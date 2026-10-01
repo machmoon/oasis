@@ -182,7 +182,15 @@ search_assets → remix_asset → create_order
     b.addEventListener("click", () => {
       app.querySelectorAll(".swatch-chip").forEach((x) => x.classList.remove("on"));
       b.classList.add("on");
-      $("#hero-tiles").innerHTML = heroTiles(HERO_PALETTES[+b.dataset.i]);
+      // Swap each tile only once its new render has loaded, so the stage never flashes empty.
+      const next = document.createElement("div");
+      next.innerHTML = heroTiles(HERO_PALETTES[+b.dataset.i]);
+      const imgs = $("#hero-tiles").querySelectorAll("img");
+      next.querySelectorAll("img").forEach((n, i) => {
+        const pre = new Image();
+        pre.onload = () => { if (imgs[i]) imgs[i].src = pre.src; };
+        pre.src = n.src;
+      });
     }),
   );
 }
