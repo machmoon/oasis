@@ -1,0 +1,11 @@
+# Render's free tier sleeps after 15 idle minutes; a judge should never meet a cold start.
+name: keep-warm
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -fsS --max-time 60 "${{ vars.OASIS_URL || 'https://oasis-design.onrender.com' }}/api/config" || true

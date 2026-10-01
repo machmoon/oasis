@@ -1,0 +1,30 @@
+{
+  "name": "oasis",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server/local.js",
+    "dev": "node --watch server/local.js",
+    "factory": "node factory/factory.mjs factory/briefs.json 4",
+    "sheet": "node scripts/contact-sheet.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0",
+    "@modelcontextprotocol/sdk": "^1.31.0",
+    "@paypal/paypal-server-sdk": "^2.5.0",
+    "@resvg/resvg-js": "^2.6.2",
+    "dotenv": "^18.0.5",
+    "express": "^5.2.1",
+    "quickjs-emscripten": "^0.32.0",
+    "zod": "^4.6.5"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
