@@ -134,12 +134,14 @@ export function createViewer(el, { time = "day", ground = true, autoRotate = fal
   }
   setTime(time);
 
-  function frame(box, { keepAngle = false } = {}) {
+  function frame(box, { keepAngle = false, fit = 1, shift = 0 } = {}) {
     const size = box.getSize(new THREE.Vector3()), center = box.getCenter(new THREE.Vector3());
     const radius = Math.max(size.x, size.y, size.z) * 0.62 + 0.5;
-    const dist = radius / Math.sin((camera.fov * Math.PI) / 360) * 1.05;
-    if (!keepAngle) camera.position.set(center.x - dist * 0.62, center.y + dist * 0.55, center.z - dist * 0.58);
-    controls.target.copy(center);
+    const dist = (radius / Math.sin((camera.fov * Math.PI) / 360)) * 1.05 * fit;
+    // shift: move the subject left (-) or right (+) on screen, as a fraction of its size, to clear side panels
+    const target = center.clone().add(new THREE.Vector3(1, 0, -1).normalize().multiplyScalar(-shift * radius));
+    if (!keepAngle) camera.position.set(target.x - dist * 0.6, target.y + dist * 0.68, target.z - dist * 0.42);
+    controls.target.copy(target);
     camera.near = dist / 100; camera.far = dist * 20; camera.updateProjectionMatrix();
     const span = Math.max(size.x, size.z) + 4;
     sun.position.set(center.x - span * 0.6, center.y + span * 1.1, center.z - span * 0.35);
@@ -193,6 +195,41 @@ export function createViewer(el, { time = "day", ground = true, autoRotate = fal
   })(0);
   function dispose() { alive = false; ro.disconnect(); controls.dispose(); renderer.dispose(); }
 
+  // Picking: the placed model (a direct child of the world group) under the pointer.
+  const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+  function pick(ev) {
+    const r = renderer.domElement.getBoundingClientRect();
+    ndc.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
+    ray.setFromCamera(ndc, camera);
+    const hit = ray.intersectObjects(content.children, true)[0];
+    let o = hit?.object;
+    while (o && o.parent !== content) o = o.parent;
+    return o || null;
+  }
+  let outline = null;
+  function select(g) {
+    if (outline) { scene.remove(outline); outline.geometry.dispose(); outline = null; }
+    if (!g) return;
+    outline = new THREE.BoxHelper(g, "#E5484D");
+    scene.add(outline);
+  }
+  function refreshSelection() { outline?.update(); }
+
+  /** Drops a placed model in from above with a small bounce, after `delay` ms. */
+  function dropIn(g, delay = 0) {
+    const y0 = g.position.y, start = performance.now() + delay, dur = 650;
+    g.position.y = y0 + 14; g.visible = false;
+    const f = (t) => {
+      const k = (t - start) / dur;
+      if (k < 0) return;
+      g.visible = true;
+      if (k >= 1) { g.position.y = y0; tickers.delete(f); return; }
+      const e = k < 0.7 ? Math.pow(k / 0.7, 2) : 1 - Math.sin(((k - 0.7) / 0.3) * Math.PI) * 0.08;
+      g.position.y = y0 + 14 * (1 - Math.min(1, e));
+    };
+    tickers.add(f);
+  }
+
   /** GLB of whatever is on screen, as a Blob. */
   async function exportGlb() {
     const { GLTFExporter } = await import("three/addons/exporters/GLTFExporter.js");
@@ -200,5 +237,5 @@ export function createViewer(el, { time = "day", ground = true, autoRotate = fal
     return new Blob([buf], { type: "model/gltf-binary" });
   }
 
-  return { scene, camera, controls, renderer, setParts, addPlaced, clearWorld, setTime, frame: (b) => frame(b || new THREE.Box3().setFromObject(content)), tickers, exportGlb, dispose, get content() { return content; } };
+  return { scene, camera, controls, renderer, setParts, addPlaced, clearWorld, setTime, pick, select, refreshSelection, dropIn, frame: (b, o) => frame(b || new THREE.Box3().setFromObject(content), o), tickers, exportGlb, dispose, get content() { return content; } };
 }

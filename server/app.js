@@ -11,6 +11,7 @@ import { forkAsset } from "./fork.js";
 import { runAgent } from "./agent.js";
 import { handleMcp } from "./mcp.js";
 import * as tools from "./tools.js";
+import * as world from "./world.js";
 import * as mandates from "./mandates.js";
 import { llmsTxt } from "./llms.js";
 
@@ -60,6 +61,28 @@ export async function createApp() {
     const { svg } = await catalog.renderAsync(a, parseKnobs(req));
     const out = a.price > 0 ? catalog.watermark(svg, catalog.sizeOf(svg, a.size)) : svg;
     res.set("Content-Type", "image/svg+xml").set("Cache-Control", "no-cache").send(out);
+  }));
+
+  // Worlds: a prompt becomes a placed layout of kit pieces; the browser builds it in 3D.
+  const worldLimit = rateLimit({ windowMs: 60_000, limit: 20, standardHeaders: "draft-8", legacyHeaders: false });
+  app.post("/api/world/plan", worldLimit, wrap(async (req, res) => {
+    const prompt = String(req.body?.prompt || "a cosy little town").slice(0, 300);
+    let plan = world.planWorld(prompt, { seed: Number(req.body?.seed) || undefined });
+    if (req.body?.agent) {
+      try { plan = (await world.agentPlan(prompt, plan)) || plan; } catch (e) { console.warn("agent plan", e.message); }
+    }
+    plan = world.cleanPlan(plan);
+    const bill = world.billOf(plan);
+    res.json({ ...plan, bill, total: bill.reduce((s, l) => s + l.price, 0) });
+  }));
+  app.post("/api/world/parts", worldLimit, wrap(async (req, res) => {
+    const items = (req.body?.items || []).slice(0, 80);
+    const out = await Promise.all(items.map(async ({ asset, knobs }) => {
+      const a = mustAsset(asset);
+      if (a.format !== "blocks") throw Object.assign(new Error(`${asset} is not a 3D block asset`), { status: 400 });
+      return (await catalog.buildAsync(a, knobs || {})).parts;
+    }));
+    res.json({ parts: out });
   }));
 
   // Block assets: the parts list the browser turns into a live 3D model (public/world3d.js).

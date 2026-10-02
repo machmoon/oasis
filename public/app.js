@@ -1031,7 +1031,12 @@ async function route() {
   const params = new URLSearchParams(query || "");
   const parts = (path || "/").split("/").filter(Boolean);
   window.scrollTo(0, 0);
-  if (!parts.length) return pageHome();
+  if (!parts.length) {
+    setNav("");
+    const { pageWorld } = await import("/worldpage.js");
+    return pageWorld(app, { api, esc, money, mountPayPal, knobControl, newOrder, toast, claims });
+  }
+  if (parts[0] === "store") return pageHome();
   if (parts[0] === "browse") return pageBrowse(params);
   if (parts[0] === "a" && parts[1]) return pageAsset(decodeURIComponent(parts[1]));
   if (parts[0] === "agent") return pageAgent();
