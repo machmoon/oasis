@@ -50,8 +50,10 @@ export function view(m, now = Date.now()) {
   return {
     id: m.id, natural_language_description: m.natural_language_description, skus: m.skus,
     user_cart_confirmation_required: true, intent_expiry: m.intent_expiry, expired: now > Date.parse(m.intent_expiry),
-    budget_usd: m.budgetCents / 100, remaining_usd: (m.budgetCents - committed(m)) / 100,
-    orders: m.holds.map((h) => ({ order_id: h.orderId, usd: h.cents / 100, state: h.state })),
+    revoked_at: m.revokedAt || null,
+    budget_usd: m.budgetCents / 100, remaining_usd: m.revokedAt ? 0 : (m.budgetCents - committed(m)) / 100,
+    // The audit log: every order an agent created against this mandate, by whom and when.
+    orders: m.holds.map((h) => ({ order_id: h.orderId, usd: h.cents / 100, state: h.state, agent_name: h.agentName || null, at: h.at })),
   };
 }
 
@@ -70,16 +72,17 @@ function locked(id, fn) {
 }
 
 /** Checks the mandate and reserves `totalUsd` for an order about to be created. Returns a release function. */
-export async function reserve(token, { totalUsd, assetIds, now = Date.now() }) {
+export async function reserve(token, { totalUsd, assetIds, agentName = null, now = Date.now() }) {
   const found = await byToken(token);
   if (!found) throw Object.assign(new Error("Unknown or revoked mandate token. Ask the human to issue one at /#/agents."), { status: 403 });
   return locked(found.id, async () => {
     const m = live(await store.get("mandates", found.id), now);
+    if (m.revokedAt) throw Object.assign(new Error(`Mandate ${m.id} was revoked by the human at ${m.revokedAt}.`), { status: 403 });
     if (now > Date.parse(m.intent_expiry)) throw Object.assign(new Error(`Mandate ${m.id} expired at ${m.intent_expiry}.`), { status: 403 });
     if (m.skus && assetIds.some((a) => !m.skus.includes(a))) throw Object.assign(new Error(`Mandate ${m.id} only allows: ${m.skus.join(", ")}.`), { status: 403 });
     const want = cents(totalUsd), left = m.budgetCents - committed(m);
     if (want > left) throw Object.assign(new Error(`Order total $${(want / 100).toFixed(2)} is over what mandate ${m.id} has left ($${(left / 100).toFixed(2)} of $${(m.budgetCents / 100).toFixed(2)}). Ask the human to issue a larger mandate.`), { status: 402 });
-    const hold = { id: crypto.randomBytes(6).toString("hex"), orderId: null, cents: want, at: new Date(now).toISOString(), state: "held" };
+    const hold = { id: crypto.randomBytes(6).toString("hex"), agentName: agentName ? String(agentName).slice(0, 40) : null, orderId: null, cents: want, at: new Date(now).toISOString(), state: "held" };
     m.holds.push(hold);
     await store.put("mandates", m.id, m);
     return {
@@ -105,4 +108,16 @@ export async function settle(mandateId, orderId, state) {
 export async function byTokenView(token) {
   const m = await byToken(token);
   return m ? view(m) : null;
+}
+
+/** The human's kill switch: the token stops working at once. Orders already created can still be approved or not. */
+export async function revoke(token, now = Date.now()) {
+  const found = await byToken(token);
+  if (!found) throw Object.assign(new Error("Unknown mandate token"), { status: 404 });
+  return locked(found.id, async () => {
+    const m = await store.get("mandates", found.id);
+    m.revokedAt = m.revokedAt || new Date(now).toISOString();
+    await store.put("mandates", m.id, m);
+    return view(m, now);
+  });
 }

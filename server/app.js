@@ -93,6 +93,7 @@ export async function createApp() {
     const { description, max_total_usd, expires_in_hours, skus } = req.body || {};
     res.json(await mandates.issue({ description, maxTotalUsd: max_total_usd, expiresInHours: expires_in_hours, skus }));
   }));
+  app.post("/api/mandates/revoke", mandateLimit, wrap(async (req, res) => res.json(await mandates.revoke(String(req.body?.token || "")))));
   app.get("/api/mandates/:id", wrap(async (req, res) => {
     const m = await mandates.get(req.params.id);
     if (!m) throw Object.assign(new Error("Unknown mandate"), { status: 404 });

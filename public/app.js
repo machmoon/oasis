@@ -212,15 +212,16 @@ function pageHome() {
           <a class="btn primary" href="#/browse">Browse assets</a>
           <a class="btn" href="#/agent">Brief the agent</a>
         </div>
-      </div>
-      <div class="stage">
-        <img class="town" id="town" src="${townUrl()}" alt="Oasis Town, an isometric street diorama rendered live from its program" />
         <a class="askcard" href="#/agent" aria-label="See how the agent asks and you approve">
           <small>The Oasis agent asks</small>
           <b>License 2 remixes · $10</b>
           <span class="capmeter"><i style="width:50%"></i></span>
           <span class="askfoot"><span>$10 of your $20 cap</span><span class="approve-pill">You approve in PayPal</span></span>
         </a>
+      </div>
+      <div class="stage">
+        <img class="town" id="town" src="${townUrl()}" alt="Oasis Town, an isometric street diorama rendered live from its program" />
+
         <div class="dock" role="toolbar" aria-label="Oasis Town knobs">
           <div class="grp">${SEASONS.map((s) => `<button class="knobbtn ${s === town.season ? "on" : ""}" data-season="${s}">${s}</button>`).join("")}</div>
           <div class="grp">${TIMES.map((t) => `<button class="knobbtn ${t === town.time ? "on" : ""}" data-time="${t}">${t}</button>`).join("")}</div>
@@ -247,6 +248,7 @@ function pageHome() {
       <h2 class="title">One brand. Every asset.</h2>
       <p class="sub">Every colour knob in Oasis knows its job: background, ink, primary, highlight. Pick a brand and the whole catalogue re-renders in it.</p>
       <div class="brandbar">${BRAND_PRESETS.map((p, i) => `<button class="swatch-chip ${i === 0 ? "on" : ""}" data-bento="${i}" title="${esc(p.name)}">${swatches(p)}</button>`).join("")}<span class="muted" id="bento-name">${esc(BRAND_PRESETS[0].name)}</span></div>
+      <form class="pastebrand" id="pastebrand"><label class="sr-only" for="hexes">Your brand colours</label><input id="hexes" placeholder="Paste your colours: #0E3B43 #F5EBDD #FF7A59" autocomplete="off" /><button class="btn small">Try mine</button><button class="btn small ghost" type="button" id="use-mine" hidden>Use it everywhere</button></form>
       <div class="bento" id="bento">${BENTO.map((id, i) => `<a class="cell c${i + 1} ${["bauhaus-poster", "oasis-town"].includes(id) ? "cover" : ""}" href="#/a/${id}"><img src="${thumbUrl(id, {}, BRAND_PRESETS[0])}" alt="${esc(CATALOG.find((a) => a.id === id)?.title || id)}" /></a>`).join("")}</div>
     </section>
 
@@ -299,6 +301,28 @@ you approve in PayPal  get_order  files</pre>
     $("#bento-name").textContent = brand.name;
     $("#bento").querySelectorAll("img").forEach((img, i) => swapImg(img, thumbUrl(BENTO[i], {}, brand)));
   }));
+  // Paste any hex colours: darkest → ink, lightest → background, the rest by saturation → primary, secondary, highlight.
+  let pasted = null;
+  $("#pastebrand").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const hexes = [...new Set(($("#hexes").value.match(/#?[0-9a-f]{6}\b/gi) || []).map((h) => "#" + h.replace("#", "").toUpperCase()))];
+    if (hexes.length < 2) return toast("Paste at least two hex colours, like #0E3B43 #FF7A59");
+    const lum = (h) => hexRgb(h).reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0);
+    const sat = (h) => { const c = hexRgb(h); return Math.max(...c) - Math.min(...c); };
+    const byLum = [...hexes].sort((a, b) => lum(a) - lum(b));
+    const ink = byLum[0], background = byLum.at(-1);
+    const rest = hexes.filter((h) => h !== ink && h !== background).sort((a, b) => sat(b) - sat(a));
+    pasted = completeBrand({ name: "Your brand", background, ink, primary: rest[0] || ink, secondary: rest[1] || mixHex(rest[0] || ink, background, 0.35), highlight: rest[2] || mixHex(rest[0] || ink, "#FFFFFF", 0.45) });
+    app.querySelectorAll("[data-bento]").forEach((x) => x.classList.remove("on"));
+    $("#bento-name").textContent = "Your brand";
+    $("#bento").querySelectorAll("img").forEach((img, i) => swapImg(img, thumbUrl(BENTO[i], {}, pasted)));
+    $("#use-mine").hidden = false;
+  });
+  $("#use-mine").addEventListener("click", () => {
+    brandState.set({ ...pasted, on: true });
+    toast("Your brand is on. Every asset in the catalogue now renders in it.");
+    location.hash = "#/browse";
+  });
   reveal(app);
 }
 
@@ -611,7 +635,7 @@ function pageAgent() {
       <img src="${thumbUrl("oasis-town", {}, BRAND_PRESETS[1])}" alt="" />
       <h2>Tell me about your brand.</h2>
       <p>I'll find the assets you need, put them all in your colours, check every render, and open a PayPal order for you to approve.</p>
-      ${CONFIG.agentReady ? "" : `<p class="offline">Playing a real recorded run. <button class="btn small" id="watch-replay">Play it again</button></p>`}
+      ${CONFIG.agentReady ? "" : `<p class="offline">Playing a real recorded run. <button class="btn small" id="watch-replay">Show it again</button></p>`}
       <div class="briefs">${SUGGESTIONS.map((t, i) => `<button class="brief" data-s="${i}"><i class="dots">${swatches(BRAND_PRESETS[[1, 2, 3][i]])}</i><span>${esc(t)}</span></button>`).join("")}</div>
     </div>`;
   }
@@ -705,12 +729,11 @@ function pageAgent() {
     add(`<i></i>Replay of a real run recorded ${esc(new Date(rec.recorded).toLocaleString())}. Nothing here is staged.`, "toolrow");
     add(esc(rec.brief), "msg user");
     for (const [ev, data] of rec.events) {
-      await new Promise((r) => setTimeout(r, ev === "text" ? 260 : 140));
       if (!document.body.contains(log) || run !== replayRun) return;
       handle(ev, data);
     }
     flushBot();
-    add(`<i></i>End of the recording. <button class="btn small" id="replay-again">Play it again</button>`, "toolrow");
+    add(`<i></i>End of the recording. <button class="btn small" id="replay-again">Show it again</button>`, "toolrow");
     $("#replay-again")?.addEventListener("click", () => replay());
   }
 
@@ -855,6 +878,7 @@ function pageAgents() {
         <button class="btn primary">Issue mandate</button>
       </form>
       <div id="mandate-out"></div>
+      <div id="my-mandates"></div>
     </div>
     <div class="panel" id="mcp-live"><h3>Live traffic</h3><p class="muted" style="margin:0">Counting…</p></div>
     <div class="panel"><h3>Claude Code</h3><pre class="code">claude mcp add --transport http oasis ${esc(o)}/mcp</pre></div>
@@ -883,6 +907,23 @@ GET ${esc(o)}/api/assets/pricing-card/render.svg?preset=Indigo</pre></div>
       <li>Licensed files go only to the order's creator, proven by a one-time claim token.</li>
     </ul><p style="margin:10px 0 0"><a href="https://github.com/machmoon/oasis/blob/main/docs/mcp-session.md">Read a recorded session</a> of an outside agent shopping by URL alone.</p></div>
   </div>`;
+  // Mandates this browser issued: the token never leaves this device except to the agent you give it to.
+  const mine = () => store.get("oasis.mandates", []);
+  const drawMine = async () => {
+    const box = $("#my-mandates");
+    if (!box || !mine().length) return;
+    const rows = (await Promise.all(mine().map(async ({ id, token }) => ({ token, m: await api(`/api/mandates/${id}`).catch(() => null) })))).filter((r) => r.m);
+    box.innerHTML = `<h4 style="margin:18px 0 8px">Your mandates</h4>${rows.map(({ token, m }) => `<div class="mandate-row">
+      <div><b>${esc(m.id)}</b> · ${esc(m.natural_language_description)}<br/><span class="muted" style="font-size:13px">${money(m.remaining_usd)} left of ${money(m.budget_usd)} · ${m.revoked_at ? "revoked" : m.expired ? "expired" : "until " + esc(new Date(m.intent_expiry).toLocaleString())}</span>
+      ${m.orders.length ? `<ul class="audit">${m.orders.map((o) => `<li><span class="mono">${esc(o.order_id || "pending")}</span> ${money(o.usd)} · ${esc(o.state)} · ${esc(o.agent_name || "an agent")} · ${esc(new Date(o.at).toLocaleString())}</li>`).join("")}</ul>` : `<p class="muted" style="margin:4px 0 0;font-size:12.5px">No orders yet.</p>`}</div>
+      ${m.revoked_at || m.expired ? "" : `<button class="btn small" data-revoke="${esc(token)}">Revoke</button>`}</div>`).join("")}`;
+    box.querySelectorAll("[data-revoke]").forEach((b) => b.addEventListener("click", async () => {
+      await api("/api/mandates/revoke", { method: "POST", body: { token: b.dataset.revoke } });
+      toast("Mandate revoked. The agent can't create orders with it any more.");
+      drawMine();
+    }));
+  };
+  drawMine();
   $("#mandate-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const f = new FormData(e.target);
@@ -893,6 +934,8 @@ GET ${esc(o)}/api/assets/pricing-card/render.svg?preset=Indigo</pre></div>
         <pre class="code" id="mdt">${esc(token)}</pre>
         <p class="muted" style="margin:8px 0 0;font-size:13px">Tell your agent: “Use mandate ${esc(token.slice(0, 12))}… for create_order.” Check what's left at any time with <span class="mono">get_mandate</span>.</p>
         <button class="btn small" id="copy-mdt" type="button">Copy token</button></div>`;
+      store.set("oasis.mandates", [{ id: mandate.id, token }, ...mine()].slice(0, 10));
+      drawMine();
       $("#copy-mdt").addEventListener("click", async () => { try { await navigator.clipboard.writeText(token); toast("Mandate token copied"); } catch { toast(token); } });
     } catch (err) { out.innerHTML = `<p class="notice">${esc(err.message)}</p>`; }
   });

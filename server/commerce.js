@@ -35,7 +35,7 @@ export async function createCheckout(items, { agent = false, agentName = null, m
     throw Object.assign(new Error(`Order total $${total.toFixed(2)} is over the $${Number(maxTotal).toFixed(2)} spending cap. Remove items or ask the human to raise the cap.`), { status: 402 });
   }
   // A mandate is the human's budget, held by the server: unlike max_total_usd, the agent can't restate it.
-  const hold = mandate ? await mandates.reserve(mandate, { totalUsd: total, assetIds: lines.map((l) => l.asset.id) }) : null;
+  const hold = mandate ? await mandates.reserve(mandate, { totalUsd: total, assetIds: lines.map((l) => l.asset.id), agentName }) : null;
   const ref = crypto.randomBytes(6).toString("hex");
   const capText = hold ? `, within the $${(hold.mandate.budgetCents / 100).toFixed(0)} budget you gave it (mandate ${hold.mandate.id})` : maxTotal ? `, within your $${Number(maxTotal).toFixed(0)} cap` : "";
   let order;

@@ -277,3 +277,19 @@ test("failure modes PayPal really produces: declined card, pending capture, out-
   await commerce.handleWebhook({ event_type: "PAYMENT.PAYOUTS-ITEM.FAILED", resource: { payout_item_id: "I9", transaction_status: "FAILED", payout_item: { sender_item_id: "Y-0-creator" } } });
   assert.equal((await store.get("payouts", "Y-0-creator")).status, "FAILED");
 });
+
+test("mandates: the human can revoke one at once, and every agent order is in its audit log", async () => {
+  const pp = fakePaypal();
+  commerce.setPaypalClient(pp);
+  const mandates = await import("../server/mandates.js");
+  const tools = await import("../server/tools.js");
+  const { mandate, token } = await mandates.issue({ maxTotalUsd: 50 });
+  const o = await tools.createOrder({ items: [{ assetId: "pricing-card" }], mandate: token, agent_name: "Cursor agent" });
+  const log = (await mandates.get(mandate.id)).orders;
+  assert.equal(log[0].order_id, o.id);
+  assert.equal(log[0].agent_name, "Cursor agent");
+  const revoked = await mandates.revoke(token);
+  assert.ok(revoked.revoked_at);
+  assert.equal(revoked.remaining_usd, 0);
+  await assert.rejects(tools.createOrder({ items: [{ assetId: "pricing-card" }], mandate: token }), /revoked/);
+});

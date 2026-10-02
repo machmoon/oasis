@@ -60,7 +60,9 @@ human-present mandate has no amount, because the human confirms every cart; Oasi
 `mdt_…` token (the server stores only its SHA-256). MCP `create_order` requires it; the server reserves each order
 against the balance under a per-mandate lock, so two concurrent orders can't both spend the last dollars. A capture
 keeps the amount spent, a refund or amount mismatch gives it back, and an order nobody approves stops holding budget
-after 3 hours, when PayPal's approval link expires anyway (tested: *the human's budget is enforced by the server, not
+after 3 hours, when PayPal's approval link expires anyway. The human can **revoke** a mandate at once
+(`POST /api/mandates/revoke`, the Revoke button on `/#/agents`), and every order an agent creates is in the mandate's
+audit log with the agent's name and time (tested: *the human's budget is enforced by the server, not
 by what the agent says*).
 
 **Who owns an order.** Order IDs travel through PayPal URLs, so they are not secrets. Each order gets a 128-bit
