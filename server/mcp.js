@@ -34,15 +34,24 @@ function getServer() {
   server.registerTool("create_order", {
     description: "Create a PayPal order licensing one or more remixes. Needs a mandate token: a budget the human issued at /#/agents and gave you. The server reserves the total against it and refuses anything over what is left. Returns approve_url: give it to the human, who still approves the payment in PayPal. Then call get_order with order_id and claim_token.",
     inputSchema: {
-      items: z.array(z.object({ asset_id: z.string(), knobs: z.record(z.string(), z.any()).default({}) })).min(1),
+      items: z.array(z.object({ asset_id: z.string(), knobs: z.record(z.string(), z.any()).default({}) })).optional(),
       mandate: z.string().describe("Mandate token (mdt_...) the human gave you. Without one, no order can be created."),
       max_total_usd: z.number().positive().optional().describe("Optional tighter cap for this one order"),
       agent_name: z.string().optional().describe("Your name, shown to the human in PayPal's approval screen"),
+      world_id: z.string().optional().describe("Buy a whole world from build_world: items may be omitted"),
     },
-  }, async ({ items, mandate, max_total_usd, agent_name }) => {
-    const o = await tools.createOrder({ items: items.map((i) => ({ assetId: i.asset_id, knobs: i.knobs })), mandate, max_total_usd, agent_name });
+  }, async ({ items, mandate, max_total_usd, agent_name, world_id }) => {
+    const o = await tools.createOrder({ items: (items || []).map((i) => ({ assetId: i.asset_id, knobs: i.knobs })), mandate, max_total_usd, agent_name, world_id });
     return text({ order_id: o.id, claim_token: o.claimToken, status: o.status, total_usd: o.total, mandate_id: o.mandateId, approve_url: o.approveUrl, next: "Ask the human to open approve_url and pay with PayPal, then call get_order with order_id and claim_token. Keep claim_token private: it unlocks the licensed files." });
   });
+  server.registerTool("build_world", {
+    description: "Build a little 3D world from a description (e.g. 'a Kyoto market street at dusk'). Oasis plans it from parametric kit pieces, Claude art-directs it, and you get a link the human can open and orbit, plus the bill of materials. Pass world_id to create_order to buy the whole world.",
+    inputSchema: { prompt: z.string(), art_direct: z.boolean().optional().describe("Let Claude restyle the layout (about 20 s)") },
+  }, async ({ prompt, art_direct }) => text(await tools.buildWorld({ prompt, art_direct })));
+  server.registerTool("edit_world", {
+    description: "Change a world you built: 'make it night', 'paint the shops mint', 'add a tram'. Returns a new world id and link (worlds are immutable snapshots).",
+    inputSchema: { world_id: z.string(), request: z.string() },
+  }, async ({ world_id, request }) => text(await tools.editWorld({ world_id, request })));
   server.registerTool("get_mandate", {
     description: "What the human allowed: budget, what is left, expiry and the orders charged against it.",
     inputSchema: { mandate: z.string() },

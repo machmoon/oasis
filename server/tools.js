@@ -1,3 +1,5 @@
+import crypto from "node:crypto";
+import * as world from "./world.js";
 // One tool surface, two consumers: the in-app Oasis agent (Claude tool use) and outside agents over
 // MCP. Names mirror PayPal's agent toolkit where they overlap (create_order, get_order).
 import * as catalog from "./catalog.js";
@@ -36,8 +38,14 @@ export async function remixAsset({ asset_id, preset, brand, knobs = {} }) {
   return { asset: a, svg, values, preview_url: previewUrl(a.id, values, a), price_usd: a.price };
 }
 
-export async function createOrder({ items, max_total_usd, agent_name, mandate }) {
+export async function createOrder({ items, max_total_usd, agent_name, mandate, world_id }) {
+  if (world_id) {
+    const w = await store.get("worlds", world_id);
+    if (!w) throw new Error("Unknown world_id");
+    items = world.billOf(w).filter((l) => l.price > 0).map((l) => ({ assetId: l.asset, knobs: l.knobs }));
+  }
   const o = await commerce.createCheckout(items, {
+    worldId: world_id || null,
     agent: true,
     agentName: agent_name ? String(agent_name).slice(0, 40) : "an MCP agent",
     maxTotal: max_total_usd ?? null,
@@ -78,4 +86,31 @@ export async function getMandate({ mandate }) {
   const v = await byTokenView(mandate);
   if (!v) throw new Error("Unknown mandate token");
   return v;
+}
+
+const worldLink = (id) => `${config.baseUrl}/#/w/${id}`;
+async function saveWorld(plan) {
+  const id = `w${crypto.randomBytes(5).toString("hex")}`;
+  await store.put("worlds", id, { id, title: String(plan.title || plan.prompt || "Untitled world").slice(0, 80), prompt: String(plan.prompt || "").slice(0, 300), time: plan.time, size: plan.size, placements: plan.placements, createdAt: new Date().toISOString() });
+  return id;
+}
+const worldSummary = (id, plan) => {
+  const bill = world.billOf(plan);
+  return { world_id: id, link: worldLink(id), title: plan.title || plan.prompt, time: plan.time, pieces: plan.placements.length, note: plan.say || undefined,
+    bill: bill.filter((l) => l.price > 0).map((l) => ({ asset_id: l.asset, title: l.title, price_usd: l.price, placed: l.count })), total_usd: bill.reduce((s, l) => s + l.price, 0),
+    next: "Give the human the link to look around. To buy it, call create_order with world_id and their mandate." };
+};
+export async function buildWorld({ prompt, art_direct }) {
+  let plan = world.planWorld(String(prompt).slice(0, 300));
+  if (art_direct) { try { plan = (await world.agentEdit(`Make this world fit: "${prompt}". Name it, recolour it, and add or swap pieces so it tells the story of the place.`, plan)) || plan; } catch {} }
+  plan = world.cleanPlan(plan);
+  return worldSummary(await saveWorld(plan), plan);
+}
+export async function editWorld({ world_id, request }) {
+  const w = await store.get("worlds", world_id);
+  if (!w) throw new Error("Unknown world_id");
+  const next = await world.agentEdit(String(request).slice(0, 400), world.cleanPlan(w));
+  if (!next) throw new Error("The world agent isn't available on this server");
+  const plan = world.cleanPlan(next);
+  return worldSummary(await saveWorld(plan), plan);
 }
