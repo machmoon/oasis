@@ -746,8 +746,9 @@ async function pageCreators() {
     <div class="split">
       <div class="panel">
         <h3>How forks pay</h3>
-        <p style="margin-top:0">Anyone can fork an asset with AI and sell the result. Every licence of a fork pays its creator, and pays the creators it was forked from, automatically, through PayPal Payouts.</p>
-        <div class="flow"><span class="node">Licence $10</span><span class="arrow">→</span><span class="node">Fork creator $6</span><span class="node">Original creator $3</span><span class="node">Oasis $1</span></div>
+        <p style="margin-top:0">Fork any asset with AI and sell it. Every licence pays you and the creators you forked from, through PayPal Payouts, the moment payment is captured.</p>
+        <div class="chain">${["pricing-card", "gilded-deco-tier-0f823929", "lantern-fortune-tier-5b119cb5"].map((id, i) => { const a = CATALOG.find((x) => x.id === id); return a ? `${i ? '<span class="chain-arrow">fork</span>' : ""}<a class="chain-node" href="#/a/${id}"><img src="${thumbUrl(id)}" alt=""/><b>${esc(a.title)}</b><span>${i === 0 ? "original" : i === 1 ? "fork" : "fork of a fork"}</span></a>` : ""; }).join("")}</div>
+        <div class="flow" style="margin-top:12px"><span class="node">$10 licence</span><span class="arrow">=</span><span class="node">$6 fork creator</span><span class="node">$2 parent</span><span class="node">$1 grandparent</span><span class="node">$1 Oasis</span></div>
         <p class="muted" style="font-size:13px;margin-bottom:0">Deeper lineages split the upstream 30%: the parent takes two thirds, older ancestors share the rest.</p>
       </div>
       <div class="panel">
@@ -776,7 +777,7 @@ function pageAgents() {
       <tr><td class="mono">search_assets</td><td>Find assets by words, kind and price.</td></tr>
       <tr><td class="mono">get_asset</td><td>Typed knob schema and colourway presets.</td></tr>
       <tr><td class="mono">remix_asset</td><td>Render with knobs; returns the image so the agent can judge it.</td></tr>
-      <tr><td class="mono">create_order</td><td>PayPal order for remixes; returns an approve link for the human.</td></tr>
+      <tr><td class="mono">create_order</td><td>PayPal order for remixes; returns an approve link for the human. Pass <span class="mono">max_total_usd</span> (your human's cap, enforced by the server) and <span class="mono">agent_name</span> (shown in PayPal's approval screen).</td></tr>
       <tr><td class="mono">get_order</td><td>After approval: captures and returns SVG, PNG, React and program downloads.</td></tr>
     </table></div>
     <div class="panel"><h3>Plain HTTP</h3><pre class="code">GET ${esc(o)}/llms.txt

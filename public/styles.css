@@ -359,3 +359,11 @@ footer .wrap { display: flex; gap: 18px; flex-wrap: wrap; justify-content: space
 .approve li em { display: block; font-style: normal; color: var(--muted); font-size: 12.5px; }
 .capnote { font-size: 13px; padding: 8px 10px; margin: 0 0 10px; }
 .brief span { text-align: left; }
+
+.chain { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+.chain-node { display: flex; flex-direction: column; gap: 4px; width: 128px; text-decoration: none; }
+.chain-node img { width: 128px; height: 128px; object-fit: cover; border-radius: 12px; border: 2px solid var(--ink); background: var(--bg-2); }
+.chain-node b { font-size: 13px; line-height: 1.2; }
+.chain-node span { font-size: 12px; color: var(--muted); }
+.chain-arrow { font-family: var(--mono); font-size: 12px; color: var(--accent); margin-top: 56px; }
+.chain-arrow::after { content: " ->"; }
