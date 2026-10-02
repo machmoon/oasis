@@ -13,7 +13,7 @@ const catalog = await import("../server/catalog.js");
 const commerce = await import("../server/commerce.js");
 const store = await import("../server/store.js");
 
-function fakePaypal({ captureAmount } = {}) {
+function fakePaypal({ captureAmount, captureStatus = "COMPLETED", declineFirst = false } = {}) {
   const calls = { create: [], capture: 0, refunds: [], payouts: [] };
   let n = 0;
   return {
@@ -22,9 +22,10 @@ function fakePaypal({ captureAmount } = {}) {
     async captureOrder(id) {
       calls.capture++;
       await new Promise((r) => setTimeout(r, 20));
+      if (declineFirst && calls.capture === 1) throw Object.assign(new Error("UNPROCESSABLE_ENTITY: INSTRUMENT_DECLINED"), { status: 422 });
       const o = await store.get("orders", id);
       const value = (captureAmount ?? o.total).toFixed(2);
-      return { id, status: "COMPLETED", payer: { name: { given_name: "Ada", surname: "Lovelace" }, email_address: "buyer@example.com" }, purchase_units: [{ payments: { captures: [{ id: `CAP-${id}`, status: "COMPLETED", amount: { currency_code: "USD", value } }] } }] };
+      return { id, status: "COMPLETED", payer: { name: { given_name: "Ada", surname: "Lovelace" }, email_address: "buyer@example.com" }, purchase_units: [{ payments: { captures: [{ id: `CAP-${id}`, status: captureStatus, ...(captureStatus === "PENDING" ? { status_details: { reason: "ECHECK" } } : {}), amount: { currency_code: "USD", value } }] } }] };
     },
     async refundCapture(captureId, opts) { calls.refunds.push({ captureId, opts }); return { id: `REF-${captureId}`, status: "COMPLETED" }; },
     async sendPayouts(batchId, items) { calls.payouts.push({ batchId, items }); return { batch_header: { payout_batch_id: `PB-${batchId}`, batch_status: "PENDING" } }; },
@@ -218,4 +219,61 @@ test("mandates: the human's budget is enforced by the server, not by what the ag
   assert.equal((await mandates.get(idle.mandate.id)).remaining_usd, 0);
   const later = mandates.view(await store.get("mandates", idle.mandate.id), Date.now() + mandates.UNCAPTURED_HOLD_MS + 1000);
   assert.equal(later.remaining_usd, price);
+});
+
+test("failure modes PayPal really produces: declined card, pending capture, out-of-order and denied captures", async () => {
+  const mandates = await import("../server/mandates.js");
+  const tools = await import("../server/tools.js");
+  const capEvent = (o, type, value = o.total) => ({ event_type: type, resource: { id: `CAP-${o.id}`, status: type.split(".").pop(), amount: { currency_code: "USD", value: value.toFixed(2) }, supplementary_data: { related_ids: { order_id: o.id } } } });
+
+  // INSTRUMENT_DECLINED: nothing is recorded as paid, and the payer's retry (actions.restart()) captures normally.
+  let pp = fakePaypal({ declineFirst: true });
+  commerce.setPaypalClient(pp);
+  const d = await commerce.createCheckout([{ assetId: "pricing-card" }]);
+  await assert.rejects(commerce.capture(d.id), /INSTRUMENT_DECLINED/);
+  assert.equal((await store.get("orders", d.id)).status, "CREATED");
+  assert.equal((await commerce.capture(d.id)).status, "COMPLETED");
+
+  // PENDING (an eCheck): no licences, budget stays held, no second capture; PAYMENT.CAPTURE.COMPLETED finishes it once.
+  pp = fakePaypal({ captureStatus: "PENDING" });
+  commerce.setPaypalClient(pp);
+  const { token } = await mandates.issue({ maxTotalUsd: 20 });
+  const p = await tools.createOrder({ items: [{ assetId: "pricing-card" }], mandate: token });
+  const pending = await commerce.capture(p.id);
+  assert.equal(pending.status, "CAPTURE_PENDING");
+  assert.equal(pending.pendingReason, "ECHECK");
+  assert.equal(pending.licenses, undefined);
+  await commerce.handleWebhook({ event_type: "CHECKOUT.ORDER.APPROVED", resource: { id: p.id } });
+  assert.equal(pp.calls.capture, 1, "a pending capture is never captured again");
+  await Promise.all([commerce.handleWebhook(capEvent(p, "PAYMENT.CAPTURE.COMPLETED")), commerce.handleWebhook(capEvent(p, "PAYMENT.CAPTURE.COMPLETED"))]);
+  const cleared = await store.get("orders", p.id);
+  assert.equal(cleared.status, "COMPLETED");
+  assert.equal(cleared.licenses.length, 1, "duplicate COMPLETED deliveries issue one licence");
+  assert.equal((await mandates.get(p.mandateId)).orders[0].state, "spent");
+
+  // PENDING then DENIED: the order is closed and the mandate gets its budget back.
+  const q = await tools.createOrder({ items: [{ assetId: "pricing-card" }], mandate: token });
+  await commerce.capture(q.id);
+  await commerce.handleWebhook(capEvent(q, "PAYMENT.CAPTURE.DENIED"));
+  assert.equal((await store.get("orders", q.id)).status, "DENIED");
+  assert.equal((await mandates.get(q.mandateId)).orders.find((o) => o.order_id === q.id).state, "released");
+
+  // Out of order: COMPLETED arrives before our own capture call finishes, or with no capture call at all.
+  pp = fakePaypal();
+  commerce.setPaypalClient(pp);
+  const r = await commerce.createCheckout([{ assetId: "pricing-card" }]);
+  await commerce.handleWebhook(capEvent(r, "PAYMENT.CAPTURE.COMPLETED"));
+  assert.equal((await store.get("orders", r.id)).status, "COMPLETED");
+  await commerce.capture(r.id);
+  assert.equal(pp.calls.capture, 0, "PayPal already captured it; Oasis doesn't call capture again");
+
+  // A COMPLETED webhook for the wrong amount is refunded, never licensed.
+  const w = await commerce.createCheckout([{ assetId: "pricing-card" }]);
+  await commerce.handleWebhook(capEvent(w, "PAYMENT.CAPTURE.COMPLETED", w.total + 1));
+  assert.equal((await store.get("orders", w.id)).status, "AMOUNT_MISMATCH");
+  assert.equal(pp.calls.refunds.at(-1).captureId, `CAP-${w.id}`);
+
+  // Payout items that bounce are recorded with their final status.
+  await commerce.handleWebhook({ event_type: "PAYMENT.PAYOUTS-ITEM.FAILED", resource: { payout_item_id: "I9", transaction_status: "FAILED", payout_item: { sender_item_id: "Y-0-creator" } } });
+  assert.equal((await store.get("payouts", "Y-0-creator")).status, "FAILED");
 });

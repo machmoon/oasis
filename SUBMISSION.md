@@ -94,8 +94,8 @@ system, no network, a 48 MB heap. An allocation storm can outrun QuickJS's own i
 testing), so every server render runs in a worker thread that is **terminated at 3 s**. Output must be SVG and is only
 shown through `<img>`. Paid source never leaves the server; catalogue previews are low-res raster comps.
 
-**Tested.** 28/28 tests pass: price tampering, the capture race, amount-mismatch refunds, refund revocation,
-webhook replays, spending mandates (two orders racing for the last dollars), order ownership, royalty cents along a fork chain, sandbox escapes and the deadline kill.
+**Tested.** 29/29 tests pass: price tampering, the capture race, amount-mismatch refunds, refund revocation,
+webhook replays, pending and denied captures, declined cards, spending mandates (two orders racing for the last dollars), order ownership, royalty cents along a fork chain, sandbox escapes and the deadline kill.
 
 **Stack.** Node + Express, a no-build vanilla JS store, Claude Opus 5.5 (agent, forks, factory, grader), MCP Streamable
 HTTP, resvg, Playwright, Render.

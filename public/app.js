@@ -621,7 +621,7 @@ function pageAgent() {
     const items = replayKit || cart.items;
     const total = items.reduce((s, i) => s + i.price, 0);
     $("#kit").innerHTML = items.length
-      ? `<div class="kit${items.length >= 4 ? " compact" : ""}">${items.map((i) => `<div class="item"><img src="${esc(i.previewUrl)}" alt=""/><div><span>${esc(i.title)}</span><b>${money(i.price)}</b></div></div>`).join("")}</div><div class="total"><span>Total</span><b>${money(total)}</b></div>${replayKit ? `<p class="muted" style="margin:10px 0 0;font-size:12.5px">A recorded run. Nothing was added to your cart.</p>` : ""}`
+      ? `<div class="kit${items.length >= 4 ? " compact" : ""}">${items.map((i) => `<div class="item" title="${esc(i.title)}"><img src="${esc(i.previewUrl)}" alt="${esc(i.title)}"/><div><span>${esc(i.title)}</span><b>${money(i.price)}</b></div></div>`).join("")}</div><div class="total"><span>Total</span><b>${money(total)}</b></div>${replayKit ? `<p class="muted" style="margin:10px 0 0;font-size:12.5px">A recorded run. Nothing was added to your cart.</p>` : ""}`
       : `<div class="empty">Remixes the agent picks land here.</div>`;
   };
   drawKit();
@@ -799,9 +799,9 @@ async function pageOrder(id) {
   try { o = await api(`/api/orders/${encodeURIComponent(id)}`, { claim: claims.get(id) }); } catch (e) { app.innerHTML = notFound("We couldn't find that order."); return; }
   const done = o.status === "COMPLETED";
   app.innerHTML = `<div class="wrap" style="max-width:860px">
-    <div class="crumbs"><h1>${done ? "Licensed." : "Order " + esc(o.status.toLowerCase())}</h1></div>
+    <div class="crumbs"><h1>${done ? "Licensed." : o.status === "CAPTURE_PENDING" ? "Payment clearing." : "Order " + esc(o.status.toLowerCase())}</h1></div>
     ${done && !o.owner ? `<p class="ok">Paid ${money(o.total)} with PayPal. The files go to whoever created this order: open it in that browser, or the agent that created it collects them with its claim token.</p>` : ""}
-    ${done && o.owner ? `<p class="ok">Paid ${money(o.total)} with PayPal${o.payer?.name ? ` by ${esc(o.payer.name)}` : ""} · capture ${esc(o.captureId)}</p>` : done ? "" : `<p class="notice">This order hasn't been paid yet.</p>`}
+    ${done && o.owner ? `<p class="ok">Paid ${money(o.total)} with PayPal${o.payer?.name ? ` by ${esc(o.payer.name)}` : ""} · capture ${esc(o.captureId)}</p>` : done ? "" : o.status === "CAPTURE_PENDING" ? `<p class="notice">PayPal has the payment and is still clearing it${o.pendingReason ? ` (${esc(o.pendingReason.toLowerCase().replace(/_/g, " "))})` : ""}. Your files unlock here the moment it completes.</p>` : o.status === "DENIED" ? `<p class="notice">PayPal declined this payment, so nothing was charged and no budget was used.</p>` : `<p class="notice">This order hasn't been paid yet.</p>`}
     ${(o.licenses || []).map((l) => `<div class="cart-line" style="grid-template-columns:84px 1fr auto"><img src="/api/licenses/${esc(l.token)}/download.svg" alt=""/><div><b>${esc(l.title)}</b><div class="muted mono" style="font-size:11px">licence ${esc(l.token.slice(0, 12))}…</div></div>
       <div class="dl">${["svg", "png", "jsx", "css", "mjs"].map((f) => `<a class="btn small" href="/api/licenses/${esc(l.token)}/download.${f}">${{ svg: "SVG", png: "PNG", jsx: "React", css: "CSS", mjs: "Program" }[f]}</a>`).join("")}<button class="btn small" data-figma="${esc(l.token)}">Copy for Figma</button></div></div>`).join("")}
     ${o.royalties?.length ? `<h3 style="margin:28px 0 8px">Where your money went</h3><table class="table"><tr><th>Asset</th><th>To</th><th>Role</th><th>Amount</th></tr>${o.royalties.map((r) => `<tr><td>${esc(r.title)}</td><td>${esc(r.author)}</td><td>${esc(r.role)}${r.held ? " (held)" : ""}</td><td>${money(r.cents / 100)}</td></tr>`).join("")}</table>

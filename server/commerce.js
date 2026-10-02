@@ -104,37 +104,77 @@ export function royaltySplit(asset, price) {
 // One capture per order at a time: the browser, the return URL and a webhook can all race to capture.
 const capturing = new Map();
 export function capture(orderId) {
-  if (!capturing.has(orderId)) capturing.set(orderId, doCapture(orderId).finally(() => capturing.delete(orderId)));
-  return capturing.get(orderId);
+  return exclusive(orderId, () => doCapture(orderId));
+}
+function exclusive(orderId, fn) {
+  const prev = capturing.get(orderId) || Promise.resolve();
+  const next = prev.catch(() => {}).then(fn);
+  capturing.set(orderId, next);
+  next.finally(() => { if (capturing.get(orderId) === next) capturing.delete(orderId); }).catch(() => {});
+  return next;
+}
+
+const TERMINAL = ["COMPLETED", "REFUNDED", "AMOUNT_MISMATCH", "CAPTURE_PENDING", "DENIED"];
+
+// Licences are only issued for exactly the amount and currency this server priced; anything else is refunded.
+async function amountOk(existing, cap) {
+  const paid = Number(cap?.amount?.value), expected = Number(existing.total.toFixed(2));
+  if (cap?.amount?.currency_code === "USD" && Math.abs(paid - expected) <= 0.001) return true;
+  existing.status = "AMOUNT_MISMATCH";
+  existing.captureId = cap.id;
+  await store.put("orders", existing.id, existing);
+  await mandates.settle(existing.mandateId, existing.id, "released");
+  await paypal.refundCapture(cap.id, { note: "Amount did not match the Oasis price; refunded automatically.", requestId: `oasis-mismatch-${existing.id}` }).catch(() => {});
+  return false;
 }
 
 async function doCapture(orderId) {
   const existing = await store.get("orders", orderId);
   if (!existing) throw Object.assign(new Error("Unknown order"), { status: 404 });
-  // Terminal states never capture again: a replayed APPROVED webhook must not resurrect a refunded order.
-  if (["COMPLETED", "REFUNDED", "AMOUNT_MISMATCH"].includes(existing.status)) return existing;
+  // Terminal states never capture again: a replayed APPROVED webhook must not resurrect a refunded order,
+  // and a PENDING capture is finished by PayPal's PAYMENT.CAPTURE.COMPLETED webhook, not by capturing twice.
+  if (TERMINAL.includes(existing.status)) return existing;
   const result = await paypal.captureOrder(orderId);
   const cap = result.purchase_units?.[0]?.payments?.captures?.[0];
-  // Licences are only issued for exactly the amount and currency this server priced.
-  const paid = Number(cap?.amount?.value), expected = Number(existing.total.toFixed(2));
-  if (cap?.status === "COMPLETED" && (cap.amount?.currency_code !== "USD" || Math.abs(paid - expected) > 0.001)) {
-    existing.status = "AMOUNT_MISMATCH";
+  existing.payer = payerOf(result.payer);
+  if (cap?.status === "COMPLETED" || cap?.status === "PENDING") {
+    if (!(await amountOk(existing, cap))) throw Object.assign(new Error(`Captured ${cap.amount?.value} ${cap.amount?.currency_code}, expected ${existing.total.toFixed(2)} USD; refunded`), { status: 409 });
+  }
+  if (cap?.status === "PENDING") {
+    // eChecks and risk reviews: PayPal has the money in flight. Hold the budget, issue nothing yet.
+    existing.status = "CAPTURE_PENDING";
     existing.captureId = cap.id;
+    existing.pendingReason = cap.status_details?.reason || null;
     await store.put("orders", orderId, existing);
-    await mandates.settle(existing.mandateId, orderId, "released");
-    await paypal.refundCapture(cap.id, { note: "Amount did not match the Oasis price; refunded automatically.", requestId: `oasis-mismatch-${orderId}` }).catch(() => {});
-    throw Object.assign(new Error(`Captured ${cap.amount?.value} ${cap.amount?.currency_code}, expected ${expected} USD; refunded`), { status: 409 });
+    return existing;
   }
   if (result.status !== "COMPLETED" || cap?.status !== "COMPLETED") {
     existing.status = result.status;
     await store.put("orders", orderId, existing);
     throw Object.assign(new Error(`Payment not completed (${cap?.status || result.status})`), { status: 402 });
   }
-  const payer = result.payer || {};
+  return fulfil(existing, cap);
+}
+
+const payerOf = (payer = {}) => ({ name: [payer.name?.given_name, payer.name?.surname].filter(Boolean).join(" "), email: payer.email_address });
+
+/** PayPal says a capture completed (webhook): finish a pending order, or one whose own capture response we missed. */
+export function completeFromWebhook(orderId, cap) {
+  return exclusive(orderId, async () => {
+    const existing = await store.get("orders", orderId);
+    if (!existing || ["COMPLETED", "REFUNDED", "AMOUNT_MISMATCH", "DENIED"].includes(existing.status)) return existing;
+    if (!(await amountOk(existing, cap))) return existing;
+    return fulfil(existing, cap);
+  });
+}
+
+async function fulfil(existing, cap) {
+  const orderId = existing.id;
   existing.status = "COMPLETED";
+  delete existing.pendingReason;
   existing.captureId = cap.id;
   await mandates.settle(existing.mandateId, orderId, "spent");
-  existing.payer = { name: [payer.name?.given_name, payer.name?.surname].filter(Boolean).join(" "), email: payer.email_address };
+  existing.payer = existing.payer || {};
   existing.licenses = [];
   const payouts = [];
   const ledger = [];
@@ -219,6 +259,22 @@ export async function handleWebhook(event) {
     case "CHECKOUT.ORDER.APPROVED":
       if (await store.get("orders", r.id)) await capture(r.id);
       return "captured";
+    case "PAYMENT.CAPTURE.COMPLETED": {
+      const orderId = r.supplementary_data?.related_ids?.order_id;
+      if (orderId && (await store.get("orders", orderId))) await completeFromWebhook(orderId, r);
+      return "completed";
+    }
+    case "PAYMENT.CAPTURE.DENIED":
+    case "PAYMENT.CAPTURE.DECLINED": {
+      const orderId = r.supplementary_data?.related_ids?.order_id;
+      const o = orderId && (await store.get("orders", orderId));
+      if (o && o.status !== "COMPLETED" && o.status !== "REFUNDED") {
+        o.status = "DENIED";
+        await store.put("orders", orderId, o);
+        await mandates.settle(o.mandateId, orderId, "released");
+      }
+      return "denied";
+    }
     case "PAYMENT.CAPTURE.REFUNDED":
     case "PAYMENT.CAPTURE.REVERSED": {
       const orderId = r.supplementary_data?.related_ids?.order_id;
