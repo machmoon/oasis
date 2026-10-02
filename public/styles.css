@@ -511,3 +511,7 @@ h1, h2, h3, .logo { font-family: var(--display); font-weight: 600; letter-spacin
 .flowkey li { display: flex; align-items: center; gap: 12px; }
 .flowkey i { width: 16px; height: 16px; border-radius: 4px; flex: none; box-shadow: 0 3px 0 var(--side); }
 .stage .town { transition: opacity .35s var(--ease-out); }
+/* agent board: the approval is the payoff, so it comes first and stays in view */
+.board { max-height: calc(100dvh - 100px); overflow-y: auto; padding-bottom: 10px; }
+.checkout-panel .approve ul li em { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+.checkout-panel .approve ul li { padding: 7px 0; }

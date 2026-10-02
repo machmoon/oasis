@@ -617,8 +617,8 @@ function pageAgent() {
       </form>
     </div>
     <aside class="board">
+      <div class="panel checkout-panel"><h3>Checkout</h3><div id="checkout"><p class="muted" style="margin:0;font-size:13.5px">When the kit is ready the agent opens a PayPal order. You approve the payment. The agent can't.</p></div></div>
       <div class="panel"><h3>Your kit <button class="btn small ghost" id="newchat">New brief</button></h3><div id="kit"></div></div>
-      <div class="panel"><h3>Checkout</h3><div id="checkout"><p class="muted" style="margin:0;font-size:13.5px">When the kit is ready the agent opens a PayPal order. You approve the payment. The agent can't.</p></div></div>
     </aside>
   </div></div>`;
   const log = $("#log");
@@ -737,7 +737,7 @@ function pageAgent() {
       <ul>${replayKit.map((i) => `<li><span><b>${esc(i.title)}</b>${i.reason ? `<em>${esc(i.reason)}</em>` : ""}</span><b>${money(i.price)}</b></li>`).join("")}</ul>
       <div class="capmeter"><i style="width:${Math.min(100, (total / cap) * 100)}%"></i></div>
       <p class="capnote ok">${money(total)} of your ${money(cap)} cap. The server refuses anything over it.</p>
-      <p class="muted" style="font-size:12px;margin:8px 0 0">In a live run the PayPal button appears here and only you can approve it. This server has no PayPal sandbox keys yet, so the recording stops at the order.</p>
+      <p class="muted" style="font-size:12px;margin:8px 0 0">This example was recorded before checkout was connected, so it stops at the order. Type a brief below for a live run: the PayPal button appears here, and only you can approve it.</p>
     </div>`;
     add(`<i></i>${CONFIG.agentReady ? "Example: a real run recorded" : "Replay of a real run recorded"} ${esc(new Date(rec.recorded).toLocaleString())}. Nothing here is staged.${CONFIG.agentReady ? " Type your own brief below to run the agent live." : ""}`, "toolrow");
     add(esc(rec.brief), "msg user");
@@ -747,7 +747,7 @@ function pageAgent() {
       if (ev === "tool" && data.name === "create_order") {
         flushBot();
         add(`<i></i>Opening a PayPal order`, "toolrow");
-        add(`<i></i>The recording stops here. In a live run the agent opens the PayPal order now, and you approve it in the Checkout panel. Nothing is charged until you do.`, "toolrow");
+        add(`<i></i>The example stops here. In a live run the agent opens the PayPal order now, and you approve it in the Checkout panel. Nothing is charged until you do.`, "toolrow");
         break;
       }
       handle(ev, data);
