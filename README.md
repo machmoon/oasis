@@ -1,11 +1,14 @@
-# Oasis: design assets you can reshape
+# Oasis: assets your agent can brand and buy
 
-**Every icon set, illustration, UI kit, mockup, poster and brand mark on Oasis is a small program with knobs.**
-Remix it live, or brief the Oasis agent and it builds your whole brand kit. Then license the *exact remix* with
-PayPal. Anyone can fork an asset with AI and sell it, and every sale pays royalties back up the fork tree through
-PayPal Payouts.
+**Design assets built as tiny programs.** Every icon set, UI kit, mockup, poster, illustration and isometric town on
+Oasis is a small program with typed knobs. Set your brand once and the whole catalogue re-renders in it. Brief the
+Oasis agent (or any agent over MCP) and it builds a branded kit, then opens a PayPal order that only a human can
+approve. Forks pay royalties upstream through PayPal Payouts.
 
-Built for the [PayPal AI Hackathon](https://paypalaihackathon.devpost.com/). Live demo: **https://oasis-design.onrender.com**
+Built for the [PayPal AI Hackathon](https://paypalaihackathon.devpost.com/).
+Live: **https://oasis-design.onrender.com** · PayPal walkthrough for developers: **[PAYPAL.md](PAYPAL.md)**
+
+![Oasis Town, an isometric diorama rendered from its program](docs/figures/02-one-brand-every-asset.png)
 
 ---
 

@@ -1,0 +1,21 @@
+{
+  "assets": 48,
+  "kitAssets": 1,
+  "knobs": 479,
+  "colourKnobs": 179,
+  "roleKnobs": 167,
+  "forks": 3,
+  "factoryBuilds": 4,
+  "factoryPublished": 4,
+  "factoryRejected": 0,
+  "graderFirstPassReject": "0 of 4",
+  "harnessCaughtFirstPass": "0 of 4",
+  "lessons": 6,
+  "tests": "22/22",
+  "liveAssets": 45,
+  "paypalReady": false,
+  "agentReady": false,
+  "ordersCaptured": 0,
+  "payoutBatches": 0,
+  "refunds": 0
+}
