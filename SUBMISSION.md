@@ -71,7 +71,7 @@ window closes, so nobody is paid on a refunded sale.
 - **Payouts** for royalties, held until the refund window closes and cancelled by a refund; **refunds** within 14 days
   through the Payments API. In production the creator split moves to **PayPal Commerce Platform** (per-unit `payee` +
   `platform_fees`) so refunds unwind it automatically.
-- **Where this stands, plainly:** no sandbox order has been captured on the live deploy yet and no Payouts batch has been sent. Every path above is exercised by the tests against a fake PayPal client. Live counts of orders, verified webhooks and payouts: [oasis-design.onrender.com/#/status](https://oasis-design.onrender.com/#/status).
+- **It runs against the real PayPal sandbox** ([docs/SANDBOX-RUN.md](https://github.com/machmoon/oasis/blob/main/docs/SANDBOX-RUN.md), `npm run sandbox-demo`): an over-budget agent order refused by the mandate; orders 47M93830FG9553221, 8V3397808V699150W captured (56834260T0051970X, 7BX91257JM822105U); refund 8GM623335Y0788449 revoking the licence (download then returns 410) and returning the budget; and a fork-of-a-fork sale paid upstream as Payouts batch CXTQ4BE5FC6GC. In that run, approval used PayPal's published sandbox test card instead of a person logging in.
 
 **The asset factory.** 59 of the 67 assets were written by an agent pipeline (5 are
 hand-written programs, 3 are AI forks). The first 36 came from factory v1 (builder self-review only, all since

@@ -1,9 +1,11 @@
 // Fills scripts/story.tmpl.md with the measured numbers in docs/numbers.json.
 import fs from "node:fs";
 const n = JSON.parse(fs.readFileSync("docs/numbers.json", "utf8"));
-const sandbox = n.ordersCaptured > 0
-  ? `- Real sandbox runs: ${n.ordersCaptured} order(s) captured, ${n.payoutBatches} royalty Payouts batch(es), ${n.refunds} refund(s).`
-  : "- **Where this stands, plainly:** no sandbox order has been captured on the live deploy yet and no Payouts batch has been sent. Every path above is exercised by the tests against a fake PayPal client. Live counts of orders, verified webhooks and payouts: [oasis-design.onrender.com/#/status](https://oasis-design.onrender.com/#/status).";
+const run = fs.existsSync("docs/SANDBOX-RUN.md") ? fs.readFileSync("docs/SANDBOX-RUN.md", "utf8") : "";
+const ids = (re) => [...run.matchAll(re)].map((m) => m[1]);
+const sandbox = run
+  ? `- **It runs against the real PayPal sandbox** ([docs/SANDBOX-RUN.md](https://github.com/machmoon/oasis/blob/main/docs/SANDBOX-RUN.md), \`npm run sandbox-demo\`): an over-budget agent order refused by the mandate; orders ${ids(/PayPal order (\w+)/g).join(", ")} captured (${ids(/capture (\w+)/g).join(", ")}); refund ${ids(/refund ([A-Z0-9]{10,})/g).join(", ")} revoking the licence (download then returns 410) and returning the budget; and a fork-of-a-fork sale paid upstream as Payouts batch ${ids(/Payouts batch (\w+)/g).join(", ")}. In that run, approval used PayPal's published sandbox test card instead of a person logging in.`
+  : "- **Where this stands:** no sandbox order has been captured yet.";
 let s = fs.readFileSync("scripts/story.tmpl.md", "utf8");
 for (const [k, v] of Object.entries({ ...n, sandboxLine: sandbox })) s = s.replaceAll(`{{${k}}}`, String(v));
 if (/\{\{/.test(s)) throw new Error("unfilled placeholder: " + s.match(/\{\{[^}]+\}\}/)[0]);

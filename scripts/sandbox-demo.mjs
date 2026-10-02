@@ -1,7 +1,7 @@
 // The whole Oasis payment path against the real PayPal sandbox, in one command: npm run sandbox-demo
 //
-// Starts its own Oasis server on PORT (default 8788, separate data dir), with a zero-length refund window so held
-// royalties release in seconds instead of 14 days. You approve two orders in PayPal's window with a sandbox
+// Starts its own Oasis server on PORT (default 8788, separate data dir), and fast-forwards its clock past the 14-day
+// refund window when releasing held royalties, so they pay out in seconds. You approve two orders in PayPal's window with a sandbox
 // *personal* account; everything else is automatic. Every PayPal ID is written to docs/SANDBOX-RUN.md.
 //
 // Needs PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET (sandbox) in .env. Optional: PAYOUT_EMAIL_CREATOR and
@@ -17,7 +17,6 @@ const PORT = Number(process.env.DEMO_PORT || 8788);
 process.env.PORT = String(PORT);
 process.env.OASIS_BASE_URL = `http://localhost:${PORT}`;
 process.env.OASIS_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "oasis-sandbox-"));
-process.env.OASIS_REFUND_WINDOW_MS = "1";
 if (!process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_CLIENT_SECRET) {
   console.error("Set PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET (sandbox) in .env first. See PAYPAL.md.");
   process.exit(1);
@@ -29,7 +28,8 @@ const commerce = await import("../server/commerce.js");
 const app = await createApp();
 const server = await new Promise((r) => { const s = app.listen(PORT, () => r(s)); });
 const BASE = `http://localhost:${PORT}`;
-const log = [`# Oasis against the PayPal sandbox`, ``, `Run ${new Date().toISOString()} by \`npm run sandbox-demo\`. Every ID below is a real PayPal sandbox object.`, ``];
+const log = [`# Oasis against the PayPal sandbox`, ``, `Run ${new Date().toISOString()} by \`npm run sandbox-demo\`. Every ID below is a real PayPal sandbox object.`, ``,
+  ...(process.argv.includes("--card") ? [`**Approval was automated:** each order was approved with one of PayPal's published sandbox test cards (\`confirm-payment-source\`) instead of a person logging in to PayPal's window. Capture, the amount check, licences, the refund and Payouts all ran through Oasis's normal code against the real sandbox.`, ``] : [])];
 const step = (title, lines) => { console.log(`\n== ${title}\n${lines.join("\n")}`); log.push(`## ${title}`, ``, ...lines.map((l) => `- ${l}`), ``); };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const rpc = async (name, args) => {
@@ -39,7 +39,25 @@ const rpc = async (name, args) => {
   if (j.result?.isError || j.error) throw new Error(text);
   return JSON.parse(text);
 };
+// --card: approve with one of PayPal's published sandbox test cards (developer.paypal.com/tools/sandbox/card-testing)
+// through confirm-payment-source, instead of a person logging in to PayPal's window. Everything after approval
+// (capture, amount check, licences, refund, Payouts) is the same Oasis code; the run log says approval was automated.
+const CARD = process.argv.includes("--card");
+const { rest } = await import("../server/paypal.js");
 const approve = async (order) => {
+  if (CARD) {
+    const r = await rest("POST", `/v2/checkout/orders/${order.order_id}/confirm-payment-source`, {
+      payment_source: { card: { number: "4012000033330026", expiry: "2030-12", security_code: "123", name: "Sandbox Tester", billing_address: { address_line_1: "1 Test St", admin_area_2: "San Jose", admin_area_1: "CA", postal_code: "95131", country_code: "US" } } },
+    });
+    console.log(`approved with PayPal's sandbox test card: order status ${r.status}`);
+    for (let i = 0; i < 10; i++) {
+      const o = await rpc("get_order", { order_id: order.order_id, claim_token: order.claim_token }).catch((e) => ({ error: e.message }));
+      if (["COMPLETED", "CAPTURE_PENDING"].includes(o.status)) return o;
+      if (o.error) console.log("get_order:", o.error);
+      await sleep(2000);
+    }
+    throw new Error("Card-approved order did not capture");
+  }
   console.log(`\nApprove in PayPal with your sandbox personal account:\n  ${order.approve_url}\n(opening it for you; waiting up to 10 minutes)`);
   execFile("open", [order.approve_url], () => {});
   for (let i = 0; i < 200; i++) {
@@ -71,7 +89,7 @@ try {
   const refunded = await (await fetch(`${BASE}/api/orders/${o.order_id}/refund`, { method: "POST", headers: { "Content-Type": "application/json", "X-Oasis-Claim": o.claim_token }, body: JSON.stringify({ reason: "sandbox demo" }) })).json();
   const after = await fetch(done.downloads[0].svg);
   const m2 = await (await fetch(`${BASE}/api/mandates/${mandate.id}`)).json();
-  step("5. Refunded through the Payments API", [`order status ${refunded.status}, refund ${refunded.refundId}`, `licensed download after refund: HTTP ${after.status}`, `mandate remaining $${m2.remaining_usd} of $${m2.budget_usd}`]);
+  step("5. Refunded through the Payments API", [refunded.error ? `refund refused: ${refunded.error}` : `order status ${refunded.status}, refund ${refunded.refundId}`, `licensed download after refund: HTTP ${after.status}`, `mandate remaining $${m2.remaining_usd} of $${m2.budget_usd}`]);
 
   // 5. A fork of a fork: royalties held, then paid up the chain through Payouts.
   const child = catalog.getAsset("lantern-fortune-tier-5b119cb5");
@@ -82,12 +100,13 @@ try {
   const fd = await approve(f);
   const held = await (await fetch(`${BASE}/api/orders/${f.order_id}`, { headers: { "X-Oasis-Claim": f.claim_token } })).json();
   await sleep(50);
-  await commerce.releaseDuePayouts(Date.now() + 1000);
+  // Fast-forward the clock past the 14-day refund window instead of shortening it, so refunds still work above.
+  await commerce.releaseDuePayouts(Date.now() + commerce.REFUND_WINDOW_MS + 60_000);
   const paid = await (await fetch(`${BASE}/api/orders/${f.order_id}`, { headers: { "X-Oasis-Claim": f.claim_token } })).json();
   step("6. A fork of a fork, royalties through Payouts", [
     `PayPal order ${f.order_id}, capture ${held.captureId}, $${fd.total_usd}`,
     ...held.royalties.map((r) => `${r.role} ${r.author}: $${(r.cents / 100).toFixed(2)}${r.email ? ` to ${r.email}` : " (platform)"}`),
-    `royalties held at capture: ${held.payoutHold?.status}; after the (shortened) refund window: Payouts batch ${paid.payoutBatch?.id || paid.payoutBatch?.error} (${paid.payoutBatch?.status || "error"})`,
+    `royalties held at capture: ${held.payoutHold?.status}; after the refund window (clock fast-forwarded): Payouts batch ${paid.payoutBatch?.id || paid.payoutBatch?.error} (${paid.payoutBatch?.status || "error"})`,
   ]);
   fs.writeFileSync("docs/SANDBOX-RUN.md", log.join("\n") + "\n");
   console.log("\nWrote docs/SANDBOX-RUN.md");

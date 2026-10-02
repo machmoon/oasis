@@ -127,9 +127,12 @@ get a 400; tested). Then:
 
 ## What has actually run
 
-The live deploy lists every order, verified webhook and payout it has produced, with real sandbox IDs, at
-[`/#/status`](https://oasis-design.onrender.com/#/status). Until the sandbox keys are set there, those lists are empty
-and everything above is proven only by `test/commerce.test.mjs` against a fake client.
+[`docs/SANDBOX-RUN.md`](docs/SANDBOX-RUN.md) is a real run of this whole path against the PayPal sandbox
+(`npm run sandbox-demo -- --card`): a refused over-budget order, two captures, a refund that revokes the licence and
+returns the budget, and a fork-of-a-fork royalty sent as a Payouts batch, each with its PayPal ID. In that run, approval
+used PayPal's published sandbox test card through `confirm-payment-source` instead of a person logging in; without
+`--card` the script opens PayPal's window and waits for you. The live deploy also lists every order, verified webhook
+and payout it produces at [`/#/status`](https://oasis-design.onrender.com/#/status).
 
 ## One command against the real sandbox
 
