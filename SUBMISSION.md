@@ -4,59 +4,52 @@
 
 ## Inspiration
 
-Agents build interfaces now. Describe a product to Claude, v0 or Lovable and a working UI comes back in a minute. The
-code half of that loop is solved. The design half isn't: the moment the agent needs a hero illustration, an icon set,
-a pricing card or an app icon, it falls off a cliff.
+Agents can build an app in a minute. Ask one for a *place*, a little town for a game level, a product launch scene, a
+playable diorama for a website, and it stalls. It can generate a picture, which is flat, unlicensed and different every
+time. Or a person spends a week stitching together models from a dozen stores, each in a different style, scale and
+licence, and pays each store separately.
 
-It can generate an image, which arrives unlicensed, off-brand and different every time. Or it can grab a stock asset:
-a frozen file someone else finished. The illustration is the wrong teal, the card has three feature rows when you
-need five. A person opens Figma and fixes it. An agent can't. And even when the agent finds the right asset, it can't
-buy it, because stock sites are built for a human with a card in a checkout form, and an agent holding your card is
-exactly what nobody should build.
-
-The way out is to sell assets as programs, not files. Design needs that, plus two pieces a plain asset store doesn't have:
-**brand** (every asset a team uses has to be in their colours) and **a payment an agent can start but only a human can
-finish**. That second piece is what PayPal's order approval already is.
+We wanted the opposite: describe a place and watch it build itself out of real, consistent, licensable 3D pieces. Then
+change it by talking to it, reshape any piece by hand, and buy the whole thing in one go, with every creator whose
+piece you used getting paid. The payment is the part an agent must never do alone, so that's what PayPal's order
+approval is for: the agent can build and ask, only the human can pay.
 
 ## What it does
 
-**Oasis is a store of design assets where nothing is finished.** Every asset is an ES module: typed knobs in, SVG out.
-68 assets (65 built-in programs and 3 AI forks) with 683 knobs, from pricing cards and phone mockups to Bauhaus posters and Oasis Town,
-an isometric street diorama that rebuilds as you turn its knobs.
+**Describe a place. Watch it build.** Type "a Kyoto market street at dusk" and Oasis lays out a street from a kit of
+parametric low-poly 3D pieces (15 today: shops, cottages, apartment flats, market stalls, a torii gate, a
+tram, cars, fountains, benches, trees, lamps, road and plaza tiles), then Claude art-directs it: names the place,
+picks a palette, swaps pieces so it tells the story. Pieces drop in one by one, in real 3D you can orbit. The tram runs
+its rails; at night the windows glow.
 
-![Change it after you find it](https://raw.githubusercontent.com/machmoon/oasis/main/docs/figures/01-rebuilt-not-stretched.png)
+**Talk to it.** "Make it night and turn the tram mint green." Claude edits the world through a small set of operations
+(set, add, remove, time) and only the pieces that changed rebuild.
 
-The pricing card above is one program at two settings. It isn't stretched: it grows three feature rows and a badge.
-The city grows from 4 blocks to 25. A file can't do either.
+**Reshape anything.** Click any piece and its knobs appear: floors, width, roof style, awning colour, lit windows. Every
+piece is a program, so a three-storey shop *becomes* a five-storey shop; nothing is stretched.
 
-**Brand Mode.** 239 of 252 colour knobs in the catalogue declare a role: background, surface,
-ink, muted, primary, secondary, highlight. Set your brand once and *every asset* re-renders in it, and components with
-a light/dark theme follow the brand's darkness on their own.
+**Buy the whole world in one PayPal approval.** The world's bill of materials is one order: one licence per piece type,
+covering every remix of it in that world, paying every creator. Buying unlocks the world as a single **GLB** for
+three.js, Unity, Godot or Blender, plus each piece's program. Worlds have share links.
 
-![One brand, every asset](https://raw.githubusercontent.com/machmoon/oasis/main/docs/figures/02-one-brand-every-asset.png)
+**Any agent can build and buy.** Over MCP (`/mcp`), `build_world` and `edit_world` return a link and a bill;
+`create_order` with `world_id` opens the PayPal order inside a **mandate**, a budget the human issued that the server
+holds and enforces (shaped after the IntentMandate in Google's AP2). The agent can ask; it can't pay.
 
-**The Oasis agent.** Describe your product and what you need ("a calm meditation app in deep teal and coral: app icon,
-hero background, pricing card, testimonial avatars, under $20"). Claude searches the catalogue, applies one brand to
-every piece, **looks at each render it makes** and remixes again when something is off, fills a cart, and opens a
-**PayPal order**. You see every licence with the agent's reason, inside the spending cap you set, and you approve it
-in PayPal's own window. The agent can ask; it can't pay.
-
-**Any agent can shop.** One MCP endpoint (`/mcp`, no key to browse) exposes `search_assets`, `get_asset`,
-`remix_asset` (returns the render so the agent can judge it), `create_order` and `get_order`. `create_order` needs a
-**mandate**: a budget the human issues on the site (shaped after the IntentMandate in Google's AP2), held by the server
-and reserved per order, so an agent restating its own cap changes nothing. The agent's name and budget appear in the
-PayPal approval screen. `get_order` captures after approval and returns licensed downloads.
-
-**Forks pay upstream.** Fork any asset with AI ("make it art deco"). Claude rewrites the program, the sandbox and harness
-prove it renders, and it's published with its lineage. A $10 licence of a fork of a fork pays its creator $6, the
-parent $2, the grandparent $1 and Oasis $1, through **PayPal Payouts**. Royalties are held until the 14-day refund
-window closes, so nobody is paid on a refunded sale.
-
-![Forks pay upstream](https://raw.githubusercontent.com/machmoon/oasis/main/docs/figures/03-forks-pay-upstream.png)
-
-**What you download.** The exact remix as SVG, a 2048 px PNG, a React component, a CSS class, or the program itself.
+The same store also sells 83 2D design assets (icons, UI, posters) built the same way, with Brand Mode re-skinning
+every one in your palette.
 
 ## How we built it
+
+**A 3D engine where every model is a program.** A kit piece is an ES module whose `build(p)` returns plain parts (boxes,
+gabled roofs, prisms, cones) in metres on one 6 m grid. The server runs it in a sandbox and returns the parts; the
+browser merges them per colour into flat-shaded three.js meshes with soft shadows and day/dusk/night lighting; the
+server writes the same parts to GLB with glTF-Transform and projects them to isometric SVG for thumbnails. One source,
+three outputs, so the file you buy is exactly the model you saw.
+
+**The world planner.** A deterministic street generator lays out road, buildings, greenery and props from the
+prompt's theme, so a world appears instantly; Claude then art-directs it by calling an `edit_world` tool with typed
+operations that the server validates against every piece's knob schema.
 
 **PayPal, end to end** (walkthrough with code references: [PAYPAL.md](https://github.com/machmoon/oasis/blob/main/PAYPAL.md)):
 - **Orders v2** via `@paypal/paypal-server-sdk`: itemised `DIGITAL_GOODS`, `PAY_NOW`, `NO_SHIPPING`, return URLs so an
@@ -73,10 +66,10 @@ window closes, so nobody is paid on a refunded sale.
   `platform_fees`) so refunds unwind it automatically.
 - **It runs against the real PayPal sandbox** ([docs/SANDBOX-RUN.md](https://github.com/machmoon/oasis/blob/main/docs/SANDBOX-RUN.md), `npm run sandbox-demo`): an over-budget agent order refused by the mandate; orders 47M93830FG9553221, 8V3397808V699150W captured (56834260T0051970X, 7BX91257JM822105U); refund 8GM623335Y0788449 revoking the licence (download then returns 410) and returning the budget; and a fork-of-a-fork sale paid upstream as Payouts batch CXTQ4BE5FC6GC. In that run, approval used PayPal's published sandbox test card instead of a person logging in.
 
-**The asset factory.** 59 of the 68 assets were written by an agent pipeline (6 are
+**The asset factory.** 59 of the 83 assets were written by an agent pipeline (21 are
 hand-written programs, 3 are AI forks). The first 36 came from factory v1 (builder self-review only, all since
-re-checked by the harness). Every build since tonight's v2 goes through the full gate below: 58 builds,
-23 published, 35 rejected (the factory is stopped for judging, so these match `factory/stats.jsonl` line for line). Nothing ships on the builder's word:
+re-checked by the harness). Every build since tonight's v2 goes through the full gate below: 63 builds,
+23 published, 40 rejected (the factory is stopped for judging, so these match `factory/stats.jsonl` line for line). Nothing ships on the builder's word:
 1. Claude writes a program from a one-line brief and critiques its own renders.
 2. **A harness measures it.** Every asset is rendered across its knob space: defaults, presets, every range at min and
    max, random combinations, and a light and a dark brand. Blank output, slow renders, oversize SVG, missing brand
@@ -112,21 +105,20 @@ HTTP, resvg, Playwright, Render.
 
 ## Accomplishments that we're proud of
 
-- An agent that goes from a one-paragraph brief to a coherent, branded kit and a PayPal order you approve, and throws
-  away its own muddy first renders without being asked.
-- A fork of a fork that pays three parties automatically.
-- Brand Mode: one palette re-skins 68 assets.
+- A prompt becomes a real, orbitable 3D world in seconds, and you can keep talking to it.
+- One PayPal approval buys a world made of many creators' pieces, and the GLB you download is the model you saw.
+- An outside agent can do the whole loop over MCP, but only spends what a human allowed and never pays on its own.
 
 ## What we learned
 
-- Agents need assets that are **code**: a planner can read, diff and change one line of a program. Design adds a
-  second reason: a program can take a brand as input.
-- **Measure the artefact, not the agent's description of it.** Every quality jump came from a check that rendered the
-  program and counted something.
+- **Models as programs** is what makes agents useful in 3D: a planner can read a piece's knobs, change one, and the
+  geometry rebuilds. Files can't be art-directed; programs can.
+- **Agents should edit, not rewrite.** Asking Claude to rewrite a 50-piece layout as JSON broke; giving it typed
+  operations that the server validates made it fast and reliable.
 - For agentic commerce the right primitive isn't "the agent has a card". It's **the agent creates the order, the human
-  approves it, the server enforces the cap**, and PayPal's order approval already works that way.
+  approves it, the server enforces the budget**, and PayPal's order approval already works that way.
 
 ## What's next
 
-PayPal Commerce Platform onboarding so creator splits settle at capture; Subscriptions for an all-access plan; a
-Figma plugin and `npx oasis add pricing-card --brand ./brand.json`; more kits that share one grid.
+More kits from the agent factory (the harness and grader now run on the 3D format), walkable worlds, a three.js
+`createWorld()` import for any saved world, and PayPal Commerce Platform onboarding so creator splits settle at capture.
