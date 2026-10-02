@@ -90,6 +90,7 @@ function openBrandPanel() {
   panel.querySelectorAll("[data-role]").forEach((inp) => inp.addEventListener("input", () => { panel.querySelector("#bp-on").checked = true; save({ [inp.dataset.role]: inp.value.toUpperCase(), on: true }); }));
 }
 const COVER_KINDS = new Set(["background", "pattern", "poster", "illustration"]);
+const KIND_LABEL = { icons: "Icon set", ui: "UI component", mockup: "Mockup", illustration: "Illustration", pattern: "Pattern", background: "Background", poster: "Poster", brand: "Brand mark", avatar: "Avatar", shape: "Shape", type: "Type" };
 const KINDS = ["icons", "ui", "mockup", "illustration", "pattern", "background", "poster", "brand", "avatar", "shape", "type"];
 
 let CONFIG = { paypalReady: false, agentReady: false };
@@ -343,7 +344,7 @@ async function pageAsset(id) {
   const presetSwatch = (p) => Object.values(a.presetValues[p] || {}).slice(0, 5).map((c) => `<s style="background:${esc(c)}"></s>`).join("");
 
   app.innerHTML = `<div class="wrap">
-    <div class="crumbs"><a class="btn ghost small" href="#/browse">←</a><h1>${esc(a.title)}</h1>${a.forkedFrom ? `<span class="badge fork">Fork</span>` : ""}<span class="badge">${esc(a.kind)}</span></div>
+    <div class="crumbs"><a class="btn ghost small" href="#/browse">←</a><h1>${esc(a.title)}</h1>${a.forkedFrom ? `<span class="badge fork">Fork</span>` : ""}<span class="badge">${esc(KIND_LABEL[a.kind] || a.kind)}</span></div>
     <div class="asset">
       <div>
         <div class="viewer">
@@ -354,15 +355,6 @@ async function pageAsset(id) {
             <button class="btn small" id="copylink">Copy remix link</button>
           </div>
         </div>
-        <div class="useit">
-          <h3 style="margin:0;font-size:20px">Use it</h3>
-          <div class="tabs" id="tabs">
-            ${["React", "SVG", "CSS", "Program", "AI agent"].map((t, i) => `<button class="chip ${i === 0 ? "on" : ""}" data-tab="${t}">${t}</button>`).join("")}
-          </div>
-          <pre class="code" id="snippet"></pre>
-        </div>
-        ${a.parent ? `<a class="lineage" href="#/a/${esc(a.parent.id)}"><img src="${renderUrl(a.parent.id)}" alt=""/><div><b>Forked from ${esc(a.parent.title)}</b><div class="muted" style="font-size:13px">${esc(a.parent.author)} earns a royalty on every licence of this fork.</div></div></a>` : ""}
-        ${a.children?.length ? `<h3 style="margin:24px 0 10px;font-size:20px">Forks of this asset</h3><div class="grid">${a.children.map(card).join("")}</div>` : ""}
       </div>
       <div>
         <div class="panel">
@@ -390,12 +382,24 @@ async function pageAsset(id) {
         <div class="panel fork-form">
           <h3>Fork with AI</h3>
           <p class="muted" style="margin:0 0 10px;font-size:13.5px">Describe a new direction. Claude rewrites the program into a new asset you can sell, and ${esc(a.author)} earns a royalty on every licence.</p>
-          <textarea id="fork-ins" placeholder="e.g. Make it art deco with gold line work and a stepped frame"></textarea>
-          <div class="two"><input id="fork-author" placeholder="Your name" /><input id="fork-email" placeholder="PayPal email for royalties" /><input id="fork-price" type="number" min="0" step="1" value="${Math.max(2, a.price)}" title="Price (USD)" /></div>
+          <label for="fork-ins" class="fieldlabel">New direction</label><textarea id="fork-ins" placeholder="Art deco, gold line work, a stepped frame"></textarea>
+          <div class="two"><label><span class="fieldlabel">Your name</span><input id="fork-author" autocomplete="name" /></label><label><span class="fieldlabel">PayPal email for royalties</span><input id="fork-email" type="email" autocomplete="email" /></label><label><span class="fieldlabel">Price ($)</span><input id="fork-price" type="number" min="0" step="1" value="${Math.max(2, a.price)}" /></label></div>
           <button class="btn palm" id="fork-go" style="width:100%">Fork it</button>
           <div id="fork-status" style="margin-top:10px"></div>
         </div>
       </div>
+    </div>
+    <div class="below">
+        ${Object.keys(a.roles || {}).length ? `<div class="brandstrip"><h3>In a brand</h3><div class="brandrow">${BRAND_PRESETS.map((p, i) => `<button class="brandtile" data-bp="${i}" title="Apply the ${esc(p.name)} brand"><img loading="lazy" src="${thumbUrl(a.id, {}, p)}" alt="${esc(a.title)} in the ${esc(p.name)} brand"/><span><i class="dots">${swatches(p)}</i>${esc(p.name)}</span></button>`).join("")}</div></div>` : ""}
+        <div class="useit">
+          <h3 style="margin:0;font-size:20px">Use it</h3>
+          <div class="tabs" id="tabs">
+            ${["React", "SVG", "CSS", "Program", "AI agent"].map((t, i) => `<button class="chip ${i === 0 ? "on" : ""}" data-tab="${t}">${t}</button>`).join("")}
+          </div>
+          <pre class="code" id="snippet"></pre>
+        </div>
+        ${a.parent ? `<a class="lineage" href="#/a/${esc(a.parent.id)}"><img src="${renderUrl(a.parent.id)}" alt=""/><div><b>Forked from ${esc(a.parent.title)}</b><div class="muted" style="font-size:13px">${esc(a.parent.author)} earns a royalty on every licence of this fork.</div></div></a>` : ""}
+        ${a.children?.length ? `<h3 style="margin:24px 0 10px;font-size:20px">Forks of this asset</h3><div class="grid">${a.children.map(card).join("")}</div>` : ""}
     </div>
   </div>`;
 
@@ -443,6 +447,15 @@ async function pageAsset(id) {
     app.querySelectorAll("[data-preset]").forEach((x) => x.classList.toggle("on", x === b));
     syncControls();
     refresh();
+  }));
+  app.querySelectorAll("[data-bp]").forEach((btn) => btn.addEventListener("click", () => {
+    const b = completeBrand(BRAND_PRESETS[+btn.dataset.bp]);
+    for (const [n, role] of Object.entries(a.roles || {})) if (b[role]) values[n] = b[role].toUpperCase();
+    const [r, g, bl] = hexRgb(b.background);
+    for (const [n, k] of Object.entries(a.knobs)) if (k.type === "choice" && k.options.includes("light") && k.options.includes("dark")) values[n] = (r * 299 + g * 587 + bl * 114) / 1000 < 110 ? "dark" : "light";
+    syncControls();
+    refresh();
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }));
   $("#own-colours")?.addEventListener("click", (e) => { for (const n of Object.keys(a.roles || {})) values[n] = defaults[n]; e.target.closest(".brand-note").remove(); syncControls(); refresh(); });
   $("#reset").addEventListener("click", () => { Object.assign(values, defaults); syncControls(); refresh(); });

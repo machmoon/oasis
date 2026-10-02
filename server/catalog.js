@@ -139,8 +139,8 @@ export async function renderAsync(a, input = {}) {
 export function watermark(svg, size) {
   const [w, h] = size;
   const inner = svg.replace(/^<svg\b([^>]*)>/, (m, attrs) => `<svg x="0" y="0" width="${w}" height="${h}"${attrs.replace(/\s(width|height|x|y)="[^"]*"/g, "")}>`);
-  const fs = Math.max(14, Math.round(Math.min(w, h) / 22));
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}"><defs><pattern id="oasis-wm" width="${fs * 11}" height="${fs * 6}" patternUnits="userSpaceOnUse" patternTransform="rotate(-24)"><text x="0" y="${fs * 2}" font-family="Helvetica, Arial, sans-serif" font-size="${fs}" font-weight="700" fill="#000000" fill-opacity="0.16" stroke="#ffffff" stroke-opacity="0.35" stroke-width="0.8">oasis · preview</text></pattern></defs>${inner}<rect width="${w}" height="${h}" fill="url(#oasis-wm)"/></svg>`;
+  const fs = Math.max(13, Math.round(Math.min(w, h) / 26));
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}"><defs><pattern id="oasis-wm" width="${fs * 15}" height="${fs * 9}" patternUnits="userSpaceOnUse" patternTransform="rotate(-24)"><text x="0" y="${fs * 2}" font-family="Helvetica, Arial, sans-serif" font-size="${fs}" font-weight="700" fill="#000000" fill-opacity="0.11" stroke="#ffffff" stroke-opacity="0.3" stroke-width="0.7">oasis preview</text></pattern></defs>${inner}<rect width="${w}" height="${h}" fill="url(#oasis-wm)"/></svg>`;
 }
 
 export function sizeOf(svg, fallback) {
