@@ -17,6 +17,19 @@ const OUT = path.join(ROOT, "judging");
 const read = (f) => (fs.existsSync(f) ? fs.readFileSync(f, "utf8") : "");
 
 let input = {};
+// The first complete JSON object in a model reply, ignoring any prose or second object after it.
+function firstJson(text) {
+  const start = text.indexOf("{");
+  let depth = 0, inStr = false, esc = false;
+  for (let i = start; i >= 0 && i < text.length; i++) {
+    const c = text[i];
+    if (inStr) { if (esc) esc = false; else if (c === "\\") esc = true; else if (c === '"') inStr = false; continue; }
+    if (c === '"') inStr = true;
+    else if (c === "{") depth++;
+    else if (c === "}" && --depth === 0) return JSON.parse(text.slice(start, i + 1));
+  }
+  throw new Error("no JSON object in reply");
+}
 try { input = JSON.parse(fs.readFileSync(0, "utf8") || "{}"); } catch {}
 
 function facts() {
@@ -62,7 +75,7 @@ async function judge(client, j, oasisText, refsText, images) {
   content.push({ type: "text", text: `=== OASIS (the entry under judgement) ===\n${oasisText}\n\n=== REFERENCE PROJECTS ===\n${refsText}\n\nScore Oasis and each reference R1-R5 on: ${CRITERIA}. Each 1-10, harsh, full range, evidence over claims; a claim with no proof (no live link, placeholder numbers like {{x}}, unsubmitted) scores low. Judge design from the screenshots. Return JSON only:\n{"scores":{"Oasis":{"tech":n,"design":n,"impact":n,"idea":n,"presentation":n},"R1":{...},"R2":{...},"R3":{...},"R4":{...},"R5":{...}},"oasis_rank":n,"verdict":"one sentence","fixes":["the 4 most valuable concrete changes to Oasis, highest impact first"]}` });
   const msg = await client.messages.create({ model: "claude-opus-5-5", max_tokens: 8000, output_config: { effort: "high" }, system: `You are a judge for the PayPal AI Hackathon on Devpost. Your role: ${j.role}. ${j.lens} You are fair, specific and hard to impress.`, messages: [{ role: "user", content }] });
   const text = msg.content.filter((b) => b.type === "text").map((b) => b.text).join("");
-  return { judge: j.role, ...JSON.parse(text.match(/\{[\s\S]*\}/)[0]) };
+  return { judge: j.role, ...firstJson(text) };
 }
 
 async function main() {
