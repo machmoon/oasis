@@ -62,6 +62,14 @@ export async function createApp() {
     res.set("Content-Type", "image/svg+xml").set("Cache-Control", "no-cache").send(out);
   }));
 
+  // Block assets: the parts list the browser turns into a live 3D model (public/world3d.js).
+  app.get("/api/assets/:id/parts.json", wrap(async (req, res) => {
+    const a = mustAsset(req.params.id);
+    if (a.format !== "blocks") throw Object.assign(new Error("Not a 3D block asset"), { status: 404 });
+    const { parts, values } = await catalog.buildAsync(a, parseKnobs(req));
+    res.set("Cache-Control", "no-cache").json({ id: a.id, values, parts });
+  }));
+
   app.get("/api/assets/:id/download.:fmt", wrap(async (req, res) => {
     const a = mustAsset(req.params.id);
     if (a.price > 0) throw Object.assign(new Error("This asset needs a licence: check out with PayPal first."), { status: 402 });

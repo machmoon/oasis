@@ -393,7 +393,9 @@ async function pageAsset(id) {
     <div class="asset">
       <div>
         <div class="viewer">
-          <div class="canvas"><img id="view" src="${renderUrl(a.id, Object.fromEntries(Object.entries(values).filter(([k, v]) => v !== defaults[k])), null)}" alt="${esc(a.title)}" /><span class="busy" id="busy"></span></div>
+          ${a.format === "blocks"
+            ? `<div class="canvas canvas3d"><div id="v3d" class="v3d" aria-label="${esc(a.title)}, a live 3D model: drag to orbit"></div><span class="busy" id="busy"></span><div class="v3d-tools"><button class="btn small" data-time3d="day">Day</button><button class="btn small" data-time3d="dusk">Dusk</button><button class="btn small" data-time3d="night">Night</button></div></div>`
+            : `<div class="canvas"><img id="view" src="${renderUrl(a.id, Object.fromEntries(Object.entries(values).filter(([k, v]) => v !== defaults[k])), null)}" alt="${esc(a.title)}" /><span class="busy" id="busy"></span></div>`}
           <div class="vbar"><span class="muted">${a.price > 0 ? "Preview is watermarked until licensed" : "Free · download any remix"}</span>
             <button class="btn small ghost" id="reset">Reset</button>
             <button class="btn small ghost" id="random">Surprise me</button>
@@ -451,9 +453,26 @@ async function pageAsset(id) {
 
   const view = $("#view"), busy = $("#busy");
   let pending;
+  // Block assets rebuild as a live 3D model: the program runs on the server and returns parts in metres.
+  let viewer3d = null;
+  const partsUrl = () => `/api/assets/${encodeURIComponent(a.id)}/parts.json?p=${encodeURIComponent(JSON.stringify(diff()))}`;
+  if (a.format === "blocks") {
+    import("/world3d.js").then(async ({ createViewer }) => {
+      viewer3d = createViewer($("#v3d"), { autoRotate: false });
+      const { parts } = await api(partsUrl());
+      viewer3d.setParts(parts, { reframe: true });
+      app.querySelectorAll("[data-time3d]").forEach((b) => b.addEventListener("click", () => viewer3d.setTime(b.dataset.time3d)));
+    });
+  }
   const refresh = () => {
     clearTimeout(pending);
-    pending = setTimeout(() => {
+    pending = setTimeout(async () => {
+      if (a.format === "blocks") {
+        busy.classList.add("on");
+        try { const { parts } = await api(partsUrl()); viewer3d?.setParts(parts); } finally { busy.classList.remove("on"); }
+        updateSnippet(); updateDownloads();
+        return;
+      }
       busy.classList.add("on");
       const next = new Image();
       next.onload = next.onerror = () => { view.src = next.src; busy.classList.remove("on"); };

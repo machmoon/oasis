@@ -515,3 +515,7 @@ h1, h2, h3, .logo { font-family: var(--display); font-weight: 600; letter-spacin
 .board { max-height: calc(100dvh - 100px); overflow-y: auto; padding-bottom: 10px; }
 .checkout-panel .approve ul li em { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
 .checkout-panel .approve ul li { padding: 7px 0; }
+.canvas3d { padding: 0; min-height: 520px; overflow: hidden; background: #E9F0F7; }
+.v3d { position: absolute; inset: 0; cursor: grab; }
+.v3d:active { cursor: grabbing; }
+.v3d-tools { position: absolute; left: 14px; bottom: 14px; display: flex; gap: 6px; }

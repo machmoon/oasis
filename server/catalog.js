@@ -4,7 +4,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { Resvg } from "@resvg/resvg-js";
 import { inspect, renderSource } from "./sandbox.js";
-import { renderInPool } from "./pool.js";
+import { renderInPool, buildInPool } from "./pool.js";
 import { resolveKnobs, applyPreset, brandKnobs } from "./knobs.js";
 import * as store from "./store.js";
 
@@ -24,6 +24,10 @@ function record(id, source, extra = {}) {
     author: meta.author || "oasis",
     credit: meta.credit || null,
     size: meta.size || [800, 600],
+    // "blocks": build(p) returns 3D parts (server/blocks.js); "svg": render(p) returns an SVG.
+    format: meta.format === "blocks" || /export\s+function\s+build\s*\(/.test(source) ? "blocks" : "svg",
+    footprint: meta.footprint || null,
+    worldKit: meta.kit || null,
     params,
     source,
     forkedFrom: null,
@@ -64,12 +68,13 @@ export const allAssets = () => [...assets.values()];
 export function summary(a, { withKnobs = false } = {}) {
   const s = {
     id: a.id, title: a.title, kind: a.kind, description: a.description, tags: a.tags,
-    price: a.price, author: a.author, credit: a.credit, size: a.size,
+    price: a.price, author: a.author, credit: a.credit, size: a.size, format: a.format, footprint: a.footprint,
     forkedFrom: a.forkedFrom, lineage: a.lineage, createdAt: a.createdAt,
     presets: Object.keys(a.params.presets || {}),
     knobCount: Object.keys(a.params.knobs || {}).length,
     // Kits: assets built to one grid, light and scale so they compose (oasis-town is the kit's reference).
     kit: a.kit || (a.id === "oasis-town" || a.id.startsWith("iso-") ? "Oasis Town" : null),
+    worldKit: a.worldKit,
     roles: Object.fromEntries(Object.entries(a.params.knobs || {}).filter(([, k]) => k.type === "color" && k.role).map(([n, k]) => [n, k.role])),
     forks: allAssets().filter((x) => x.forkedFrom === a.id).length,
   };
@@ -135,6 +140,20 @@ export async function renderAsync(a, input = {}) {
     cache.set(key, svg);
   }
   return { svg, values };
+}
+
+const partsCache = new Map();
+/** Block assets: the parts list for a remix, built on the worker pool. */
+export async function buildAsync(a, input = {}) {
+  const values = resolveInput(a, input);
+  const key = a.id + JSON.stringify(values);
+  let parts = partsCache.get(key);
+  if (!parts) {
+    parts = await buildInPool(a.source, values);
+    if (partsCache.size > 300) partsCache.delete(partsCache.keys().next().value);
+    partsCache.set(key, parts);
+  }
+  return { parts, values };
 }
 
 /** A paid asset's preview carries a tiled watermark until it is licensed. */

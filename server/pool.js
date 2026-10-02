@@ -70,3 +70,12 @@ export function inspectInPool(source) {
     pump();
   });
 }
+
+/** Block assets: build(p) off the main thread, under the same deadline. Resolves to validated parts. */
+export function buildInPool(source, values) {
+  if (!workers.length) for (let i = 0; i < SIZE; i++) workers.push(spawn());
+  return new Promise((resolve, reject) => {
+    queue.push({ id: ++seq, op: "build", source, values, resolve, reject });
+    pump();
+  });
+}

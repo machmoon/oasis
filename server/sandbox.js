@@ -1,6 +1,7 @@
 // Runs an asset program inside QuickJS (WebAssembly), so community and AI-written programs
 // never touch Node: no require, no fs, no network, a memory cap and a hard time limit.
 import { getQuickJS, shouldInterruptAfterDeadline } from "quickjs-emscripten";
+import { validateParts, projectSvg } from "./blocks.js";
 
 const QJS = await getQuickJS();
 const MEMORY_LIMIT = 48 * 1024 * 1024;
@@ -50,30 +51,55 @@ export function inspect(source) {
   }));
 }
 
-/** Calls the module's default export with resolved knob values and returns its SVG. */
+// Calls one exported function with the resolved knob values and returns its plain result.
+function callExport(vm, ns, name, values) {
+  const fn = vm.getProp(ns, name);
+  try {
+    if (vm.typeof(fn) !== "function") return { missing: true };
+    const json = vm.newString(JSON.stringify(values));
+    const parse = vm.getProp(vm.global, "JSON");
+    const parseFn = vm.getProp(parse, "parse");
+    const arg = vm.unwrapResult(vm.callFunction(parseFn, parse, json));
+    json.dispose(); parseFn.dispose(); parse.dispose();
+    const out = vm.callFunction(fn, vm.undefined, arg);
+    arg.dispose();
+    if (out.error) {
+      const err = vm.dump(out.error);
+      out.error.dispose();
+      throw new AssetError(`${name} failed: ${err?.message || JSON.stringify(err)}`);
+    }
+    const value = vm.dump(out.value);
+    out.value.dispose();
+    return { value };
+  } finally {
+    fn.dispose();
+  }
+}
+
+/** Block assets: calls build(p) and returns validated parts (see server/blocks.js). */
+export function buildSource(source, values) {
+  return withModule(source, (vm, ns) => {
+    const r = callExport(vm, ns, "build", values);
+    if (r.missing) throw new AssetError("module has no build function");
+    try { return validateParts(r.value); } catch (e) { throw new AssetError(e.message); }
+  });
+}
+
+/** Returns an asset's SVG: its own render(p), or for block assets, an isometric projection of build(p). */
 export function renderSource(source, values) {
   return withModule(source, (vm, ns) => {
-    const fn = vm.getProp(ns, "default");
-    try {
-      if (vm.typeof(fn) !== "function") throw new AssetError("module has no default render function");
-      const json = vm.newString(JSON.stringify(values));
-      const parse = vm.getProp(vm.global, "JSON");
-      const parseFn = vm.getProp(parse, "parse");
-      const arg = vm.unwrapResult(vm.callFunction(parseFn, parse, json));
-      json.dispose(); parseFn.dispose(); parse.dispose();
-      const out = vm.callFunction(fn, vm.undefined, arg);
-      arg.dispose();
-      if (out.error) {
-        const err = vm.dump(out.error);
-        out.error.dispose();
-        throw new AssetError(`render failed: ${err?.message || JSON.stringify(err)}`);
-      }
-      const svg = vm.dump(out.value);
-      out.value.dispose();
-      if (typeof svg !== "string" || !svg.trimStart().startsWith("<svg")) throw new AssetError("render must return an <svg> string");
-      return svg;
-    } finally {
-      fn.dispose();
+    let r = callExport(vm, ns, "default", values);
+    if (r.missing) {
+      const b = callExport(vm, ns, "build", values);
+      if (b.missing) throw new AssetError("module has no default render function or build function");
+      let parts;
+      try { parts = validateParts(b.value); } catch (e) { throw new AssetError(e.message); }
+      const meta = getJson(vm, ns, "meta") || {};
+      const [w, h] = meta.size || [1200, 1200];
+      return projectSvg(parts, { width: w, height: h, background: values.backdrop || meta.background || "#E9ECF1", night: values.time === "night" });
     }
+    const svg = r.value;
+    if (typeof svg !== "string" || !svg.trimStart().startsWith("<svg")) throw new AssetError("render must return an <svg> string");
+    return svg;
   });
 }
