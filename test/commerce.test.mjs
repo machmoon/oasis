@@ -179,3 +179,43 @@ test("an order's licences belong to whoever created it: the order ID alone unloc
   const got = await tools.getOrder({ order_id: o.id, claim_token: o.claimToken });
   assert.equal(got.downloads.length, 1);
 });
+
+test("mandates: the human's budget is enforced by the server, not by what the agent says", async () => {
+  const pp = fakePaypal();
+  commerce.setPaypalClient(pp);
+  const mandates = await import("../server/mandates.js");
+  const tools = await import("../server/tools.js");
+  const price = catalog.getAsset("pricing-card").price; // $5
+  const { mandate, token } = await mandates.issue({ description: "Pricing cards for Lumen", maxTotalUsd: price * 2, expiresInHours: 1 });
+  assert.equal(mandate.remaining_usd, price * 2);
+  assert.equal((await store.get("mandates", mandate.id)).tokenHash.length, 64, "only a hash of the token is stored");
+
+  // The agent claiming a huge cap changes nothing: the mandate decides.
+  const a = await tools.createOrder({ items: [{ assetId: "pricing-card" }], mandate: token, max_total_usd: 9999 });
+  assert.equal(a.mandateId, mandate.id);
+  assert.match(pp.calls.create[0].opts.description, /budget you gave it/);
+  // Two orders racing for the last $5: exactly one fits.
+  const race = await Promise.allSettled([1, 2].map(() => tools.createOrder({ items: [{ assetId: "pricing-card" }], mandate: token })));
+  assert.equal(race.filter((r) => r.status === "fulfilled").length, 1);
+  assert.match(race.find((r) => r.status === "rejected").reason.message, /left/);
+  assert.equal((await mandates.get(mandate.id)).remaining_usd, 0);
+
+  // A refund gives the budget back; a capture keeps it spent.
+  await commerce.capture(a.id);
+  assert.equal((await mandates.get(mandate.id)).orders.find((o) => o.order_id === a.id).state, "spent");
+  await commerce.handleWebhook({ event_type: "PAYMENT.CAPTURE.REFUNDED", resource: { id: "RM", supplementary_data: { related_ids: { order_id: a.id } } } });
+  assert.equal((await mandates.get(mandate.id)).remaining_usd, price);
+
+  // Forged, expired and SKU-limited mandates are refused.
+  await assert.rejects(tools.createOrder({ items: [{ assetId: "pricing-card" }], mandate: "mdt_" + "0".repeat(40) }), /Unknown or revoked/);
+  const old = await mandates.issue({ maxTotalUsd: 50, expiresInHours: 1, now: Date.now() - 2 * 3600_000 });
+  await assert.rejects(tools.createOrder({ items: [{ assetId: "pricing-card" }], mandate: old.token }), /expired/);
+  const narrow = await mandates.issue({ maxTotalUsd: 50, skus: ["app-icon"] });
+  await assert.rejects(tools.createOrder({ items: [{ assetId: "pricing-card" }], mandate: narrow.token }), /only allows/);
+  // An order nobody approves stops holding budget after the hold window.
+  const idle = await mandates.issue({ maxTotalUsd: price });
+  await tools.createOrder({ items: [{ assetId: "pricing-card" }], mandate: idle.token });
+  assert.equal((await mandates.get(idle.mandate.id)).remaining_usd, 0);
+  const later = mandates.view(await store.get("mandates", idle.mandate.id), Date.now() + mandates.UNCAPTURED_HOLD_MS + 1000);
+  assert.equal(later.remaining_usd, price);
+});

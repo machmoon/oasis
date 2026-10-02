@@ -38,9 +38,10 @@ every piece, **looks at each render it makes** and remixes again when something 
 in PayPal's own window. The agent can ask; it can't pay.
 
 **Any agent can shop.** One MCP endpoint (`/mcp`, no key to browse) exposes `search_assets`, `get_asset`,
-`remix_asset` (returns the render so the agent can judge it), `create_order` and `get_order`. `create_order` takes the
-human's `max_total_usd` (the server refuses anything above it) and the agent's name, which PayPal shows the buyer in
-the approval screen. `get_order` captures after approval and returns licensed downloads.
+`remix_asset` (returns the render so the agent can judge it), `create_order` and `get_order`. `create_order` needs a
+**mandate**: a budget the human issues on the site (shaped after the IntentMandate in Google's AP2), held by the server
+and reserved per order, so an agent restating its own cap changes nothing. The agent's name and budget appear in the
+PayPal approval screen. `get_order` captures after approval and returns licensed downloads.
 
 **Forks pay upstream.** Fork any asset with AI ("make it art deco"). Claude rewrites the program, the sandbox and harness
 prove it renders, and it's published with its lineage. A $10 licence of a fork of a fork pays its creator $6, the
@@ -90,7 +91,7 @@ testing), so every server render runs in a worker thread that is **terminated at
 shown through `<img>`. Paid source never leaves the server; catalogue previews are low-res raster comps.
 
 **Tested.** {{tests}} tests pass: price tampering, the capture race, amount-mismatch refunds, refund revocation,
-webhook handling, the spending cap, royalty cents along a fork chain, sandbox escapes and the deadline kill.
+webhook replays, spending mandates (two orders racing for the last dollars), order ownership, royalty cents along a fork chain, sandbox escapes and the deadline kill.
 
 **Stack.** Node + Express, a no-build vanilla JS store, Claude Opus 5.5 (agent, forks, factory, grader), MCP Streamable
 HTTP, resvg, Playwright, Render.

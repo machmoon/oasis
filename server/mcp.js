@@ -32,16 +32,21 @@ function getServer() {
     };
   });
   server.registerTool("create_order", {
-    description: "Create a PayPal order licensing one or more remixes. Returns approve_url: give it to the human, who pays in PayPal. Then poll get_order for download links.",
+    description: "Create a PayPal order licensing one or more remixes. Needs a mandate token: a budget the human issued at /#/agents and gave you. The server reserves the total against it and refuses anything over what is left. Returns approve_url: give it to the human, who still approves the payment in PayPal. Then call get_order with order_id and claim_token.",
     inputSchema: {
       items: z.array(z.object({ asset_id: z.string(), knobs: z.record(z.string(), z.any()).default({}) })).min(1),
-      max_total_usd: z.number().positive().optional().describe("Spending cap the human gave you; the server refuses orders above it"),
+      mandate: z.string().describe("Mandate token (mdt_...) the human gave you. Without one, no order can be created."),
+      max_total_usd: z.number().positive().optional().describe("Optional tighter cap for this one order"),
       agent_name: z.string().optional().describe("Your name, shown to the human in PayPal's approval screen"),
     },
-  }, async ({ items, max_total_usd, agent_name }) => {
-    const o = await tools.createOrder({ items: items.map((i) => ({ assetId: i.asset_id, knobs: i.knobs })), max_total_usd, agent_name });
-    return text({ order_id: o.id, claim_token: o.claimToken, status: o.status, total_usd: o.total, approve_url: o.approveUrl, next: "Ask the human to open approve_url and pay with PayPal, then call get_order with order_id and claim_token. Keep claim_token private: it unlocks the licensed files." });
+  }, async ({ items, mandate, max_total_usd, agent_name }) => {
+    const o = await tools.createOrder({ items: items.map((i) => ({ assetId: i.asset_id, knobs: i.knobs })), mandate, max_total_usd, agent_name });
+    return text({ order_id: o.id, claim_token: o.claimToken, status: o.status, total_usd: o.total, mandate_id: o.mandateId, approve_url: o.approveUrl, next: "Ask the human to open approve_url and pay with PayPal, then call get_order with order_id and claim_token. Keep claim_token private: it unlocks the licensed files." });
   });
+  server.registerTool("get_mandate", {
+    description: "What the human allowed: budget, what is left, expiry and the orders charged against it.",
+    inputSchema: { mandate: z.string() },
+  }, async ({ mandate }) => text(await tools.getMandate({ mandate })));
   server.registerTool("get_order", {
     description: "Order status. Once the human has approved in PayPal this captures payment and returns licensed download links (SVG, PNG, React, source program).",
     inputSchema: { order_id: z.string(), claim_token: z.string().describe("Returned by create_order; proves this agent created the order") },

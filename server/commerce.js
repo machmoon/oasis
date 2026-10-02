@@ -1,6 +1,7 @@
 // Carts become PayPal orders; captured orders become licences; licence revenue flows back up the
 // fork lineage as royalties, paid with PayPal Payouts.
 import crypto from "node:crypto";
+import * as mandates from "./mandates.js";
 import * as catalog from "./catalog.js";
 import * as paypalApi from "./paypal.js";
 
@@ -25,7 +26,7 @@ export function priceCart(items = []) {
   return lines;
 }
 
-export async function createCheckout(items, { agent = false, agentName = null, maxTotal = null, returnUrl, cancelUrl } = {}) {
+export async function createCheckout(items, { agent = false, agentName = null, maxTotal = null, mandate = null, returnUrl, cancelUrl } = {}) {
   const lines = priceCart(items).filter((l) => l.price > 0);
   if (!lines.length) throw Object.assign(new Error("Nothing to pay for: every item in the cart is free."), { status: 400 });
   const total = lines.reduce((s, l) => s + l.price, 0);
@@ -33,8 +34,13 @@ export async function createCheckout(items, { agent = false, agentName = null, m
   if (maxTotal !== null && maxTotal !== undefined && total > Number(maxTotal) + 1e-9) {
     throw Object.assign(new Error(`Order total $${total.toFixed(2)} is over the $${Number(maxTotal).toFixed(2)} spending cap. Remove items or ask the human to raise the cap.`), { status: 402 });
   }
+  // A mandate is the human's budget, held by the server: unlike max_total_usd, the agent can't restate it.
+  const hold = mandate ? await mandates.reserve(mandate, { totalUsd: total, assetIds: lines.map((l) => l.asset.id) }) : null;
   const ref = crypto.randomBytes(6).toString("hex");
-  const order = await paypal.createOrder(
+  const capText = hold ? `, within the $${(hold.mandate.budgetCents / 100).toFixed(0)} budget you gave it (mandate ${hold.mandate.id})` : maxTotal ? `, within your $${Number(maxTotal).toFixed(0)} cap` : "";
+  let order;
+  try {
+  order = await paypal.createOrder(
     lines.map((l, i) => ({
       name: `${l.asset.title} — remix licence`,
       sku: `${l.asset.id}:${ref}:${i}`,
@@ -42,8 +48,13 @@ export async function createCheckout(items, { agent = false, agentName = null, m
       description: Object.entries(diffFromDefaults(l.asset.params, l.values)).slice(0, 4).map(([k, v]) => `${k}=${v}`).join(", ") || "default knobs",
       url: `${config.baseUrl}/#/a/${l.asset.id}`,
     })),
-    { returnUrl, cancelUrl, customId: ref, description: agent ? `Requested by ${agentName || "an AI agent"} on Oasis${maxTotal ? `, within your $${Number(maxTotal).toFixed(0)} cap` : ""}. You approve; the agent cannot pay.` : undefined },
+    { returnUrl, cancelUrl, customId: ref, description: agent ? `Requested by ${agentName || "an AI agent"} on Oasis${capText}. You approve; the agent cannot pay.` : undefined },
   );
+  } catch (e) {
+    await hold?.release();
+    throw e;
+  }
+  await hold?.bind(order.id);
   const doc = {
     id: order.id,
     ref,
@@ -51,6 +62,7 @@ export async function createCheckout(items, { agent = false, agentName = null, m
     agent,
     agentName: agent ? agentName || "AI agent" : null,
     maxTotal: maxTotal ?? null,
+    mandateId: hold?.mandate.id || null,
     createdAt: new Date().toISOString(),
     total: lines.reduce((s, l) => s + l.price, 0),
     items: lines.map((l) => ({ assetId: l.asset.id, title: l.asset.title, price: l.price, knobs: l.values })),
@@ -109,6 +121,7 @@ async function doCapture(orderId) {
     existing.status = "AMOUNT_MISMATCH";
     existing.captureId = cap.id;
     await store.put("orders", orderId, existing);
+    await mandates.settle(existing.mandateId, orderId, "released");
     await paypal.refundCapture(cap.id, { note: "Amount did not match the Oasis price; refunded automatically.", requestId: `oasis-mismatch-${orderId}` }).catch(() => {});
     throw Object.assign(new Error(`Captured ${cap.amount?.value} ${cap.amount?.currency_code}, expected ${expected} USD; refunded`), { status: 409 });
   }
@@ -120,6 +133,7 @@ async function doCapture(orderId) {
   const payer = result.payer || {};
   existing.status = "COMPLETED";
   existing.captureId = cap.id;
+  await mandates.settle(existing.mandateId, orderId, "spent");
   existing.payer = { name: [payer.name?.given_name, payer.name?.surname].filter(Boolean).join(" "), email: payer.email_address };
   existing.licenses = [];
   const payouts = [];
@@ -189,6 +203,7 @@ export async function refund(orderId, { reason = "Refund requested" } = {}) {
 async function markRefunded(o, refundId) {
   o.status = "REFUNDED";
   o.refundId = refundId;
+  await mandates.settle(o.mandateId, o.id, "released"); // a refund gives the budget back
   if (o.payoutHold?.status === "HELD") o.payoutHold.status = "CANCELLED";
   for (const l of o.licenses || []) {
     const lic = await store.get("licenses", l.token);

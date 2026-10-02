@@ -11,6 +11,7 @@ import { forkAsset } from "./fork.js";
 import { runAgent } from "./agent.js";
 import { handleMcp } from "./mcp.js";
 import * as tools from "./tools.js";
+import * as mandates from "./mandates.js";
 import { llmsTxt } from "./llms.js";
 
 export async function createApp() {
@@ -86,6 +87,17 @@ export async function createApp() {
     res.json({ id: o.id, total: o.total, items: o.items, claimToken: o.claimToken });
   }));
   const claimOf = (req) => req.get("X-Oasis-Claim") || "";
+  // Humans issue spending mandates to their agents; the token is shown once, the balance lives here.
+  const mandateLimit = rateLimit({ windowMs: 60_000, limit: 10, standardHeaders: "draft-8", legacyHeaders: false });
+  app.post("/api/mandates", mandateLimit, wrap(async (req, res) => {
+    const { description, max_total_usd, expires_in_hours, skus } = req.body || {};
+    res.json(await mandates.issue({ description, maxTotalUsd: max_total_usd, expiresInHours: expires_in_hours, skus }));
+  }));
+  app.get("/api/mandates/:id", wrap(async (req, res) => {
+    const m = await mandates.get(req.params.id);
+    if (!m) throw Object.assign(new Error("Unknown mandate"), { status: 404 });
+    res.json(m);
+  }));
   // Anyone may trigger a capture (PayPal only captures approved orders), but only the owner sees the licences.
   app.post("/api/orders/:id/capture", wrap(async (req, res) => res.json(commerce.publicOrder(await commerce.capture(req.params.id), claimOf(req)))));
   app.get("/api/orders/:id", wrap(async (req, res) => {

@@ -52,6 +52,17 @@ free items is refused.
 
 The agent never holds a payment method. It can create an order; only a human can approve one.
 
+**The agent's budget is a mandate the human issued.** `server/mandates.js`, shaped after the `IntentMandate` in
+Google's Agent Payments Protocol ([`AP2/code/sdk/python/ap2/models/mandate.py`](https://github.com/google-agentic-commerce/AP2/blob/main/code/sdk/python/ap2/models/mandate.py)):
+a confirmed description, `intent_expiry`, optional `skus`, `user_cart_confirmation_required: true`. AP2's
+human-present mandate has no amount, because the human confirms every cart; Oasis adds a server-held budget, because
+`max_total_usd` alone is only the agent's word. The human issues one on `/#/agents` and gives the agent its
+`mdt_…` token (the server stores only its SHA-256). MCP `create_order` requires it; the server reserves each order
+against the balance under a per-mandate lock, so two concurrent orders can't both spend the last dollars. A capture
+keeps the amount spent, a refund or amount mismatch gives it back, and an order nobody approves stops holding budget
+after 3 hours, when PayPal's approval link expires anyway (tested: *the human's budget is enforced by the server, not
+by what the agent says*).
+
 **Who owns an order.** Order IDs travel through PayPal URLs, so they are not secrets. Each order gets a 128-bit
 `claimToken` at creation (`createCheckout()`), returned once to whoever created it, the way Stripe returns a
 PaymentIntent's `client_secret`. Licences, the money trail and refunds need it (`X-Oasis-Claim` over HTTP,

@@ -846,6 +846,16 @@ function pageAgents() {
   app.innerHTML = `<div class="wrap" style="max-width:900px">
     <div class="crumbs"><h1>For AI agents</h1></div>
     <p style="font-size:17px" class="muted">Oasis is built to be shopped by agents. One MCP endpoint, no key to browse. Payments always come back to a human in PayPal.</p>
+    <div class="panel" id="mandate"><h3>Give your agent a budget</h3>
+      <p style="margin:0 0 12px">Agents can't create orders on their own say-so. You issue a mandate here; the server holds the balance and refuses any order over what is left. You still approve every payment in PayPal.</p>
+      <form id="mandate-form" class="mandate-form">
+        <label><span class="fieldlabel">What it's for</span><input name="description" maxlength="300" value="Brand kit for my launch: icons, hero, pricing card" /></label>
+        <label><span class="fieldlabel">Budget</span><span class="cap-input">$<input name="max_total_usd" type="number" min="1" max="500" step="1" value="20" /></span></label>
+        <label><span class="fieldlabel">Expires</span><select name="expires_in_hours"><option value="1">in 1 hour</option><option value="24" selected>in 24 hours</option><option value="168">in 7 days</option></select></label>
+        <button class="btn primary">Issue mandate</button>
+      </form>
+      <div id="mandate-out"></div>
+    </div>
     <div class="panel" id="mcp-live"><h3>Live traffic</h3><p class="muted" style="margin:0">Counting…</p></div>
     <div class="panel"><h3>Claude Code</h3><pre class="code">claude mcp add --transport http oasis ${esc(o)}/mcp</pre></div>
     <div class="panel"><h3>Claude Desktop and claude.ai</h3><p style="margin:0 0 8px">Settings → Connectors → Add custom connector, then paste:</p><pre class="code">${esc(o)}/mcp</pre></div>
@@ -858,7 +868,8 @@ function pageAgents() {
       <tr><td class="mono">search_assets</td><td>Find assets by words, kind and price.</td></tr>
       <tr><td class="mono">get_asset</td><td>Typed knob schema and colourway presets.</td></tr>
       <tr><td class="mono">remix_asset</td><td>Render with knobs; returns the image so the agent can judge it.</td></tr>
-      <tr><td class="mono">create_order</td><td>PayPal order for remixes; returns an approve link for the human. Pass <span class="mono">max_total_usd</span> (your human's cap, enforced by the server) and <span class="mono">agent_name</span> (shown in PayPal's approval screen).</td></tr>
+      <tr><td class="mono">create_order</td><td>PayPal order for remixes; returns an approve link for the human. Needs the human's <span class="mono">mandate</span> token; pass <span class="mono">agent_name</span> too (shown in PayPal's approval screen).</td></tr>
+      <tr><td class="mono">get_mandate</td><td>The budget the human gave you, what is left, and the orders charged to it.</td></tr>
       <tr><td class="mono">get_order</td><td>After approval: captures and returns SVG, PNG, React and program downloads. Needs the <span class="mono">claim_token</span> that <span class="mono">create_order</span> returned, so an order ID alone unlocks nothing.</td></tr>
     </table></div>
     <div class="panel"><h3>Plain HTTP</h3><pre class="code">GET ${esc(o)}/llms.txt
@@ -866,12 +877,25 @@ GET ${esc(o)}/api/assets?q=pricing&amp;kind=ui
 GET ${esc(o)}/api/assets/pricing-card/render.svg?preset=Indigo</pre></div>
     <div class="panel"><h3>What the server enforces</h3><ul class="plain">
       <li>Prices come from the catalogue, never from the agent.</li>
-      <li><span class="mono">max_total_usd</span> is checked before PayPal is called; an order over it is refused (HTTP 402).</li>
+      <li><span class="mono">create_order</span> needs a mandate you issued. The server reserves each order against it, so two orders can't both spend the last dollars, and an agent restating its cap changes nothing.</li>
       <li>At most 10 orders a minute per client and 120 MCP calls a minute; over that, JSON-RPC error <span class="mono">-32029</span>.</li>
       <li>No agent can pay. Every order waits for a human to approve it in PayPal.</li>
       <li>Licensed files go only to the order's creator, proven by a one-time claim token.</li>
     </ul><p style="margin:10px 0 0"><a href="https://github.com/machmoon/oasis/blob/main/docs/mcp-session.md">Read a recorded session</a> of an outside agent shopping by URL alone.</p></div>
   </div>`;
+  $("#mandate-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const f = new FormData(e.target);
+    const out = $("#mandate-out");
+    try {
+      const { mandate, token } = await api("/api/mandates", { method: "POST", body: { description: f.get("description"), max_total_usd: Number(f.get("max_total_usd")), expires_in_hours: Number(f.get("expires_in_hours")) } });
+      out.innerHTML = `<div class="mandate-token"><p style="margin:0 0 8px"><b>Mandate ${esc(mandate.id)}</b> · ${money(mandate.budget_usd)} until ${esc(new Date(mandate.intent_expiry).toLocaleString())}. Give your agent this token. It is shown once.</p>
+        <pre class="code" id="mdt">${esc(token)}</pre>
+        <p class="muted" style="margin:8px 0 0;font-size:13px">Tell your agent: “Use mandate ${esc(token.slice(0, 12))}… for create_order.” Check what's left at any time with <span class="mono">get_mandate</span>.</p>
+        <button class="btn small" id="copy-mdt" type="button">Copy token</button></div>`;
+      $("#copy-mdt").addEventListener("click", async () => { try { await navigator.clipboard.writeText(token); toast("Mandate token copied"); } catch { toast(token); } });
+    } catch (err) { out.innerHTML = `<p class="notice">${esc(err.message)}</p>`; }
+  });
   api("/api/stats/mcp").then((s) => {
     const box = $("#mcp-live");
     if (!box) return;

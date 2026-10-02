@@ -9,13 +9,16 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 
 const URL_ = process.argv[2] || "https://oasis-design.onrender.com/mcp";
 const CAP = Number(process.env.CAP || 8);
-const BRIEF = process.env.BRIEF || `I'm launching Lumen, a reading app. Brand: ink #1B1F3B, paper #F7F3EA, amber #F2A541. Find me an app icon and a pricing card in that brand, then open a PayPal order for both. My spending cap is $${CAP}; pass it as max_total_usd.`;
+// The human's side: issue a mandate (the same call the "Give your agent a budget" form makes) and hand over the token.
+const ORIGIN = new URL(URL_).origin;
+const issued = await fetch(`${ORIGIN}/api/mandates`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ description: "App icon and pricing card for Lumen", max_total_usd: CAP, expires_in_hours: 1 }) }).then((r) => r.json());
+const BRIEF = process.env.BRIEF || `I'm launching Lumen, a reading app. Brand: ink #1B1F3B, paper #F7F3EA, amber #F2A541. Find me an app icon and a pricing card in that brand, then open a PayPal order for both. I've given you a $${CAP} budget: mandate token ${issued.token}.`;
 
 const mcp = new Client({ name: "oasis-external-agent", version: "1.0.0" });
 await mcp.connect(new StreamableHTTPClientTransport(new URL(URL_)));
 const { tools } = await mcp.listTools();
 const log = [`# An outside agent on Oasis over MCP`, ``, `Recorded ${new Date().toISOString()} by \`scripts/mcp-agent.mjs\` against \`${URL_}\`.`,
-  `The agent is Claude (claude-opus-5-5) with no Oasis code: only the tools the MCP server lists (${tools.map((t) => `\`${t.name}\``).join(", ")}).`, ``, `**Brief:** ${BRIEF}`, ``];
+  `The agent is Claude (claude-opus-5-5) with no Oasis code: only the tools the MCP server lists (${tools.map((t) => `\`${t.name}\``).join(", ")}).`, ``, `**The human issued** mandate \`${issued.mandate?.id}\` ($${CAP}, 1 hour) and pasted its token into the brief.`, ``, `**Brief:** ${BRIEF.replace(issued.token, "mdt_…")}`, ``];
 
 const claude = new Anthropic();
 const messages = [{ role: "user", content: BRIEF }];
@@ -31,7 +34,7 @@ for (let turn = 0; turn < 14; turn++) {
   for (const b of res.content) {
     if (b.type === "text" && b.text.trim()) log.push(`**Agent:** ${b.text.trim()}`, ``);
     if (b.type !== "tool_use") continue;
-    log.push(`**→ \`${b.name}\`** \`${JSON.stringify(b.input).slice(0, 400)}\``, ``);
+    log.push(`**→ \`${b.name}\`** \`${JSON.stringify(b.input).replace(issued.token, "mdt_…").slice(0, 400)}\``, ``);
     const r = await mcp.callTool({ name: b.name, arguments: b.input }).catch((e) => ({ isError: true, content: [{ type: "text", text: String(e.message) }] }));
     const text = (r.content || []).filter((c) => c.type === "text").map((c) => c.text).join("\n");
     const imgs = (r.content || []).filter((c) => c.type === "image").length;

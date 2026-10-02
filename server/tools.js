@@ -36,11 +36,12 @@ export async function remixAsset({ asset_id, preset, brand, knobs = {} }) {
   return { asset: a, svg, values, preview_url: previewUrl(a.id, values, a), price_usd: a.price };
 }
 
-export async function createOrder({ items, max_total_usd, agent_name }) {
+export async function createOrder({ items, max_total_usd, agent_name, mandate }) {
   const o = await commerce.createCheckout(items, {
     agent: true,
     agentName: agent_name ? String(agent_name).slice(0, 40) : "an MCP agent",
     maxTotal: max_total_usd ?? null,
+    mandate: mandate || null,
     returnUrl: `${config.baseUrl}/checkout/return`,
     cancelUrl: `${config.baseUrl}/#/cart`,
   });
@@ -70,4 +71,11 @@ export async function getOrder({ order_id, claim_token }) {
       program: `${config.baseUrl}/api/licenses/${l.token}/download.mjs`,
     })),
   };
+}
+
+export async function getMandate({ mandate }) {
+  const { byTokenView } = await import("./mandates.js");
+  const v = await byTokenView(mandate);
+  if (!v) throw new Error("Unknown mandate token");
+  return v;
 }
