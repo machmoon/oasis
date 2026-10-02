@@ -25,8 +25,9 @@ export const params = { knobs: { /* as below */ }, presets: { /* 2-3 named colou
 export function build(p) { return { parts: [ /* parts */ ] }; }
 ```
 
-Knob types: `color` (default "#RRGGBB", give it a `role`: background | surface | ink | muted | primary | secondary |
-highlight so Brand Mode can re-skin it), `range` (default, min, max, step), `choice` (default, options), `toggle`.
+Knob types: `color` (default "#RRGGBB"; give a `role` (surface | ink | muted | primary | secondary | highlight) ONLY to
+painted surfaces such as walls, awnings, trim and signs, so Brand Mode can re-skin them; materials such as water,
+foliage, glass, stone, metal, wood and lamps never get a role), `range` (default, min, max, step), `choice` (default, options), `toggle`.
 5-8 knobs that a level designer would actually reach for: colours, proportions (height, width, floors, count),
 style choices, and a `lights` toggle where windows or lamps exist.
 
