@@ -12,6 +12,7 @@ import { runAgent } from "./agent.js";
 import { handleMcp } from "./mcp.js";
 import * as tools from "./tools.js";
 import * as world from "./world.js";
+import { toGlb } from "./glb.js";
 import * as mandates from "./mandates.js";
 import { llmsTxt } from "./llms.js";
 
@@ -88,6 +89,33 @@ export async function createApp() {
     res.json({ ...plan, bill, total: bill.reduce((s, l) => s + l.price, 0) });
   }));
 
+  // Saved worlds: a link anyone can open; the whole-world GLB unlocks with a completed order for that world.
+  app.post("/api/worlds", worldLimit, wrap(async (req, res) => {
+    const plan = world.cleanPlan({ ...(req.body?.plan || {}), placements: (req.body?.plan?.placements || []).slice(0, 200) });
+    if (!plan.placements.length) throw Object.assign(new Error("Empty world"), { status: 400 });
+    const id = `w${crypto.randomBytes(5).toString("hex")}`;
+    const doc = { id, title: String(plan.title || plan.prompt || "Untitled world").slice(0, 80), prompt: String(plan.prompt || "").slice(0, 300), time: plan.time, size: plan.size, placements: plan.placements, createdAt: new Date().toISOString() };
+    await store.put("worlds", id, doc);
+    res.json({ id });
+  }));
+  app.get("/api/worlds/:id", wrap(async (req, res) => {
+    const w = await store.get("worlds", req.params.id);
+    if (!w) throw Object.assign(new Error("Unknown world"), { status: 404 });
+    const bill = world.billOf(w);
+    res.json({ ...w, bill, total: bill.reduce((s, l) => s + l.price, 0) });
+  }));
+  app.get("/api/worlds/:id/world.glb", wrap(async (req, res) => {
+    const w = await store.get("worlds", req.params.id);
+    if (!w) throw Object.assign(new Error("Unknown world"), { status: 404 });
+    const paid = w.placements.some((p) => p.price > 0);
+    if (paid) {
+      const o = await store.get("orders", String(req.query.order || ""));
+      if (!o || o.worldId !== w.id || o.status !== "COMPLETED" || !commerce.ownsOrder(o, String(req.query.claim || ""))) throw Object.assign(new Error("Buy this world to download it"), { status: 402 });
+    }
+    const items = await Promise.all(w.placements.map(async (p) => ({ parts: (await catalog.buildAsync(catalog.getAsset(p.asset), p.knobs)).parts, at: p.at, rot: p.rot })));
+    res.set("Content-Type", "model/gltf-binary").set("Content-Disposition", `attachment; filename="${w.id}.glb"`).send(await toGlb(items, { name: w.title }));
+  }));
+
   app.post("/api/world/parts", worldLimit, wrap(async (req, res) => {
     const items = (req.body?.items || []).slice(0, 80);
     const out = await Promise.all(items.map(async ({ asset, knobs }) => {
@@ -113,6 +141,12 @@ export async function createApp() {
   }));
 
   async function sendFormat(res, a, knobs, fmt) {
+    if (fmt === "glb") {
+      if (a.format !== "blocks") throw Object.assign(new Error("GLB is available for 3D block assets"), { status: 400 });
+      const { parts } = await catalog.buildAsync(a, knobs);
+      const glb = await toGlb([{ parts }], { name: a.id });
+      return res.set("Content-Type", "model/gltf-binary").set("Content-Disposition", `attachment; filename="${a.id}.glb"`).send(glb);
+    }
     const f = FORMATS[fmt];
     if (!f) throw Object.assign(new Error(`Unknown format ${fmt}`), { status: 400 });
     const { svg, values } = await catalog.renderAsync(a, knobs);
@@ -127,7 +161,8 @@ export async function createApp() {
   }));
 
   app.post("/api/orders", wrap(async (req, res) => {
-    const o = await commerce.createCheckout(req.body?.items || []);
+    const worldId = /^w[0-9a-f]{10}$/.test(req.body?.worldId || "") ? req.body.worldId : null;
+    const o = await commerce.createCheckout(req.body?.items || [], { worldId });
     res.json({ id: o.id, total: o.total, items: o.items, claimToken: o.claimToken });
   }));
   const claimOf = (req) => req.get("X-Oasis-Claim") || "";

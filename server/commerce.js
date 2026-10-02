@@ -26,7 +26,7 @@ export function priceCart(items = []) {
   return lines;
 }
 
-export async function createCheckout(items, { agent = false, agentName = null, maxTotal = null, mandate = null, returnUrl, cancelUrl } = {}) {
+export async function createCheckout(items, { agent = false, agentName = null, maxTotal = null, mandate = null, worldId = null, returnUrl, cancelUrl } = {}) {
   const lines = priceCart(items).filter((l) => l.price > 0);
   if (!lines.length) throw Object.assign(new Error("Nothing to pay for: every item in the cart is free."), { status: 400 });
   const total = lines.reduce((s, l) => s + l.price, 0);
@@ -63,6 +63,7 @@ export async function createCheckout(items, { agent = false, agentName = null, m
     agentName: agent ? agentName || "AI agent" : null,
     maxTotal: maxTotal ?? null,
     mandateId: hold?.mandate.id || null,
+    worldId,
     createdAt: new Date().toISOString(),
     total: lines.reduce((s, l) => s + l.price, 0),
     items: lines.map((l) => ({ assetId: l.asset.id, title: l.asset.title, price: l.price, knobs: l.values })),

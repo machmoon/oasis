@@ -22,7 +22,7 @@ const claims = {
   get: (id) => store.get("oasis.claims", {})[id],
   set: (id, t) => { if (t) store.set("oasis.claims", { ...store.get("oasis.claims", {}), [id]: t }); },
 };
-const newOrder = async (items) => { const o = await api("/api/orders", { method: "POST", body: { items } }); claims.set(o.id, o.claimToken); return o.id; };
+const newOrder = async (items, extra = {}) => { const o = await api("/api/orders", { method: "POST", body: { items, ...extra } }); claims.set(o.id, o.claimToken); return o.id; };
 function toast(msg) {
   const t = $("#toast");
   t.textContent = msg;
@@ -863,8 +863,10 @@ async function pageOrder(id) {
   let o;
   try { o = await api(`/api/orders/${encodeURIComponent(id)}`, { claim: claims.get(id) }); } catch (e) { app.innerHTML = notFound("We couldn't find that order."); return; }
   const done = o.status === "COMPLETED";
+  const worldGlb = done && o.owner && o.worldId ? `/api/worlds/${encodeURIComponent(o.worldId)}/world.glb?order=${encodeURIComponent(o.id)}&claim=${encodeURIComponent(claims.get(o.id) || "")}` : null;
   app.innerHTML = `<div class="wrap" style="max-width:860px">
     <div class="crumbs"><h1>${done ? "Licensed." : o.status === "CAPTURE_PENDING" ? "Payment clearing." : "Order " + esc(o.status.toLowerCase())}</h1></div>
+    ${worldGlb ? `<div class="panel" style="margin:0 0 18px"><h3>Your world</h3><p style="margin:0 0 12px">The whole world as one GLB: drop it into three.js, Unity, Godot or Blender.</p><a class="btn primary" href="${worldGlb}">Download world GLB</a> <a class="btn" href="#/w/${esc(o.worldId)}">Open the world</a></div>` : ""}
     ${done && !o.owner ? `<p class="ok">Paid ${money(o.total)} with PayPal. The files go to whoever created this order: open it in that browser, or the agent that created it collects them with its claim token.</p>` : ""}
     ${done && o.owner ? `<p class="ok">Paid ${money(o.total)} with PayPal${o.payer?.name ? ` by ${esc(o.payer.name)}` : ""} · capture ${esc(o.captureId)}</p>` : done ? "" : o.status === "CAPTURE_PENDING" ? `<p class="notice">PayPal has the payment and is still clearing it${o.pendingReason ? ` (${esc(o.pendingReason.toLowerCase().replace(/_/g, " "))})` : ""}. Your files unlock here the moment it completes.</p>` : o.status === "DENIED" ? `<p class="notice">PayPal declined this payment, so nothing was charged and no budget was used.</p>` : `<p class="notice">This order hasn't been paid yet.</p>`}
     ${(o.licenses || []).map((l) => `<div class="cart-line" style="grid-template-columns:84px 1fr auto"><img src="/api/licenses/${esc(l.token)}/download.svg" alt=""/><div><b>${esc(l.title)}</b><div class="muted mono" style="font-size:11px">licence ${esc(l.token.slice(0, 12))}…</div></div>
@@ -1035,6 +1037,11 @@ async function route() {
     setNav("");
     const { pageWorld } = await import("/worldpage.js");
     return pageWorld(app, { api, esc, money, mountPayPal, knobControl, newOrder, toast, claims, agentReady: CONFIG.agentReady });
+  }
+  if (parts[0] === "w" && parts[1]) {
+    setNav("");
+    const { pageWorld } = await import("/worldpage.js");
+    return pageWorld(app, { api, esc, money, mountPayPal, knobControl, newOrder, toast, claims, agentReady: CONFIG.agentReady, worldId: parts[1] });
   }
   if (parts[0] === "store") return pageHome();
   if (parts[0] === "browse") return pageBrowse(params);

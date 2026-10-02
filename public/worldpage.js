@@ -107,12 +107,20 @@ export async function pageWorld(app, h) {
       <div class="wtotal"><span>One licence for the whole world</span><b>${money(total)}</b></div>
       <p class="muted wsplit">${paid.length} paid remixes from ${creators.length} creator${creators.length === 1 ? "" : "s"}. One PayPal approval pays every one of them.</p>
       <div id="wpp"></div>
-      <button class="btn primary wbuy" id="wbuy">Buy this world · ${money(total)}</button>`;
+      <div class="wbuyrow"><button class="btn primary wbuy" id="wbuy">Buy this world · ${money(total)}</button><button class="btn" id="wshare">Share</button></div>
+      <p class="muted" style="font-size:12px;margin:10px 0 0">Buying gets you the whole world as one GLB for three.js, Unity, Godot or Blender, plus every piece's program.</p>`;
     $("#wedit").addEventListener("submit", (e) => { e.preventDefault(); const q = $("#wask").value.trim(); if (q) edit(q); });
-    $("#wbuy").addEventListener("click", () => {
+    $("#wshare").addEventListener("click", async () => {
+      const id = await save();
+      const url = `${location.origin}/#/w/${id}`;
+      history.replaceState(null, "", `#/w/${id}`);
+      try { await navigator.clipboard.writeText(url); toast("Link copied. Anyone can open this world."); } catch { toast(url); }
+    });
+    $("#wbuy").addEventListener("click", async () => {
       $("#wbuy").remove();
+      const worldId = await save();
       mountPayPal($("#wpp"), {
-        createOrder: () => newOrder(paid.map((l) => ({ assetId: l.asset, knobs: l.knobs }))),
+        createOrder: () => newOrder(paid.map((l) => ({ assetId: l.asset, knobs: l.knobs })), { worldId }),
         onDone: (o) => { location.hash = `#/order/${o.id}`; },
       });
     });
@@ -178,5 +186,22 @@ export async function pageWorld(app, h) {
   $("#wform").addEventListener("submit", (e) => { e.preventDefault(); build($("#wp").value.trim() || $("#wp").placeholder, { agent: $("#wagent").checked }); });
   app.querySelectorAll("[data-ex]").forEach((b) => b.addEventListener("click", () => { $("#wp").value = b.dataset.ex; build(b.dataset.ex, { agent: $("#wagent").checked }); }));
   app.querySelectorAll("[data-t]").forEach((b) => b.addEventListener("click", () => { v.setTime(b.dataset.t); app.querySelectorAll("[data-t]").forEach((x) => x.classList.toggle("on", x === b)); }));
-  build(EXAMPLES[0]);
+  // Saved worlds are immutable snapshots: saving again after an edit makes a new link.
+  let savedSig = null, savedId = null;
+  async function save() {
+    const sigNow = JSON.stringify(plan.placements.map((p) => [p.asset, p.at, p.rot, p.knobs])) + plan.time;
+    if (sigNow === savedSig) return savedId;
+    const { id } = await api("/api/worlds", { method: "POST", body: { plan } });
+    savedSig = sigNow; savedId = id;
+    return id;
+  }
+
+  if (h.worldId) {
+    try {
+      const w = await api(`/api/worlds/${encodeURIComponent(h.worldId)}`);
+      $("#wp").value = w.prompt || w.title;
+      await show(w, ++building, { fresh: true });
+      savedId = w.id;
+    } catch { toast("That world link doesn't exist"); build(EXAMPLES[0]); }
+  } else build(EXAMPLES[0]);
 }
