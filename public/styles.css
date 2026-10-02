@@ -343,3 +343,8 @@ footer .wrap { display: flex; gap: 18px; flex-wrap: wrap; justify-content: space
 @media (max-width: 640px) { .brandrow { grid-template-columns: repeat(3, minmax(0, 1fr)); } .fork-form .two { grid-template-columns: 1fr; } }
 .below { margin-top: 8px; } .below .brandrow { grid-template-columns: repeat(5, minmax(0, 1fr)); max-width: 980px; }
 .asset > :first-child { align-self: stretch; }
+
+.kitchip { border-color: var(--accent); color: var(--accent); }
+.kitchip.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.kitrow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; margin-top: 24px; }
+@media (max-width: 1024px) { .kitrow { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

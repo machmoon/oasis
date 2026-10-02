@@ -63,7 +63,7 @@ async function ask(messages) {
   for (let attempt = 0; ; attempt++) {
     try {
       msg = await client.messages
-        .stream({ model: MODEL, max_tokens: 64000, output_config: { effort: "high" }, system: SYSTEM(), messages })
+        .stream({ model: MODEL, max_tokens: 64000, output_config: { effort: process.env.FACTORY_EFFORT || "medium" }, system: SYSTEM(), messages })
         .finalMessage();
       break;
     } catch (e) {

@@ -68,6 +68,8 @@ export function summary(a, { withKnobs = false } = {}) {
     forkedFrom: a.forkedFrom, lineage: a.lineage, createdAt: a.createdAt,
     presets: Object.keys(a.params.presets || {}),
     knobCount: Object.keys(a.params.knobs || {}).length,
+    // Kits: assets built to one grid, light and scale so they compose (oasis-town is the kit's reference).
+    kit: a.kit || (a.id === "oasis-town" || a.id.startsWith("iso-") ? "Oasis Town" : null),
     roles: Object.fromEntries(Object.entries(a.params.knobs || {}).filter(([, k]) => k.type === "color" && k.role).map(([n, k]) => [n, k.role])),
     forks: allAssets().filter((x) => x.forkedFrom === a.id).length,
   };

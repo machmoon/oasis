@@ -191,7 +191,8 @@ function pageHome() {
     if (town.time !== "day") knobs.time = town.time;
     return renderUrl("oasis-town", knobs, town.brand);
   };
-  const fresh = CATALOG.filter((a) => !BENTO.includes(a.id)).slice(0, 8);
+  const fresh = CATALOG.filter((a) => !BENTO.includes(a.id) && !a.kit).slice(0, 8);
+  const townKit = CATALOG.filter((a) => a.kit === "Oasis Town");
   app.innerHTML = `
   <div class="wrap">
     <section class="hero">
@@ -238,6 +239,14 @@ function pageHome() {
       <div class="grid" style="grid-template-columns:repeat(3,1fr)">${["pricing-card", "gilded-deco-tier-0f823929", "lantern-fortune-tier-5b119cb5"].map((id) => { const a = CATALOG.find((x) => x.id === id); return a ? card(a) : ""; }).join("")}</div>
     </section>
 
+    ${townKit.length >= 4 ? `<section class="block reveal">
+      <div style="display:flex;align-items:end;justify-content:space-between;gap:16px;flex-wrap:wrap">
+        <div><h2 class="title" style="margin:0 0 8px">The Oasis Town kit.</h2><p class="sub" style="margin:0">${townKit.length} dioramas on one grid, one light and one scale, so they sit side by side. Every one takes your brand.</p></div>
+        <a class="btn" href="#/browse?kit=Oasis%20Town">Open the kit</a>
+      </div>
+      <div class="kitrow">${townKit.slice(0, 8).map(card).join("")}</div>
+    </section>` : ""}
+
     <section class="block reveal">
       <div style="display:flex;align-items:end;justify-content:space-between;gap:16px;flex-wrap:wrap">
         <h2 class="title" style="margin:0">Fresh from the factory.</h2>
@@ -278,7 +287,8 @@ you approve in PayPal  get_order  files</pre>
 
 function pageBrowse(params) {
   setNav("browse");
-  const state = { q: params.get("q") || "", kind: params.get("kind") || "", free: params.get("free") === "1" };
+  const state = { q: params.get("q") || "", kind: params.get("kind") || "", free: params.get("free") === "1", kit: params.get("kit") || "" };
+  const kits = [...new Set(CATALOG.map((a) => a.kit).filter(Boolean))];
   app.innerHTML = `<div class="wrap">
     <div class="crumbs"><h1>Browse</h1><span class="muted">${CATALOG.length} programmable assets</span></div>
     <div class="filters">
@@ -286,12 +296,13 @@ function pageBrowse(params) {
       <button class="chip ${state.kind ? "" : "on"}" data-kind="">All</button>
       ${KINDS.filter((k) => CATALOG.some((a) => a.kind === k)).map((k) => `<button class="chip ${state.kind === k ? "on" : ""}" data-kind="${k}">${k}</button>`).join("")}
       <button class="chip ${state.free ? "on" : ""}" id="free">Free only</button>
+      ${kits.map((k) => `<button class="chip kitchip ${state.kit === k ? "on" : ""}" data-kit="${esc(k)}">${esc(k)} kit</button>`).join("")}
     </div>
     <div class="grid" id="grid"></div>
   </div>`;
   const draw = () => {
     const terms = state.q.toLowerCase().split(/\s+/).filter(Boolean);
-    const list = CATALOG.filter((a) => (!state.kind || a.kind === state.kind) && (!state.free || a.price === 0) && terms.every((t) => (a.title + " " + a.tags.join(" ") + " " + a.description + " " + a.kind).toLowerCase().includes(t)));
+    const list = CATALOG.filter((a) => (!state.kind || a.kind === state.kind) && (!state.free || a.price === 0) && (!state.kit || a.kit === state.kit) && terms.every((t) => (a.title + " " + a.tags.join(" ") + " " + a.description + " " + a.kind).toLowerCase().includes(t)));
     $("#grid").innerHTML = list.length ? list.map(card).join("") : `<div class="empty" style="grid-column:1/-1">Nothing matches. <a href="#/agent">Ask the agent</a> to fork something new.</div>`;
   };
   $("#q").addEventListener("input", (e) => { state.q = e.target.value; draw(); });
@@ -301,6 +312,7 @@ function pageBrowse(params) {
     draw();
   }));
   $("#free").addEventListener("click", (e) => { state.free = !state.free; e.target.classList.toggle("on", state.free); draw(); });
+  app.querySelectorAll("[data-kit]").forEach((b) => b.addEventListener("click", () => { state.kit = state.kit === b.dataset.kit ? "" : b.dataset.kit; b.classList.toggle("on", !!state.kit); draw(); }));
   draw();
 }
 
