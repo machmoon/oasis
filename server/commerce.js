@@ -2,7 +2,11 @@
 // fork lineage as royalties, paid with PayPal Payouts.
 import crypto from "node:crypto";
 import * as catalog from "./catalog.js";
-import * as paypal from "./paypal.js";
+import * as paypalApi from "./paypal.js";
+
+// The PayPal client is injectable so the order lifecycle can be tested without network calls.
+let paypal = paypalApi;
+export function setPaypalClient(client) { paypal = client || paypalApi; }
 import * as store from "./store.js";
 import { config } from "./config.js";
 import { diffFromDefaults } from "./knobs.js";

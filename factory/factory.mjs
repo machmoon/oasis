@@ -16,8 +16,8 @@ const client = new Anthropic();
 const MODEL = "claude-opus-5-5";
 const ROOT = path.resolve(import.meta.dirname, "..");
 const CONTRACT = fs.readFileSync(path.join(ROOT, "factory/CONTRACT.md"), "utf8");
-const EXAMPLES = ["organic-blob.mjs", "line-icons.mjs"]
-  .map((f) => `--- assets/${f} ---\n${fs.readFileSync(path.join(ROOT, "assets", f), "utf8").slice(0, 6000)}`)
+const EXAMPLES = (process.env.FACTORY_EXAMPLES || "organic-blob.mjs,line-icons.mjs").split(",")
+  .map((f) => `--- assets/${f} ---\n${fs.readFileSync(path.join(ROOT, "assets", f), "utf8").slice(0, 16000)}`)
   .join("\n\n");
 
 const LESSONS_FILE = path.join(ROOT, "factory/lessons.md");
