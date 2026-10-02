@@ -212,7 +212,7 @@ export async function createApp() {
   };
   const isCreate = (req) => req.body?.method === "tools/call" && req.body?.params?.name === "create_order";
   // Public evidence page: what the deploy can do and the PayPal objects it has actually produced.
-  const numbers = fs.existsSync("judging/numbers.json") ? JSON.parse(fs.readFileSync("judging/numbers.json", "utf8")) : {};
+  const numbers = fs.existsSync("docs/numbers.json") ? JSON.parse(fs.readFileSync("docs/numbers.json", "utf8")) : {};
   app.get("/api/status", wrap(async (req, res) => {
     const recent = (rows, n = 12) => rows.sort((a, b) => String(b.createdAt || b.at).localeCompare(String(a.createdAt || a.at))).slice(0, n);
     const orders = await store.list("orders");

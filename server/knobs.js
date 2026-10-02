@@ -1,5 +1,5 @@
-// Knob schema follows Polyfork's (lucas-martinic/polyfork-unity-connector, Runtime/PolyforkKnob.cs):
-// type is color | range | choice | toggle, with label, default, min/max/step and options, plus
+// Knob schema: each knob has a
+// type of color | range | choice | toggle, with label, default, min/max/step and options, plus
 // named colourway presets that map colour knobs to hex. Oasis adds `text`, because design assets
 // carry words (labels, names, headlines) where 3D models do not.
 

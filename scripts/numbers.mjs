@@ -43,5 +43,5 @@ const n = {
   payoutBatches: orders.filter((o) => o.payoutBatch?.id).length,
   refunds: orders.filter((o) => o.status === "REFUNDED").length,
 };
-fs.writeFileSync("judging/numbers.json", JSON.stringify(n, null, 2));
+fs.writeFileSync("docs/numbers.json", JSON.stringify(n, null, 2));
 console.log(JSON.stringify(n, null, 2));

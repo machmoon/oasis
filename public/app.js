@@ -372,7 +372,7 @@ function knobControl(name, k, v) {
 }
 
 function orderKnobs(knobs) {
-  // Display order after Polyfork's PolyforkParams.Remixable: colours first, then choices, then the rest.
+  // Display order: colours first, then choices, then the rest.
   const rank = { color: 0, text: 1, choice: 2, range: 3, toggle: 4 };
   return Object.entries(knobs).sort((a, b) => (rank[a[1].type] ?? 5) - (rank[b[1].type] ?? 5));
 }

@@ -21,9 +21,8 @@ Oasis sells assets as **programs**. A pricing card has knobs for plan name, pric
 rows. An icon set has stroke, style, container and line caps. A mesh gradient has a seed and four colours. You
 turn the knobs until it's *yours*, and you license *that*.
 
-The idea comes from [Polyfork](https://polyfork.dev), Lucas Martinic's store of 3D models sold as programs (winner
-of the Build with Gemini XPRIZE). Oasis carries it into product design, UI design and graphic design, and adds two
-things Polyfork doesn't do: an **agent that shops for you** and **royalty-paying forks**.
+Oasis sells product, UI and graphic design assets as programs rather than files, and adds two things a file store
+can't do: an **agent that shops for you** and **royalty-paying forks**.
 
 ## What you can do
 
@@ -60,7 +59,7 @@ things Polyfork doesn't do: an **agent that shops for you** and **royalty-paying
   load and render inside the sandbox before it's published.
 - **The asset factory** (`factory/factory.mjs`): how most of the catalogue was made: Claude writes a program from a
   one-line brief, the sandbox renders it at defaults, presets and every range maxed, then Claude *looks at those
-  renders* as a design director and revises. (Polyfork's equivalent publishes 175+ models a week.)
+  renders* as a design director and revises.
 
 ## Safety
 
@@ -106,10 +105,8 @@ export const params = {
 export default function render(p) { return `<svg …>…</svg>`; }
 ```
 
-The knob schema follows Polyfork's (`type: color | range | choice | toggle`, `label`, `default`, `min/max/step`,
-`options`, named colourway presets), as read in
-[`polyfork-unity-connector/Runtime/PolyforkKnob.cs`](https://github.com/lucas-martinic/polyfork-unity-connector/blob/main/Runtime/PolyforkKnob.cs).
-Oasis adds a `text` type, because design assets carry words (headlines, labels, names) where 3D models don't.
+The knob schema is `type: color | range | choice | toggle | text`, with `label`, `default`, `min/max/step`, `options`
+and named colourway presets. `text` exists because design assets carry words: headlines, labels, names.
 
 ## Run it
 
@@ -127,7 +124,6 @@ npm start              # http://localhost:8787
 
 ## Credits
 
-- Concept: [Polyfork](https://polyfork.dev) by Lucas Martinic (assets as programs, typed knobs, agent-native store).
 - Icon glyphs: [Lucide](https://github.com/lucide-icons/lucide) (ISC).
 - Beam avatars: layout from [boring-avatars](https://github.com/boringdesigners/boring-avatars) `avatar-beam.tsx` (MIT).
 - Blob geometry: [g-harel/blobs](https://github.com/g-harel/blobs) `internal/gen.ts` (MIT).

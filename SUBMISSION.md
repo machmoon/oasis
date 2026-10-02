@@ -14,7 +14,7 @@ need five. A person opens Figma and fixes it. An agent can't. And even when the 
 buy it, because stock sites are built for a human with a card in a checkout form, and an agent holding your card is
 exactly what nobody should build.
 
-Polyfork showed the way out for 3D: sell models as programs, not meshes. Design needs that, plus two pieces 3D didn't:
+The way out is to sell assets as programs, not files. Design needs that, plus two pieces a plain asset store doesn't have:
 **brand** (every asset a team uses has to be in their colours) and **a payment an agent can start but only a human can
 finish**. That second piece is what PayPal's order approval already is.
 
