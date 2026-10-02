@@ -763,7 +763,10 @@ function pageAgent() {
     if (!text) return;
     $("#input").value = "";
     $("#suggest")?.remove();
-    if (replayKit) { replayRun++; replayKit = null; log.innerHTML = ""; drawKit(); }
+    if (replayKit) {
+      replayRun++; replayKit = null; log.innerHTML = ""; drawKit();
+      $("#checkout").innerHTML = `<p class="muted" style="margin:0;font-size:13.5px">When the kit is ready the agent opens a PayPal order here. You approve the payment. The agent can't.</p>`;
+    }
     const userHtml = esc(text);
     add(userHtml, "msg user");
     remember(userHtml, "msg user");
