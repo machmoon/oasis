@@ -22,6 +22,7 @@ const log = [`# An outside agent on Oasis over MCP`, ``, `Recorded ${new Date().
 
 const claude = new Anthropic();
 const messages = [{ role: "user", content: BRIEF }];
+let confirmed = false;
 for (let turn = 0; turn < 14; turn++) {
   const res = await claude.messages.create({
     model: "claude-opus-5-5", max_tokens: 4000,
@@ -41,9 +42,21 @@ for (let turn = 0; turn < 14; turn++) {
     log.push(`${r.isError ? "**✖ error:**" : "**←**"} ${"`"}${text.replace(/\s+/g, " ").slice(0, 500)}${"`"}${imgs ? ` (+${imgs} render)` : ""}`, ``);
     results.push({ type: "tool_result", tool_use_id: b.id, is_error: !!r.isError, content: (r.content || []).map((c) => c.type === "image" ? { type: "image", source: { type: "base64", media_type: c.mimeType, data: c.data } } : { type: "text", text: c.text }) });
   }
-  if (!results.length) break;
+  if (!results.length) {
+    // The mandate asks for cart confirmation, so a good agent stops to ask. The human says go, once.
+    if (confirmed || !/go/i.test(log.at(-2) || "")) break;
+    confirmed = true;
+    log.push(`**Human:** go`, ``);
+    messages.push({ role: "user", content: "go" });
+    continue;
+  }
   messages.push({ role: "user", content: results });
 }
+
+// A scripted probe, not the agent: try to spend past the mandate while claiming a huge cap.
+const probe = await mcp.callTool({ name: "create_order", arguments: { items: [{ asset_id: "app-icon" }, { asset_id: "pricing-card" }], mandate: issued.token, max_total_usd: 9999, agent_name: "a misbehaving agent" } }).catch((e) => ({ isError: true, content: [{ type: "text", text: String(e.message) }] }));
+log.push(`---`, ``, `**Scripted probe (not the agent):** \`create_order\` for $10 of items against the same $${CAP} mandate, claiming \`max_total_usd: 9999\`.`, ``,
+  `${probe.isError ? "**✖ refused:**" : "**← accepted (unexpected):**"} \`${(probe.content || []).map((c) => c.text).join(" ").replace(/\s+/g, " ").slice(0, 400)}\``, ``);
 await mcp.close();
 fs.writeFileSync("docs/mcp-session.md", log.join("\n") + "\n");
 console.log(log.join("\n"));
