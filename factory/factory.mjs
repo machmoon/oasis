@@ -155,9 +155,11 @@ function gradeRenders(src) {
     const alt = v.options.filter((o) => o !== v.default).slice(-1)[0];
     if (alt) shots.push([`Choice knob "${k}" set to "${alt}"`, { [k]: alt }]);
   }
+  // 3D pieces: lights (e: true) only glow at night, so show the grader a night render too.
+  if (/export\s+function\s+build\s*\(/.test(src)) shots.push(["Night (lit parts glow)", { __night: true }]);
   shots.push(["Light brand probe", brandKnobs(params, BRAND_PROBES.light)]);
   shots.push(["Dark brand probe", brandKnobs(params, BRAND_PROBES.dark)]);
-  const pngs = shots.map(([, input]) => new Resvg(renderSource(src, resolveKnobs(params, input)), { fitTo: { mode: "width", value: 512 }, font: { loadSystemFonts: true } }).render().asPng());
+  const pngs = shots.map(([, input]) => new Resvg(renderSource(src, resolveKnobs(params, input), { night: !!input.__night }), { fitTo: { mode: "width", value: 512 }, font: { loadSystemFonts: true } }).render().asPng());
   return { pngs, labels: shots.map(([l]) => l) };
 }
 

@@ -86,7 +86,7 @@ export function buildSource(source, values) {
 }
 
 /** Returns an asset's SVG: its own render(p), or for block assets, an isometric projection of build(p). */
-export function renderSource(source, values) {
+export function renderSource(source, values, opts = {}) {
   return withModule(source, (vm, ns) => {
     let r = callExport(vm, ns, "default", values);
     if (r.missing) {
@@ -96,7 +96,7 @@ export function renderSource(source, values) {
       try { parts = validateParts(b.value); } catch (e) { throw new AssetError(e.message); }
       const meta = getJson(vm, ns, "meta") || {};
       const [w, h] = meta.size || [1200, 1200];
-      return projectSvg(parts, { width: w, height: h, background: values.backdrop || meta.background || "#E9ECF1", night: values.time === "night" });
+      return projectSvg(parts, { width: w, height: h, background: values.backdrop || meta.background || "#E9ECF1", night: opts.night || values.time === "night" });
     }
     const svg = r.value;
     if (typeof svg !== "string" || !svg.trimStart().startsWith("<svg")) throw new AssetError("render must return an <svg> string");
