@@ -668,7 +668,8 @@ function pageAgent() {
   $("#newchat").addEventListener("click", () => { store.set("oasis.agent", { chatId: null, log: [] }); cart.clear(); pageAgent(); });
   $("#suggest")?.querySelectorAll("button[data-s]").forEach((b) => b.addEventListener("click", () => { $("#input").value = SUGGESTIONS[+b.dataset.s]; $("#input").focus(); }));
   $("#watch-replay")?.addEventListener("click", () => replay());
-  if (!CONFIG.agentReady && !session.log.length) setTimeout(() => replay(), 400);
+  // An empty chat opens on a real example run; typing a brief replaces it with a live run (when the agent is on).
+  if (!session.log.length) setTimeout(() => replay(), 400);
   $("#input").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("#composer").requestSubmit(); } });
 
   const TOOL_LABEL = { search_assets: (i) => `Searching “${i.query}”`, get_asset: (i) => `Reading ${i.asset_id}`, remix_asset: (i) => `Remixing ${i.asset_id}`, add_to_cart: (i) => `Adding ${i.asset_id} to the kit`, create_order: () => "Opening a PayPal order", fork_asset: (i) => `Forking ${i.asset_id} into something new` };
@@ -746,7 +747,7 @@ function pageAgent() {
       <p class="capnote ok">${money(total)} of your ${money(cap)} cap. The server refuses anything over it.</p>
       <p class="muted" style="font-size:12px;margin:8px 0 0">In a live run the PayPal button appears here and only you can approve it. This server has no PayPal sandbox keys yet, so the recording stops at the order.</p>
     </div>`;
-    add(`<i></i>Replay of a real run recorded ${esc(new Date(rec.recorded).toLocaleString())}. Nothing here is staged.`, "toolrow");
+    add(`<i></i>${CONFIG.agentReady ? "Example: a real run recorded" : "Replay of a real run recorded"} ${esc(new Date(rec.recorded).toLocaleString())}. Nothing here is staged.${CONFIG.agentReady ? " Type your own brief below to run the agent live." : ""}`, "toolrow");
     add(esc(rec.brief), "msg user");
     for (const [ev, data] of rec.events) {
       if (!document.body.contains(log) || run !== replayRun) return;
