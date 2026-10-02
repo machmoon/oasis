@@ -173,12 +173,15 @@ async function mountKnobDemo() {
     return "";
   }).join("") + `<div class="readout" id="readout">Building…</div>`;
   let n = 0;
+  // Frame once on the tallest version, then hold the camera still so the building visibly grows.
+  const tallest = await api(`/api/assets/${id}/parts.json?p=${encodeURIComponent(JSON.stringify({ floors: a.knobs.floors?.max }))}`);
+  v.setParts(tallest.parts, { reframe: true });
   const rebuild = async () => {
     const run = ++n;
     const diff = Object.fromEntries(show.map((k) => [k, values[k]]));
     const { parts } = await api(`/api/assets/${id}/parts.json?p=${encodeURIComponent(JSON.stringify(diff))}`);
     if (run !== n) return;
-    v.setParts(parts);
+    v.setParts(parts, { lock: true });
     const s = v.stats();
     $("#readout").innerHTML = `Rebuilt: <b>${parts.length}</b> parts, <b>${s.tris.toLocaleString()}</b> triangles`;
     if ($("#code-floors")) $("#code-floors").textContent = values.floors;

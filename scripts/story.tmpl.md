@@ -1,120 +1,93 @@
 ## Inspiration
 
-Agents can build an app in a minute. Ask one for a *place*, a little town for a game level, a product launch scene, a
-playable diorama for a website, and it stalls. It can generate a picture, which is flat, unlicensed and different every
-time. Or a person spends a week stitching together models from a dozen stores, each in a different style, scale and
-licence, and pays each store separately.
+Agents can write a 3D scene in a minute now. Ask Claude Code for a cozy Kyoto street in three.js and you get one. But
+every shop, tram and lantern in that street is somebody's work, and the agent has no way to pay them. It can't check
+out on a store, it shouldn't hold your card, and asking you to click through twelve checkouts defeats the point of
+having an agent.
 
-We wanted the opposite: describe a place and watch it build itself out of real, consistent, licensable 3D pieces. Then
-change it by talking to it, reshape any piece by hand, and buy the whole thing in one go, with every creator whose
-piece you used getting paid. The payment is the part an agent must never do alone, so that's what PayPal's order
-approval is for: the agent can build and ask, only the human can pay.
+The 3D side of this is getting solved: there are now libraries where a model is a small program with knobs instead of
+a frozen mesh, so an agent can read it, change one parameter and rebuild it. What nobody has solved is the money. When
+an agent assembles a scene from forty pieces by a dozen creators, who pays whom, inside what limit, approved by which
+human?
+
+That is a payments problem, and it is exactly the shape of the tools PayPal already ships: a wallet a human can save
+for a merchant once (Vault), orders that charge it with no buyer present, and Payouts to many people at once.
 
 ## What it does
 
-**Describe a place. Watch it build.** Type "a Kyoto market street at dusk" and Oasis lays out a street from a kit of
-parametric low-poly 3D pieces ({{kitPieces}} today: shops, cottages, apartment flats, market stalls, a torii gate, a
-tram, cars, fountains, benches, trees, lamps, road and plaza tiles), then Claude art-directs it: names the place,
-picks a palette, swaps pieces so it tells the story. Pieces drop in one by one, in real 3D you can orbit. The tram runs
-its rails; at night the windows glow.
+**Oasis is a registry of 3D assets written as code, where AI agents are the buyers.**
 
-**Talk to it.** "Make it night and turn the tram mint green." Claude edits the world through a small set of operations
-(set, add, remove, time) and only the pieces that changed rebuild.
+1. **You give your agent a budget.** Pick an amount, approve once in PayPal. Under the hood that is a PayPal Vault
+   setup token you approve, exchanged for a payment token Oasis keeps. That is the last checkout you see.
+2. **Your agent builds the scene.** Claude Code (or any MCP client) searches the registry, reads each piece's knobs,
+   previews them, and buys everything the scene needs in one `buy_assets` call. Oasis charges your saved wallet in a
+   single PayPal order, with no redirect, and refuses anything over the budget before PayPal is ever called.
+3. **Every piece is a licensed import.** The agent gets a module URL per piece and writes
+   `import { createAsset } from "…/cdn/town-shop.mjs?lic=…"; scene.add(createAsset({ floors: 3 }))`.
+   Knobs rebuild the model: more floors means more windows, not a taller mesh.
+4. **Every creator gets paid.** Each creator's share is booked on the ledger the moment PayPal completes, and paid
+   out with PayPal Payouts after the 14-day refund window.
 
-**Reshape anything.** Click any piece and its knobs appear: floors, width, roof style, awning colour, lit windows. Every
-piece is a program, so a three-storey shop *becomes* a five-storey shop; nothing is stretched.
+In the demo video, the agent is the real Claude Code CLI, unedited. It had a $25 budget for a street that wanted more,
+chose what to cut, and bought {{runPieces}} pieces from {{runCreators}} creators for {{runTotal}} in PayPal sandbox
+order **{{runOrder}}**. The ledger you see updating is filmed at the same moment.
 
-**Buy the whole world in one PayPal approval.** The world's bill of materials is one order: one licence per piece type,
-covering every remix of it in that world, paying every creator. Buying unlocks the world as a single **GLB** for
-three.js, Unity, Godot or Blender, plus each piece's program. Worlds have share links.
-
-**Any agent can build and buy.** Over MCP (`/mcp`), `build_world` and `edit_world` return a link and a bill;
-`create_order` with `world_id` opens the PayPal order inside a **mandate**, a budget the human issued that the server
-holds and enforces (shaped after the IntentMandate in Google's AP2). The agent can ask; it can't pay.
-
-The same store also sells {{assets}} 2D design assets (icons, UI, posters) built the same way, with Brand Mode re-skinning
-every one in your palette.
+**Without a licence, nothing breaks.** A browser import with no licence still loads, as a grey block with the real
+footprint, so a scene never crashes. Anything that isn't a browser (an agent, `curl`, a build step) gets
+**HTTP 402 Payment Required** in the shape of Coinbase's x402 v2 transport: a `PAYMENT-REQUIRED` header with the price
+in cents and the creator to pay, and a retry with `PAYMENT-SIGNATURE` that settles through the PayPal budget and
+returns the module with `PAYMENT-RESPONSE`.
 
 ## How we built it
 
-**A 3D engine where every model is a program.** A kit piece is an ES module whose `build(p)` returns plain parts (boxes,
-gabled roofs, prisms, cones) in metres on one 6 m grid. The server runs it in a sandbox and returns the parts; the
-browser merges them per colour into flat-shaded three.js meshes with soft shadows and day/dusk/night lighting; the
-server writes the same parts to GLB with glTF-Transform and projects them to isometric SVG for thumbnails. One source,
-three outputs, so the file you buy is exactly the model you saw.
-
-**The world planner.** A deterministic street generator lays out road, buildings, greenery and props from the
-prompt's theme, so a world appears instantly; Claude then art-directs it by calling an `edit_world` tool with typed
-operations that the server validates against every piece's knob schema.
-
-**PayPal, end to end** (walkthrough with code references: [PAYPAL.md](https://github.com/machmoon/oasis/blob/main/PAYPAL.md)):
-- **Orders v2** via `@paypal/paypal-server-sdk`: itemised `DIGITAL_GOODS`, `PAY_NOW`, `NO_SHIPPING`, return URLs so an
-  MCP agent can hand a human the `payer-action` link, and the agent's name and cap in the order description.
-- **Smart Buttons** in the asset page, the cart and inside the agent chat.
-- **Capture is server-side and verified:** licences are issued only if the captured amount and currency equal what
-  the server priced; a mismatch is refunded automatically. One capture per order, because the browser, the return URL
-  and a webhook can race.
-- **`PayPal-Request-Id` idempotency** on create, capture and refund.
-- **Webhooks**, verified with `verify-webhook-signature`: `CHECKOUT.ORDER.APPROVED` captures orders whose tab closed,
-  `PAYMENT.CAPTURE.REFUNDED` revokes licences, `PAYMENT.PAYOUTS-ITEM.*` tracks each royalty.
-- **Payouts** for royalties, held until the refund window closes and cancelled by a refund; **refunds** within 14 days
-  through the Payments API. In production the creator split moves to **PayPal Commerce Platform** (per-unit `payee` +
-  `platform_fees`) so refunds unwind it automatically.
-{{sandboxLine}}
-
-**The asset factory.** {{factoryAuthored}} of the {{assets}} assets were written by an agent pipeline ({{handAuthored}} are
-hand-written programs, {{forks}} are AI forks). The first {{factoryV1}} came from factory v1 (builder self-review only, all since
-re-checked by the harness). Every build since tonight's v2 goes through the full gate below: {{factoryBuilds}} builds,
-{{factoryPublished}} published, {{factoryRejected}} rejected (the factory is stopped for judging, so these match `factory/stats.jsonl` line for line). Nothing ships on the builder's word:
-1. Claude writes a program from a one-line brief and critiques its own renders.
-2. **A harness measures it.** Every asset is rendered across its knob space: defaults, presets, every range at min and
-   max, random combinations, and a light and a dark brand. Blank output, slow renders, oversize SVG, missing brand
-   roles and **dead knobs** (a knob whose every value yields byte-identical SVG) are rejected.
-3. **An independent grader in a fresh session**, which never saw the builder's reasoning, looks at those renders and
-   publishes or rejects. It has caught real bugs a self-review missed: a checkout screen whose order total didn't add
-   up, a login screen whose focus ring turned the error colour on one brand.
-4. Each verdict writes one general lesson into every later build's prompt ({{lessons}} so far).
-
-Every verdict, with the grader's main finding, and every test name are in
-[docs/PROOF.md](https://github.com/machmoon/oasis/blob/main/docs/PROOF.md), generated from the factory log and the test run.
-
-**Safety.** Asset programs, including AI-written forks, run in QuickJS compiled to WebAssembly: no `require`, no file
-system, no network, a 48 MB heap. An allocation storm can outrun QuickJS's own interrupt (it took 8.3 s to die in
-testing), so every server render runs in a worker thread that is **terminated at 3 s**. Output must be SVG and is only
-shown through `<img>`. Paid source never leaves the server; catalogue previews are low-res raster comps.
-
-**Tested.** {{tests}} tests pass: price tampering, the capture race, amount-mismatch refunds, refund revocation,
-webhook replays, pending and denied captures, declined cards, spending mandates (two orders racing for the last dollars), order ownership, royalty cents along a fork chain, sandbox escapes and the deadline kill.
-
-**Stack.** Node + Express, a no-build vanilla JS store, Claude Opus 5.5 (agent, forks, factory, grader), MCP Streamable
-HTTP, resvg, Playwright, Render.
+- **PayPal Vault (v3 setup and payment tokens)** for the one-time approval, and **Orders v2** with
+  `payment_source.paypal.vault_id` and `stored_credential.payment_initiator: MERCHANT` for agent purchases, which
+  PayPal completes in the same call. **Payouts** pays creators. Webhooks are signature-verified, refunds revoke
+  licences (the module URL returns 410), and payouts are held until the refund window closes.
+- **The budget** is a server-held mandate shaped after Google's Agent Payments Protocol (AP2) open payment mandate:
+  a `payment.budget` constraint checked like AP2's `BudgetEvaluator` (past spend plus this payment against the cap),
+  an expiry, and a revocable bearer token. The agent can restate any limit it likes; only the server's number counts.
+- **The 402** follows coinbase/x402's v2 HTTP transport, with one fiat scheme (`exact`, network `paypal:sandbox`,
+  asset `USD`), which x402's spec allows for ISO 4217 currencies.
+- **MCP** (Streamable HTTP): `search_assets`, `get_asset`, `preview_asset`, `buy_assets`, `get_budget`, plus
+  `/llms.txt` for agents that read before they call.
+- **Assets are programs.** Each piece exports `build(knobs)` returning boxes, gables, cylinders and cones in metres.
+  It runs in a QuickJS sandbox on the server for previews and as plain JavaScript in the buyer's scene through a
+  shared three.js runtime, so the import is exactly the model you previewed. {{kitPieces}} pieces today, on one 6 m
+  grid and palette, many built by an agent factory with a separate grader (see the repo's `factory/`).
+- **Claude** (Opus 5.5) is both sides: the buyer in the demo (Claude Code over MCP) and the builder in the factory.
+- Node, Express, three.js, PayPal Server SDK and REST, the MCP TypeScript SDK, Render. {{tests}} tests.
 
 ## Challenges we ran into
 
-- **The builder approves its own dead knobs.** On the first 40 assets, a pixel-diff harness flagged 22 with at least one
-  knob that barely changed anything; the stricter byte-identical rule found 3 that changed nothing at their defaults. "Every knob
-  must change the bytes" became a hard gate.
-- **A memory bomb beat the sandbox's own clock.** The fix was a deadline enforced from outside, by killing the worker.
-- **Brand Mode on dark brands** made light components unreadable until themed components learned to follow the
-  brand's background luminance.
-- **Royalties in cents.** 30% of $7.99 split across a parent and grandparents must sum to exactly 799 cents. Tested.
+- **Charging without a buyer present.** The first design still sent the human to PayPal for every order, which made
+  the agent pointless. Vault with merchant-initiated stored credentials fixed it; the hard part was making the server,
+  not the agent, the only place the cap lives, including holds for in-flight orders and giving budget back on a
+  decline.
+- **A licence that a browser can use.** Browsers can't answer a 402 on a module import; the import just fails and the
+  scene dies. So browser imports get a placeholder of the right size, and only non-browser clients get the 402.
+- **Splitting money honestly.** One Orders v2 order can name at most 10 payees, each a real merchant account. We
+  capture to the platform and pay creators with one Payouts batch per order, held until refunds can no longer land.
 
 ## Accomplishments that we're proud of
 
-- A prompt becomes a real, orbitable 3D world in seconds, and you can keep talking to it.
-- One PayPal approval buys a world made of many creators' pieces, and the GLB you download is the model you saw.
-- An outside agent can do the whole loop over MCP, but only spends what a human allowed and never pays on its own.
+- A real agent, unedited, spending a real (sandbox) budget, choosing under a constraint, and paying several creators
+  in one order, with the order ID on screen and on the ledger.
+- Every guardrail runs on the server: over-budget is refused before PayPal is called, a revoked token fails at once,
+  a refund revokes the licence and returns the budget.
 
 ## What we learned
 
-- **Models as programs** is what makes agents useful in 3D: a planner can read a piece's knobs, change one, and the
-  geometry rebuilds. Files can't be art-directed; programs can.
-- **Agents should edit, not rewrite.** Asking Claude to rewrite a 50-piece layout as JSON broke; giving it typed
-  operations that the server validates made it fast and reliable.
-- For agentic commerce the right primitive isn't "the agent has a card". It's **the agent creates the order, the human
-  approves it, the server enforces the budget**, and PayPal's order approval already works that way.
+- The agent should never hold the money or the limit. Give it a token; keep the balance, the cap and the kill switch
+  on the server.
+- Payment standards for agents (x402, AP2) and PayPal's existing primitives fit together better than we expected:
+  x402 describes the price, AP2 describes the permission, PayPal moves the money.
 
-## What's next
+## What's next for Oasis
 
-More kits from the agent factory (the harness and grader now run on the 3D format), walkable worlds, a three.js
-`createWorld()` import for any saved world, and PayPal Commerce Platform onboarding so creator splits settle at capture.
+- Open publishing: anyone uploads a program, sets a price and a PayPal account, and earns when agents import it.
+- PayPal Complete Payments so creators are paid at capture instead of after a hold.
+- Per-creator and per-asset limits in the budget (AP2's `allowed_payees`), and budgets for teams.
+
+**Honest notes:** everything runs on the PayPal sandbox. The creator accounts in the demo are sandbox accounts, and
+the kit pieces were made by Oasis's own agent factory, not by four separate people.

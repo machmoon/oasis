@@ -107,7 +107,7 @@ export function createViewer(el, { time = "day", ground = true, autoRotate = fal
   }
 
   /** Replaces the scene contents with one model; reframes on first load or when asked. */
-  function setParts(parts, { reframe = false } = {}) {
+  function setParts(parts, { reframe = false, lock = false } = {}) {
     const next = partsToGroup(parts, { night });
     scene.remove(content);
     content.traverse((o) => { if (o.isMesh) o.geometry.dispose(); });
@@ -116,7 +116,7 @@ export function createViewer(el, { time = "day", ground = true, autoRotate = fal
     if (wire) setWireframe(true);
     const box = new THREE.Box3().setFromObject(content), size = box.getSize(new THREE.Vector3()).length();
     if (reframe || !setParts.framed) { frame(box); setParts.framed = true; setParts.size = size; }
-    else if (size > setParts.size * 1.2 || size < setParts.size * 0.6) { frame(box, { keepAngle: true }); setParts.size = size; }
+    else if (!lock && size > setParts.size * 1.2 || size < setParts.size * 0.6) { frame(box, { keepAngle: true }); setParts.size = size; }
   }
 
   /** Adds a placed model to the world and returns its Group (for selection, animation and removal). */
