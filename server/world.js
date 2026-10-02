@@ -68,6 +68,13 @@ export function planWorld(prompt = "a cosy little town", { seed } = {}) {
     if (cx % 2 === 0) { place("town-lamp", cx, 2, {}, { dx: 2.5, dz: -0.2 }); place("town-lamp", cx, 2, {}, { dx: 3.5, dz: 5.4 }); }
   }
   if (tram) placements.push({ asset: "town-tram", at: [CELL * 0.6, 0.1, CELL * 2 + 1.95], rot: 0, knobs: { body: pick(T.awnings), cars: 2, lights: time !== "day" } });
+  // props: any small kit piece the factory has published (benches, fountains, carts...) dots the lawns
+  const CORE = new Set(["town-shop", "town-house", "town-stall", "town-torii", "town-tram", "town-robot", "town-gate", "town-road", "town-plaza", "town-tree", "town-lamp"]);
+  const props = catalog.allAssets().filter((a) => a.format === "blocks" && !CORE.has(a.id) && a.footprint && Math.max(...a.footprint) <= 4).sort((a, b) => a.id.localeCompare(b.id));
+  if (props.length) for (let cx = 0; cx < cols; cx++) for (const cz of [0, 4]) if (r() > 0.45) {
+    const a = pick(props);
+    place(a.id, cx, cz, {}, { dx: Math.min(6 - a.footprint[0], 0.5 + r() * 2), dz: Math.min(6 - a.footprint[1], 0.3 + r() * 1.5) });
+  }
   // the Oasis agent itself, at the corner of the street
   place("town-robot", 0, 4, { cube: pick(T.awnings) }, { dx: 2, dz: 0.5 });
   return { prompt, theme: themeName, time, size: [cols * CELL, 5 * CELL], placements };

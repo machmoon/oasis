@@ -15,12 +15,12 @@ import { rolesFor, applyRoles } from "./annotate-roles.mjs";
 const client = new Anthropic();
 const MODEL = "claude-opus-5-5";
 const ROOT = path.resolve(import.meta.dirname, "..");
-const CONTRACT = fs.readFileSync(path.join(ROOT, "factory/CONTRACT.md"), "utf8");
+const CONTRACT = fs.readFileSync(path.join(ROOT, process.env.FACTORY_CONTRACT || "factory/CONTRACT.md"), "utf8");
 const EXAMPLES = (process.env.FACTORY_EXAMPLES || "organic-blob.mjs,line-icons.mjs").split(",")
   .map((f) => `--- assets/${f} ---\n${fs.readFileSync(path.join(ROOT, "assets", f), "utf8").slice(0, 16000)}`)
   .join("\n\n");
 
-const LESSONS_FILE = path.join(ROOT, "factory/lessons.md");
+const LESSONS_FILE = path.join(ROOT, process.env.FACTORY_LESSONS || "factory/lessons.md");
 const STATS_FILE = path.join(ROOT, "factory/stats.jsonl");
 const lessons = () => (fs.existsSync(LESSONS_FILE) ? fs.readFileSync(LESSONS_FILE, "utf8").trim().split("\n").filter(Boolean).slice(-40) : []);
 const SYSTEM_BASE = `You are a senior product designer and creative coder writing assets for Oasis, a marketplace where design assets are small programs with typed knobs that buyers remix before downloading.

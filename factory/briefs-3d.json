@@ -1,0 +1,122 @@
+[
+ {
+  "slug": "town-bakery",
+  "brief": "Oasis Town 3D block kit piece on the 6 m grid, matching town-shop.mjs scale and palette. A bakery with a big bread-shaped sign, a bay window of loaves, a striped awning and a chimney. Knobs: wall, awning (primary role), sign colour, floors 1-3, chimney toggle, lights."
+ },
+ {
+  "slug": "town-cafe",
+  "brief": "Oasis Town 3D block kit piece on the 6 m grid, matching town-shop.mjs scale and palette. A corner cafe with a glass front, two outdoor tables with parasols and chairs on the pavement side (z 0 to 1.5). Knobs: wall, parasol colour, tables 0-3, floors 1-2, lights."
+ },
+ {
+  "slug": "town-ramen",
+  "brief": "Oasis Town 3D block kit piece on the 6 m grid, matching town-shop.mjs scale and palette. A narrow ramen shop with noren curtain strips over the door, a vertical sign and paper lanterns that glow. Knobs: wall, curtain colour, lantern count 0-4, roof gable/flat, lights."
+ },
+ {
+  "slug": "town-bookshop",
+  "brief": "Oasis Town 3D block kit piece on the 6 m grid, matching town-shop.mjs scale and palette. A bookshop with a green front, shelves of coloured book spines in the window and a hanging sign. Knobs: front colour, book colours seed, floors 1-3, lights."
+ },
+ {
+  "slug": "town-apartments",
+  "brief": "Oasis Town 3D block kit piece on the 6 m grid, matching town-shop.mjs scale and palette. A four-to-six storey apartment block with balconies and plants, a lobby door and rooftop water tank. Knobs: wall, balcony colour, floors 3-7, width 4-6 m, water tank toggle, lights."
+ },
+ {
+  "slug": "town-fountain",
+  "brief": "Oasis Town 3D block kit piece on the 6 m grid, matching town-shop.mjs scale and palette. A round plaza fountain on a 4x4 footprint: stepped stone basin, central column, water as pale blue cylinders. Knobs: stone colour, water colour, tiers 1-3, size."
+ },
+ {
+  "slug": "town-bench",
+  "brief": "Oasis Town 3D block kit piece on the 6 m grid, matching town-shop.mjs scale and palette. A park bench with a slatted seat and back, optional planter boxes at each end. Footprint 2x1. Knobs: wood colour, frame colour, planters toggle, length 1.5-3 m."
+ },
+ {
+  "slug": "town-busstop",
+  "brief": "Oasis Town 3D block kit piece on the 6 m grid, matching town-shop.mjs scale and palette. A bus stop shelter with a roof, glass back panel, bench, timetable sign and a pole sign. Footprint 3x2. Knobs: frame colour, roof colour, sign colour, lights."
+ },
+ {
+  "slug": "town-car",
+  "brief": "Oasis Town 3D block kit piece on the 6 m grid, matching town-shop.mjs scale and palette. A boxy toy hatchback car with windows, wheels as dark cylinders lying sideways (use boxes for wheels), headlights. Footprint 4x2. Knobs: body colour (primary), roof rack toggle, lights."
+ },
+ {
+  "slug": "town-van",
+  "brief": "Oasis Town 3D block kit piece on the 6 m grid, matching town-shop.mjs scale and palette. A delivery van with a tall cargo box, a logo panel and rear doors. Footprint 5x2. Knobs: body colour, logo colour, length 4-6 m, lights."
+ },
+ {
+  "slug": "town-foodtruck",
+  "brief": "Oasis Town 3D block kit piece on the 6 m grid, matching town-shop.mjs scale and palette. A food truck with a serving hatch, awning flap, menu board and a little roof sign. Footprint 5x2.5. Knobs: body colour, awning colour, sign colour, hatch open toggle, lights."
+ },
+ {
+  "slug": "town-bicycle",
+  "brief": "Oasis Town 3D block kit piece on the 6 m grid, matching town-shop.mjs scale and palette. A bicycle leaning on a stand, made of thin boxes and two wheel rings approximated with 8 thin boxes each. Footprint 2x1. Knobs: frame colour, basket toggle."
+ },
+ {
+  "slug": "town-vending",
+  "brief": "Oasis Town 3D block kit piece on the 6 m grid, matching town-shop.mjs scale and palette. A pair of vending machines with lit fronts and rows of coloured drinks. Footprint 2x1. Knobs: machine colours, machines 1-3, lights."
+ },
+ {
+  "slug": "town-phonebooth",
+  "brief": "Oasis Town 3D block kit piece on the 6 m grid, matching town-shop.mjs scale and palette. A red telephone booth with glass panes and a lit crown sign. Footprint 1x1. Knobs: colour, lights."
+ },
+ {
+  "slug": "town-trafficlight",
+  "brief": "Oasis Town 3D block kit piece on the 6 m grid, matching town-shop.mjs scale and palette. A traffic light pole with three lamps on an arm over the road. Footprint 1x1. Knobs: pole colour, active light choice red/amber/green, arm length."
+ },
+ {
+  "slug": "town-clocktower",
+  "brief": "Oasis Town 3D block kit piece on the 6 m grid, matching town-shop.mjs scale and palette. A clock tower: square brick tower with a clock face on the front, a belfry and pointed roof. Footprint 4x4. Knobs: brick colour, roof colour, height 8-16 m, lights."
+ },
+ {
+  "slug": "town-pagoda",
+  "brief": "Oasis Town 3D block kit piece on the 6 m grid, matching town-shop.mjs scale and palette. A three-to-five tier pagoda with flared tier roofs and a finial. Footprint 5x5. Knobs: wall colour, roof colour, tiers 3-5, lights."
+ },
+ {
+  "slug": "town-lighthouse",
+  "brief": "Oasis Town 3D block kit piece on the 6 m grid, matching town-shop.mjs scale and palette. A striped lighthouse on a rocky base with a glowing lamp room. Footprint 4x4. Knobs: stripe colours, height 8-14 m, stripes 2-5, lights."
+ },
+ {
+  "slug": "town-windmill",
+  "brief": "Oasis Town 3D block kit piece on the 6 m grid, matching town-shop.mjs scale and palette. A windmill with a tapered tower, cap and four sails made of thin boxes. Footprint 4x4. Knobs: tower colour, sail colour, height, sail angle."
+ },
+ {
+  "slug": "town-gazebo",
+  "brief": "Oasis Town 3D block kit piece on the 6 m grid, matching town-shop.mjs scale and palette. An octagonal park gazebo with posts, a railing and a pointed roof (cone). Footprint 4x4. Knobs: post colour, roof colour, size."
+ },
+ {
+  "slug": "town-playground",
+  "brief": "Oasis Town 3D block kit piece on the 6 m grid, matching town-shop.mjs scale and palette. A playground with a slide, swings frame and a sandbox on a soft mat. Footprint 6x6. Knobs: mat colour, slide colour, swings 1-3, sandbox toggle."
+ },
+ {
+  "slug": "town-pond",
+  "brief": "Oasis Town 3D block kit piece on the 6 m grid, matching town-shop.mjs scale and palette. A pond tile 6x6: grass edge, water as a thin pale blue box, lily pads, reeds, a little wooden jetty. Knobs: water colour, lily pads 0-8, jetty toggle."
+ },
+ {
+  "slug": "town-bridge",
+  "brief": "Oasis Town 3D block kit piece on the 6 m grid, matching town-shop.mjs scale and palette. A small arched footbridge 6x3 over water: deck boxes stepping up and down, railings. Knobs: wood colour, rail colour, water toggle."
+ },
+ {
+  "slug": "town-canal",
+  "brief": "Oasis Town 3D block kit piece on the 6 m grid, matching town-shop.mjs scale and palette. A canal tile 6x6 with stone banks, water and a moored small boat. Knobs: stone colour, water colour, boat colour, boat toggle."
+ },
+ {
+  "slug": "town-flowercart",
+  "brief": "Oasis Town 3D block kit piece on the 6 m grid, matching town-shop.mjs scale and palette. A flower cart with wheels and buckets of colourful flowers. Footprint 2x1.5. Knobs: cart colour, flower colours seed, buckets 3-8."
+ },
+ {
+  "slug": "town-hedge",
+  "brief": "Oasis Town 3D block kit piece on the 6 m grid, matching town-shop.mjs scale and palette. A clipped hedge run with a gate gap option. Footprint 6x1. Knobs: leaf colour, height 0.6-1.8 m, gate toggle."
+ },
+ {
+  "slug": "town-fence",
+  "brief": "Oasis Town 3D block kit piece on the 6 m grid, matching town-shop.mjs scale and palette. A picket fence run with posts and pointed pickets. Footprint 6x0.5. Knobs: colour, height, length 2-6 m."
+ },
+ {
+  "slug": "town-billboard",
+  "brief": "Oasis Town 3D block kit piece on the 6 m grid, matching town-shop.mjs scale and palette. A rooftop or ground billboard on legs with a bold panel and lamps. Footprint 4x1. Knobs: panel colour, accent colour, height, lights."
+ },
+ {
+  "slug": "town-carousel",
+  "brief": "Oasis Town 3D block kit piece on the 6 m grid, matching town-shop.mjs scale and palette. A carousel with a striped cone roof, central pole and blocky horses on poles. Footprint 6x6. Knobs: roof colours, horses 4-8, lights."
+ },
+ {
+  "slug": "town-stationplatform",
+  "brief": "Oasis Town 3D block kit piece on the 6 m grid, matching town-shop.mjs scale and palette. A small tram station platform 6x3 with a canopy, a bench, a clock and a sign. Knobs: canopy colour, sign colour, lights."
+ }
+]

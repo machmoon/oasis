@@ -158,6 +158,7 @@ export function createViewer(el, { time = "day", ground = true, autoRotate = fal
     content.traverse((o) => { if (o.isMesh) o.geometry.dispose(); });
     content = next;
     scene.add(content);
+    if (wire) setWireframe(true);
     if (reframe || !setParts.framed) { frame(new THREE.Box3().setFromObject(content)); setParts.framed = true; }
   }
 
@@ -230,6 +231,14 @@ export function createViewer(el, { time = "day", ground = true, autoRotate = fal
     tickers.add(f);
   }
 
+  let wire = false;
+  function setWireframe(on) { wire = on; content.traverse((o) => { if (o.isMesh) o.material.wireframe = on; }); }
+  function stats() {
+    let tris = 0;
+    content.traverse((o) => { if (o.isMesh) tris += o.geometry.attributes.position.count / 3; });
+    return { tris: Math.round(tris) };
+  }
+
   /** GLB of whatever is on screen, as a Blob. */
   async function exportGlb() {
     const { GLTFExporter } = await import("three/addons/exporters/GLTFExporter.js");
@@ -237,5 +246,5 @@ export function createViewer(el, { time = "day", ground = true, autoRotate = fal
     return new Blob([buf], { type: "model/gltf-binary" });
   }
 
-  return { scene, camera, controls, renderer, setParts, addPlaced, clearWorld, setTime, pick, select, refreshSelection, dropIn, frame: (b, o) => frame(b || new THREE.Box3().setFromObject(content), o), tickers, exportGlb, dispose, get content() { return content; } };
+  return { scene, camera, controls, renderer, setParts, addPlaced, clearWorld, setTime, pick, select, refreshSelection, dropIn, setWireframe, stats, frame: (b, o) => frame(b || new THREE.Box3().setFromObject(content), o), tickers, exportGlb, dispose, get content() { return content; } };
 }

@@ -394,7 +394,7 @@ async function pageAsset(id) {
       <div>
         <div class="viewer">
           ${a.format === "blocks"
-            ? `<div class="canvas canvas3d"><div id="v3d" class="v3d" aria-label="${esc(a.title)}, a live 3D model: drag to orbit"></div><span class="busy" id="busy"></span><div class="v3d-tools"><button class="btn small" data-time3d="day">Day</button><button class="btn small" data-time3d="dusk">Dusk</button><button class="btn small" data-time3d="night">Night</button></div></div>`
+            ? `<div class="canvas canvas3d"><div id="v3d" class="v3d" aria-label="${esc(a.title)}, a live 3D model: drag to orbit"></div><span class="busy" id="busy"></span><div class="v3d-tools"><button class="btn small" data-time3d="day">Day</button><button class="btn small" data-time3d="dusk">Dusk</button><button class="btn small" data-time3d="night">Night</button><button class="btn small" id="wire3d">Wireframe</button></div><span class="v3d-stats mono" id="tris3d"></span></div>`
             : `<div class="canvas"><img id="view" src="${renderUrl(a.id, Object.fromEntries(Object.entries(values).filter(([k, v]) => v !== defaults[k])), null)}" alt="${esc(a.title)}" /><span class="busy" id="busy"></span></div>`}
           <div class="vbar"><span class="muted">${a.price > 0 ? "Preview is watermarked until licensed" : "Free · download any remix"}</span>
             <button class="btn small ghost" id="reset">Reset</button>
@@ -461,6 +461,10 @@ async function pageAsset(id) {
       viewer3d = createViewer($("#v3d"), { autoRotate: false });
       const { parts } = await api(partsUrl());
       viewer3d.setParts(parts, { reframe: true });
+      const showStats = (n) => { $("#tris3d").textContent = `${n} parts · ${viewer3d.stats().tris.toLocaleString()} triangles`; };
+      showStats(parts.length);
+      viewer3d.onParts = showStats;
+      $("#wire3d").addEventListener("click", (e) => { const on = !e.target.classList.contains("on"); e.target.classList.toggle("on", on); viewer3d.setWireframe(on); });
       app.querySelectorAll("[data-time3d]").forEach((b) => b.addEventListener("click", () => viewer3d.setTime(b.dataset.time3d)));
     });
   }
@@ -469,7 +473,7 @@ async function pageAsset(id) {
     pending = setTimeout(async () => {
       if (a.format === "blocks") {
         busy.classList.add("on");
-        try { const { parts } = await api(partsUrl()); viewer3d?.setParts(parts); } finally { busy.classList.remove("on"); }
+        try { const { parts } = await api(partsUrl()); viewer3d?.setParts(parts); viewer3d?.onParts?.(parts.length); } finally { busy.classList.remove("on"); }
         updateSnippet(); updateDownloads();
         return;
       }
