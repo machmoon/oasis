@@ -685,10 +685,25 @@ function pageAgent() {
             log.scrollTop = log.scrollHeight;
           } else if (ev === "tool") {
             flushBot();
-            const label = esc((TOOL_LABEL[data.name] || ((i) => data.name))(data.input || {}));
-            const html = `<i></i>${label}`;
-            add(html, "toolrow");
-            remember(html, "toolrow");
+            // Consecutive calls of the same tool collapse into one step: "Remixing · app-icon · mesh-gradient".
+            const GROUP = { search_assets: ["Searching", (i) => `“${i.query}”`], get_asset: ["Reading", (i) => i.asset_id], remix_asset: ["Remixing", (i) => i.asset_id], add_to_cart: ["Adding to the kit", (i) => i.asset_id] };
+            const g = GROUP[data.name];
+            let last = log.lastElementChild;
+            if (last?.classList.contains("variant-row") && last.previousElementSibling?.dataset.tool === data.name) last = last.previousElementSibling;
+            if (g && last?.dataset.tool === data.name) {
+              const item = g[1](data.input || {});
+              const seen = (last.seen ||= new Set([last.dataset.first]));
+              last.querySelector("span").insertAdjacentHTML("beforeend", ` · ${esc(item)}${seen.has(item) ? " (again)" : ""}`);
+              seen.add(item);
+              if (last.entry) { last.entry.html = last.innerHTML; if (!replayKit) store.set("oasis.agent", session); }
+            } else {
+              const html = g ? `<i></i><b>${g[0]}</b><span> · ${esc(g[1](data.input || {}))}</span>` : `<i></i>${esc((TOOL_LABEL[data.name] || ((i) => data.name))(data.input || {}))}`;
+              const row = add(html, "toolrow");
+              row.dataset.tool = data.name;
+              if (g) row.dataset.first = g[1](data.input || {});
+              row.entry = { html, cls: "toolrow" };
+              if (!replayKit) { session.log.push(row.entry); store.set("oasis.agent", session); }
+            }
           } else if (ev === "tool_error") {
             add(`<i></i>${esc(data.message)}`, "toolrow err");
           } else if (ev === "variant") {
