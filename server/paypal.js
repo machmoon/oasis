@@ -7,7 +7,11 @@ import { config, paypalConfigured } from "./config.js";
 
 let orders, payments;
 function controller() {
-  if (!paypalConfigured()) throw new Error("PayPal sandbox credentials are not configured (PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET).");
+  if (!paypalConfigured()) {
+    // Operators see which settings are missing; users and agents only see that checkout is off. Nothing is charged.
+    console.warn("PayPal is not configured: set PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET");
+    throw Object.assign(new Error("Checkout isn't connected on this server yet, so no PayPal order could be opened. Nothing was charged."), { status: 503 });
+  }
   if (!orders) {
     const client = new Client({
       clientCredentialsAuthCredentials: { oAuthClientId: config.paypal.clientId, oAuthClientSecret: config.paypal.clientSecret },

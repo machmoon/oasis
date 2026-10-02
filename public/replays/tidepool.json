@@ -577,49 +577,7 @@
     "name": "create_order",
     "input": {}
    }
-  ],
-  [
-   "tool_error",
-   {
-    "name": "create_order",
-    "message": "PayPal sandbox credentials are not configured (PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET)."
-   }
-  ],
-  [
-   "text",
-   {
-    "delta": "\n\nYour Tidepool kit is in the cart, but I couldn't create the PayPal order. The checkout refused because Oasis's PayPal connection isn't set up yet (the sandbox credentials are missing). Nothing has been charged."
-   }
-  ],
-  [
-   "text",
-   {
-    "delta": "\n\nTwo items are paid and need that order before you can license them:"
-   }
-  ],
-  [
-   "text",
-   {
-    "delta": " the app icon ($5) and the pricing card ($5). The hero background and the avatars are free and ready to use now. Once PayPal is connected, I can create the order in one step, or you can check out the cart yourself.\n\nI re-rendered two pieces before adding them. The first hero came out muddy, so I made the deep teal dominant with soft coral glows. One avatar was sand on sand and would have disappeared on your page, so I changed it.\n\nOne limit: the pricing card has no setting for its smaller text. The tagline still says \"Everything a growing team needs\" and the features are generic placeholders, so you'll want to change that copy yourself."
-   }
-  ],
-  [
-   "text",
-   {
-    "delta": " I set the plan name to Tidepool Plus at $8 a month as a placeholder price."
-   }
-  ],
-  [
-   "text",
-   {
-    "delta": "\n\n**Kit:** a wave app icon, a teal mesh hero background, a Tidepool Plus pricing card and four testimonial avatars.\n**Palette and total:** deep teal #0E3B43, sand #F5EBDD and coral #FF7A59, plus two connecting shades I added (mid-teal #2E7D7A and peach #FFC2A8)."
-   }
-  ],
-  [
-   "text",
-   {
-    "delta": " Total is $10 of your $20 cap, once PayPal is working."
-   }
   ]
- ]
+ ],
+ "note": "Recorded live on a server without PayPal keys. Trimmed after the create_order call: the rest was the agent reporting that checkout was not connected."
 }
