@@ -78,6 +78,10 @@ ID alone unlocks nothing*).
   coalesced per order (tested: three simultaneous captures produce one PayPal call)
 - **amount check:** licences are issued only when the captured `amount.value` and `currency_code` equal what the
   server priced. A mismatch marks the order `AMOUNT_MISMATCH` and is refunded automatically (tested)
+- **pending captures** (eChecks, risk review): the order becomes `CAPTURE_PENDING`, keeps its mandate budget held,
+  issues nothing and is never captured twice; `PAYMENT.CAPTURE.COMPLETED` fulfils it (amount-checked again) and
+  `PAYMENT.CAPTURE.DENIED` closes it and releases the budget. A COMPLETED event that beats Oasis's own capture
+  response fulfils the order without a second PayPal call (tested: *failure modes PayPal really produces*)
 - each item gets a licence token; downloads are `GET /api/licenses/<token>/download.{svg|png|jsx|css|mjs}`
 
 ## 5. Royalties through Payouts, held through the refund window
