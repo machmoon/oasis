@@ -159,3 +159,23 @@ test("webhooks: PayPal's duplicate and replayed deliveries change nothing twice"
   assert.equal(pp.calls.capture, 1);
   await assert.rejects(commerce.license(after.licenses[0].token), /refunded/);
 });
+
+test("an order's licences belong to whoever created it: the order ID alone unlocks nothing", async () => {
+  const pp = fakePaypal();
+  commerce.setPaypalClient(pp);
+  const tools = await import("../server/tools.js");
+  const o = await tools.createOrder({ items: [{ assetId: "pricing-card" }], max_total_usd: 20, agent_name: "test agent" });
+  assert.match(o.claimToken, /^[a-f0-9]{32}$/);
+  const done = await commerce.capture(o.id);
+  const stranger = commerce.publicOrder(done, "");
+  assert.equal(stranger.owner, false);
+  assert.equal(stranger.licenses, undefined, "no licence tokens without the claim");
+  assert.equal(stranger.claimToken, undefined);
+  const owner = commerce.publicOrder(done, o.claimToken);
+  assert.equal(owner.licenses.length, 1);
+  assert.equal(owner.claimToken, undefined, "the token is never echoed back");
+  await assert.rejects(tools.getOrder({ order_id: o.id }), /claim_token/);
+  await assert.rejects(tools.getOrder({ order_id: o.id, claim_token: "0".repeat(32) }), /claim_token/);
+  const got = await tools.getOrder({ order_id: o.id, claim_token: o.claimToken });
+  assert.equal(got.downloads.length, 1);
+});

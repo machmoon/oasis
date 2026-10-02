@@ -40,11 +40,11 @@ function getServer() {
     },
   }, async ({ items, max_total_usd, agent_name }) => {
     const o = await tools.createOrder({ items: items.map((i) => ({ assetId: i.asset_id, knobs: i.knobs })), max_total_usd, agent_name });
-    return text({ order_id: o.id, status: o.status, total_usd: o.total, approve_url: o.approveUrl, next: "Ask the human to open approve_url and pay with PayPal, then call get_order." });
+    return text({ order_id: o.id, claim_token: o.claimToken, status: o.status, total_usd: o.total, approve_url: o.approveUrl, next: "Ask the human to open approve_url and pay with PayPal, then call get_order with order_id and claim_token. Keep claim_token private: it unlocks the licensed files." });
   });
   server.registerTool("get_order", {
     description: "Order status. Once the human has approved in PayPal this captures payment and returns licensed download links (SVG, PNG, React, source program).",
-    inputSchema: { order_id: z.string() },
+    inputSchema: { order_id: z.string(), claim_token: z.string().describe("Returned by create_order; proves this agent created the order") },
   }, async (args) => text(await tools.getOrder(args)));
   return server;
 }

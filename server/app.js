@@ -83,16 +83,22 @@ export async function createApp() {
 
   app.post("/api/orders", wrap(async (req, res) => {
     const o = await commerce.createCheckout(req.body?.items || []);
-    res.json({ id: o.id, total: o.total, items: o.items });
+    res.json({ id: o.id, total: o.total, items: o.items, claimToken: o.claimToken });
   }));
-  app.post("/api/orders/:id/capture", wrap(async (req, res) => res.json(await commerce.capture(req.params.id))));
+  const claimOf = (req) => req.get("X-Oasis-Claim") || "";
+  // Anyone may trigger a capture (PayPal only captures approved orders), but only the owner sees the licences.
+  app.post("/api/orders/:id/capture", wrap(async (req, res) => res.json(commerce.publicOrder(await commerce.capture(req.params.id), claimOf(req)))));
   app.get("/api/orders/:id", wrap(async (req, res) => {
     const o = await store.get("orders", req.params.id);
     if (!o) throw Object.assign(new Error("Unknown order"), { status: 404 });
-    res.json(o);
+    res.json(commerce.publicOrder(o, claimOf(req)));
   }));
 
-  app.post("/api/orders/:id/refund", wrap(async (req, res) => res.json(await commerce.refund(req.params.id, req.body || {}))));
+  app.post("/api/orders/:id/refund", wrap(async (req, res) => {
+    const o = await store.get("orders", req.params.id);
+    if (!commerce.ownsOrder(o, claimOf(req))) throw Object.assign(new Error("Only the buyer can refund this order"), { status: 403 });
+    res.json(commerce.publicOrder(await commerce.refund(req.params.id, req.body || {}), claimOf(req)));
+  }));
 
   // PayPal webhooks, verified with verify-webhook-signature before anything is trusted.
   const webhookLimit = rateLimit({ windowMs: 60_000, limit: 60, standardHeaders: "draft-8", legacyHeaders: false });

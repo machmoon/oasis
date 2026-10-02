@@ -154,7 +154,7 @@ async function execute(call, cart, emit, budget) {
     }
     case "create_order": {
       const order = await tools.createOrder({ items: cart.map((c) => ({ assetId: c.assetId, knobs: c.knobs })), max_total_usd: budget || null, agent_name: "the Oasis agent" });
-      emit("checkout", { orderId: order.id, total: order.total, items: order.items.map((i) => ({ ...i, reason: cart.find((c) => c.assetId === i.assetId)?.reason || "" })), approveUrl: order.approveUrl, cap: budget || null });
+      emit("checkout", { orderId: order.id, claimToken: order.claimToken, total: order.total, items: order.items.map((i) => ({ ...i, reason: cart.find((c) => c.assetId === i.assetId)?.reason || "" })), approveUrl: order.approveUrl, cap: budget || null });
       return `PayPal order ${order.id} created for $${order.total.toFixed(2)} (${order.items.length} paid licence(s); free items need no payment). The person now approves it with the PayPal button shown in the chat.`;
     }
     case "fork_asset": {

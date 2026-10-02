@@ -7,7 +7,8 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const md = (t) => esc(t).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/`([^`]+)`/g, "<code>$1</code>");
 const money = (n) => (n === 0 ? "Free" : `$${Number(n).toFixed(2).replace(/\.00$/, "")}`);
 const api = async (path, opts = {}) => {
-  const r = await fetch(path, { headers: { "Content-Type": "application/json" }, ...opts, body: opts.body ? JSON.stringify(opts.body) : undefined });
+  const claim = opts.claim ? { "X-Oasis-Claim": opts.claim } : {};
+  const r = await fetch(path, { ...opts, headers: { "Content-Type": "application/json", ...claim }, body: opts.body ? JSON.stringify(opts.body) : undefined });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(j.error || `Request failed (${r.status})`);
   return j;
@@ -16,6 +17,12 @@ const store = {
   get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
 };
+// Claim tokens for orders this browser created; the server shows licences only to their owner.
+const claims = {
+  get: (id) => store.get("oasis.claims", {})[id],
+  set: (id, t) => { if (t) store.set("oasis.claims", { ...store.get("oasis.claims", {}), [id]: t }); },
+};
+const newOrder = async (items) => { const o = await api("/api/orders", { method: "POST", body: { items } }); claims.set(o.id, o.claimToken); return o.id; };
 function toast(msg) {
   const t = $("#toast");
   t.textContent = msg;
@@ -135,7 +142,7 @@ async function mountPayPal(el, { createOrder, onDone }) {
         async onApprove(data, actions) {
           el.insertAdjacentHTML("beforeend", `<p class="muted" style="text-align:center">Capturing payment…</p>`);
           try {
-            const order = await api(`/api/orders/${data.orderID}/capture`, { method: "POST" });
+            const order = await api(`/api/orders/${data.orderID}/capture`, { method: "POST", claim: claims.get(data.orderID) });
             onDone(order);
           } catch (e) {
             if (/INSTRUMENT_DECLINED/.test(e.message)) return actions.restart();
@@ -208,6 +215,12 @@ function pageHome() {
       </div>
       <div class="stage">
         <img class="town" id="town" src="${townUrl()}" alt="Oasis Town, an isometric street diorama rendered live from its program" />
+        <a class="askcard" href="#/agent" aria-label="See how the agent asks and you approve">
+          <small>The Oasis agent asks</small>
+          <b>License 2 remixes · $10</b>
+          <span class="capmeter"><i style="width:50%"></i></span>
+          <span class="askfoot"><span>$10 of your $20 cap</span><span class="approve-pill">You approve in PayPal</span></span>
+        </a>
         <div class="dock" role="toolbar" aria-label="Oasis Town knobs">
           <div class="grp">${SEASONS.map((s) => `<button class="knobbtn ${s === town.season ? "on" : ""}" data-season="${s}">${s}</button>`).join("")}</div>
           <div class="grp">${TIMES.map((t) => `<button class="knobbtn ${t === town.time ? "on" : ""}" data-time="${t}">${t}</button>`).join("")}</div>
@@ -533,7 +546,7 @@ async function pageAsset(id) {
   $("#buynow")?.addEventListener("click", () => {
     const box = $("#buynow-box");
     mountPayPal(box, {
-      createOrder: async () => (await api("/api/orders", { method: "POST", body: { items: [{ assetId: a.id, knobs: values }] } })).id,
+      createOrder: () => newOrder([{ assetId: a.id, knobs: values }]),
       onDone: (order) => (location.hash = `#/order/${order.id}`),
     });
   });
@@ -742,6 +755,7 @@ function pageAgent() {
   });
 
   function showCheckout(order) {
+    claims.set(order.orderId, order.claimToken);
     const box = $("#checkout");
     box.innerHTML = `<div class="approve">
       <p class="approve-head">The Oasis agent is asking you to approve</p>
@@ -771,7 +785,7 @@ function pageCart() {
     app.querySelectorAll(".rm").forEach((b) => b.addEventListener("click", () => { cart.remove(+b.dataset.i); draw(); }));
     if (paid.length)
       mountPayPal($("#pp"), {
-        createOrder: async () => (await api("/api/orders", { method: "POST", body: { items: paid.map((i) => ({ assetId: i.assetId, knobs: i.knobs })) } })).id,
+        createOrder: () => newOrder(paid.map((i) => ({ assetId: i.assetId, knobs: i.knobs }))),
         onDone: (o) => { cart.clear(); location.hash = `#/order/${o.id}`; },
       });
   };
@@ -782,11 +796,12 @@ async function pageOrder(id) {
   setNav("");
   app.innerHTML = `<div class="wrap" style="max-width:860px"><div class="crumbs"><span class="spinner"></span></div></div>`;
   let o;
-  try { o = await api(`/api/orders/${encodeURIComponent(id)}`); } catch (e) { app.innerHTML = notFound("We couldn't find that order."); return; }
+  try { o = await api(`/api/orders/${encodeURIComponent(id)}`, { claim: claims.get(id) }); } catch (e) { app.innerHTML = notFound("We couldn't find that order."); return; }
   const done = o.status === "COMPLETED";
   app.innerHTML = `<div class="wrap" style="max-width:860px">
     <div class="crumbs"><h1>${done ? "Licensed." : "Order " + esc(o.status.toLowerCase())}</h1></div>
-    ${done ? `<p class="ok">Paid ${money(o.total)} with PayPal${o.payer?.name ? ` by ${esc(o.payer.name)}` : ""} · capture ${esc(o.captureId)}</p>` : `<p class="notice">This order hasn't been paid yet.</p>`}
+    ${done && !o.owner ? `<p class="ok">Paid ${money(o.total)} with PayPal. The files go to whoever created this order: open it in that browser, or the agent that created it collects them with its claim token.</p>` : ""}
+    ${done && o.owner ? `<p class="ok">Paid ${money(o.total)} with PayPal${o.payer?.name ? ` by ${esc(o.payer.name)}` : ""} · capture ${esc(o.captureId)}</p>` : done ? "" : `<p class="notice">This order hasn't been paid yet.</p>`}
     ${(o.licenses || []).map((l) => `<div class="cart-line" style="grid-template-columns:84px 1fr auto"><img src="/api/licenses/${esc(l.token)}/download.svg" alt=""/><div><b>${esc(l.title)}</b><div class="muted mono" style="font-size:11px">licence ${esc(l.token.slice(0, 12))}…</div></div>
       <div class="dl">${["svg", "png", "jsx", "css", "mjs"].map((f) => `<a class="btn small" href="/api/licenses/${esc(l.token)}/download.${f}">${{ svg: "SVG", png: "PNG", jsx: "React", css: "CSS", mjs: "Program" }[f]}</a>`).join("")}<button class="btn small" data-figma="${esc(l.token)}">Copy for Figma</button></div></div>`).join("")}
     ${o.royalties?.length ? `<h3 style="margin:28px 0 8px">Where your money went</h3><table class="table"><tr><th>Asset</th><th>To</th><th>Role</th><th>Amount</th></tr>${o.royalties.map((r) => `<tr><td>${esc(r.title)}</td><td>${esc(r.author)}</td><td>${esc(r.role)}${r.held ? " (held)" : ""}</td><td>${money(r.cents / 100)}</td></tr>`).join("")}</table>
@@ -844,7 +859,7 @@ function pageAgents() {
       <tr><td class="mono">get_asset</td><td>Typed knob schema and colourway presets.</td></tr>
       <tr><td class="mono">remix_asset</td><td>Render with knobs; returns the image so the agent can judge it.</td></tr>
       <tr><td class="mono">create_order</td><td>PayPal order for remixes; returns an approve link for the human. Pass <span class="mono">max_total_usd</span> (your human's cap, enforced by the server) and <span class="mono">agent_name</span> (shown in PayPal's approval screen).</td></tr>
-      <tr><td class="mono">get_order</td><td>After approval: captures and returns SVG, PNG, React and program downloads.</td></tr>
+      <tr><td class="mono">get_order</td><td>After approval: captures and returns SVG, PNG, React and program downloads. Needs the <span class="mono">claim_token</span> that <span class="mono">create_order</span> returned, so an order ID alone unlocks nothing.</td></tr>
     </table></div>
     <div class="panel"><h3>Plain HTTP</h3><pre class="code">GET ${esc(o)}/llms.txt
 GET ${esc(o)}/api/assets?q=pricing&amp;kind=ui
@@ -854,6 +869,7 @@ GET ${esc(o)}/api/assets/pricing-card/render.svg?preset=Indigo</pre></div>
       <li><span class="mono">max_total_usd</span> is checked before PayPal is called; an order over it is refused (HTTP 402).</li>
       <li>At most 10 orders a minute per client and 120 MCP calls a minute; over that, JSON-RPC error <span class="mono">-32029</span>.</li>
       <li>No agent can pay. Every order waits for a human to approve it in PayPal.</li>
+      <li>Licensed files go only to the order's creator, proven by a one-time claim token.</li>
     </ul><p style="margin:10px 0 0"><a href="https://github.com/machmoon/oasis/blob/main/docs/mcp-session.md">Read a recorded session</a> of an outside agent shopping by URL alone.</p></div>
   </div>`;
   api("/api/stats/mcp").then((s) => {

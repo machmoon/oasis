@@ -52,6 +52,12 @@ free items is refused.
 
 The agent never holds a payment method. It can create an order; only a human can approve one.
 
+**Who owns an order.** Order IDs travel through PayPal URLs, so they are not secrets. Each order gets a 128-bit
+`claimToken` at creation (`createCheckout()`), returned once to whoever created it, the way Stripe returns a
+PaymentIntent's `client_secret`. Licences, the money trail and refunds need it (`X-Oasis-Claim` over HTTP,
+`claim_token` in MCP `get_order`); anyone else with the ID sees only the status (`publicOrder()`; tested: *the order
+ID alone unlocks nothing*).
+
 ## 4. Capture, verified
 
 `server/commerce.js` → `capture()` / `doCapture()`
@@ -107,6 +113,31 @@ get a 400; tested). Then:
 The live deploy lists every order, verified webhook and payout it has produced, with real sandbox IDs, at
 [`/#/status`](https://oasis-design.onrender.com/#/status). Until the sandbox keys are set there, those lists are empty
 and everything above is proven only by `test/commerce.test.mjs` against a fake client.
+
+## Sandbox quickstart (about five minutes)
+
+```bash
+git clone https://github.com/machmoon/oasis && cd oasis && npm install
+cp .env.example .env    # then fill in the three lines below
+#   PAYPAL_CLIENT_ID=...       developer.paypal.com → Apps & Credentials → Sandbox → your app
+#   PAYPAL_CLIENT_SECRET=...
+#   ANTHROPIC_API_KEY=...      optional: only the built-in agent needs it
+npm start               # http://localhost:8787 ; /api/config should say "paypalReady": true
+```
+
+1. Open any paid asset, click **License**, and pay with your sandbox *personal* account in the PayPal popup.
+   You land on `/#/order/<id>` with the capture ID and five download links.
+2. `/#/status` now lists the order with its capture ID.
+3. An agent's view of the same flow, over MCP:
+   ```bash
+   CAP=8 node scripts/mcp-agent.mjs http://localhost:8787/mcp   # writes docs/mcp-session.md
+   ```
+   The agent stays under `max_total_usd`, calls `create_order`, and hands you `approve_url`. Approve it in the
+   browser, then call `get_order` with the `order_id` and `claim_token` from the transcript: it captures and returns
+   the files. Without the token, the same call is refused.
+4. Webhooks need a public URL. Expose the server (for example with `cloudflared tunnel --url http://localhost:8787`),
+   register `https://<host>/api/paypal/webhook` in the sandbox app for the event types in section 6, set
+   `PAYPAL_WEBHOOK_ID`, and restart. Each delivery then shows on `/#/status` with `verified` and its effect.
 
 ## Running it in the sandbox
 

@@ -55,6 +55,9 @@ export async function createCheckout(items, { agent = false, agentName = null, m
     total: lines.reduce((s, l) => s + l.price, 0),
     items: lines.map((l) => ({ assetId: l.asset.id, title: l.asset.title, price: l.price, knobs: l.values })),
     approveUrl: order.links?.find((x) => x.rel === "payer-action" || x.rel === "approve")?.href || null,
+    // Like Stripe's PaymentIntent client_secret: returned once, to whoever created the order, and required to
+    // read its licences or refund it. Order IDs travel through PayPal URLs, so they can't be the secret.
+    claimToken: crypto.randomBytes(16).toString("hex"),
   };
   await store.put("orders", order.id, doc);
   return doc;
@@ -219,4 +222,17 @@ export async function handleWebhook(event) {
     default:
       return "ignored";
   }
+}
+
+/** Constant-time check of an order's claim token. */
+export function ownsOrder(o, claim) {
+  return !!(o?.claimToken && typeof claim === "string" && claim.length === o.claimToken.length && crypto.timingSafeEqual(Buffer.from(claim), Buffer.from(o.claimToken)));
+}
+
+/** What an order looks like over HTTP: status for anyone with the ID, licences and money trail only for its owner. */
+export function publicOrder(o, claim) {
+  const base = { id: o.id, status: o.status, total: o.total, createdAt: o.createdAt, agentName: o.agentName, maxTotal: o.maxTotal, items: o.items.map(({ assetId, title, price }) => ({ assetId, title, price })) };
+  if (!ownsOrder(o, claim)) return { ...base, owner: false };
+  const { claimToken, ...rest } = o;
+  return { ...rest, owner: true };
 }

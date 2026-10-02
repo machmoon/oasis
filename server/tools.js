@@ -37,18 +37,19 @@ export async function remixAsset({ asset_id, preset, brand, knobs = {} }) {
 }
 
 export async function createOrder({ items, max_total_usd, agent_name }) {
-  return commerce.createCheckout(items, {
+  const o = await commerce.createCheckout(items, {
     agent: true,
     agentName: agent_name ? String(agent_name).slice(0, 40) : "an MCP agent",
     maxTotal: max_total_usd ?? null,
     returnUrl: `${config.baseUrl}/checkout/return`,
     cancelUrl: `${config.baseUrl}/#/cart`,
   });
+  return o;
 }
 
-export async function getOrder({ order_id }) {
+export async function getOrder({ order_id, claim_token }) {
   let o = await store.get("orders", order_id);
-  if (!o) throw new Error("Unknown order");
+  if (!commerce.ownsOrder(o, claim_token)) throw new Error("Unknown order, or wrong claim_token");
   // An agent polling an order the human has approved completes it, like the return page would.
   if (o.status !== "COMPLETED") {
     try {
