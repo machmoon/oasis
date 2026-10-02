@@ -608,7 +608,7 @@ function pageAgent() {
     const items = replayKit || cart.items;
     const total = items.reduce((s, i) => s + i.price, 0);
     $("#kit").innerHTML = items.length
-      ? `<div class="kit">${items.map((i) => `<div class="item"><img src="${esc(i.previewUrl)}" alt=""/><div><span>${esc(i.title)}</span><b>${money(i.price)}</b></div></div>`).join("")}</div><div class="total"><span>Total</span><b>${money(total)}</b></div>${replayKit ? `<p class="muted" style="margin:10px 0 0;font-size:12.5px">From the recorded run. Your own cart is untouched.</p>` : ""}`
+      ? `<div class="kit${items.length >= 4 ? " compact" : ""}">${items.map((i) => `<div class="item"><img src="${esc(i.previewUrl)}" alt=""/><div><span>${esc(i.title)}</span><b>${money(i.price)}</b></div></div>`).join("")}</div><div class="total"><span>Total</span><b>${money(total)}</b></div>${replayKit ? `<p class="muted" style="margin:10px 0 0;font-size:12.5px">From the recorded run. Your own cart is untouched.</p>` : ""}`
       : `<div class="empty">Remixes the agent picks land here.</div>`;
   };
   drawKit();
@@ -660,7 +660,7 @@ function pageAgent() {
             if (!replayKit) store.set("oasis.agent", session);
           } else if (ev === "cart_add") {
             const item = { ...data, previewUrl: data.previewUrl.replace(/^https?:\/\/[^/]+/, "") };
-            if (replayKit) replayKit.push(item); else cart.add(item);
+            if (!replayKit) cart.add(item);
             drawKit();
           } else if (ev === "checkout") {
             showCheckout(data);
@@ -678,12 +678,21 @@ function pageAgent() {
     const rec = await api("/replays/tidepool.json");
     if (!document.body.contains(log) || run !== replayRun) return;
     log.innerHTML = "";
-    replayKit = [];
+    // Open on the payoff: the finished kit and the approval the agent asks for. The log below shows how it got there.
+    replayKit = rec.events.filter(([e]) => e === "cart_add").map(([, d]) => ({ ...d, previewUrl: d.previewUrl.replace(/^https?:\/\/[^/]+/, "") }));
     drawKit();
+    const cap = 20, total = replayKit.reduce((s, i) => s + i.price, 0);
+    $("#checkout").innerHTML = `<div class="approve">
+      <p class="approve-head">What the agent asked you to approve</p>
+      <ul>${replayKit.map((i) => `<li><span><b>${esc(i.title)}</b>${i.reason ? `<em>${esc(i.reason)}</em>` : ""}</span><b>${money(i.price)}</b></li>`).join("")}</ul>
+      <div class="capmeter"><i style="width:${Math.min(100, (total / cap) * 100)}%"></i></div>
+      <p class="capnote ok">${money(total)} of your ${money(cap)} cap. The server refuses anything over it.</p>
+      <p class="muted" style="font-size:12px;margin:8px 0 0">In a live run the PayPal button appears here and only you can approve it. This server has no PayPal sandbox keys yet, so the recording stops at the order.</p>
+    </div>`;
     add(`<i></i>Replay of a real run recorded ${esc(new Date(rec.recorded).toLocaleString())}. Nothing here is staged.`, "toolrow");
     add(esc(rec.brief), "msg user");
     for (const [ev, data] of rec.events) {
-      await new Promise((r) => setTimeout(r, ev === "text" ? 400 : 550));
+      await new Promise((r) => setTimeout(r, ev === "text" ? 260 : 140));
       if (!document.body.contains(log) || run !== replayRun) return;
       handle(ev, data);
     }
@@ -822,8 +831,10 @@ function pageAgents() {
   app.innerHTML = `<div class="wrap" style="max-width:900px">
     <div class="crumbs"><h1>For AI agents</h1></div>
     <p style="font-size:17px" class="muted">Oasis is built to be shopped by agents. One MCP endpoint, no key to browse. Payments always come back to a human in PayPal.</p>
+    <div class="panel" id="mcp-live"><h3>Live traffic</h3><p class="muted" style="margin:0">Counting…</p></div>
     <div class="panel"><h3>Claude Code</h3><pre class="code">claude mcp add --transport http oasis ${esc(o)}/mcp</pre></div>
-    <div class="panel"><h3>Any MCP client</h3><pre class="code">{
+    <div class="panel"><h3>Claude Desktop and claude.ai</h3><p style="margin:0 0 8px">Settings → Connectors → Add custom connector, then paste:</p><pre class="code">${esc(o)}/mcp</pre></div>
+    <div class="panel"><h3>Cursor, VS Code and other MCP clients</h3><p style="margin:0 0 8px"><span class="mono">.cursor/mcp.json</span> or your client's MCP config:</p><pre class="code">{
   "mcpServers": {
     "oasis": { "type": "http", "url": "${esc(o)}/mcp" }
   }
@@ -838,7 +849,22 @@ function pageAgents() {
     <div class="panel"><h3>Plain HTTP</h3><pre class="code">GET ${esc(o)}/llms.txt
 GET ${esc(o)}/api/assets?q=pricing&amp;kind=ui
 GET ${esc(o)}/api/assets/pricing-card/render.svg?preset=Indigo</pre></div>
+    <div class="panel"><h3>What the server enforces</h3><ul class="plain">
+      <li>Prices come from the catalogue, never from the agent.</li>
+      <li><span class="mono">max_total_usd</span> is checked before PayPal is called; an order over it is refused (HTTP 402).</li>
+      <li>At most 10 orders a minute per client and 120 MCP calls a minute; over that, JSON-RPC error <span class="mono">-32029</span>.</li>
+      <li>No agent can pay. Every order waits for a human to approve it in PayPal.</li>
+    </ul><p style="margin:10px 0 0"><a href="https://github.com/machmoon/oasis/blob/main/docs/mcp-session.md">Read a recorded session</a> of an outside agent shopping by URL alone.</p></div>
   </div>`;
+  api("/api/stats/mcp").then((s) => {
+    const box = $("#mcp-live");
+    if (!box) return;
+    const tools = Object.entries(s.tools).sort((a, b) => b[1] - a[1]);
+    const clients = Object.entries(s.clients).sort((a, b) => b[1] - a[1]);
+    box.innerHTML = `<h3>Live traffic <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:400">since ${esc(new Date(s.since).toLocaleDateString())}</span></h3>
+      <div class="stats3"><div><b>${s.requests}</b><span>MCP requests</span></div><div><b>${Object.values(s.tools).reduce((a, b) => a + b, 0)}</b><span>tool calls</span></div><div><b>${clients.length}</b><span>distinct clients</span></div></div>
+      ${tools.length ? `<p class="muted" style="margin:10px 0 0;font-size:13px">${tools.map(([t, n]) => `<span class="mono">${esc(t)}</span> ${n}`).join(" · ")}${clients.length ? `<br/>Clients: ${clients.map(([c, n]) => `${esc(c)} (${n})`).join(", ")}` : ""}</p>` : ""}`;
+  }).catch(() => {});
 }
 
 // ---------- router ----------

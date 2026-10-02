@@ -46,3 +46,14 @@ test("a client cannot set its own price", async () => {
   const r = await fetch(`${base}/api/orders`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: [{ assetId: "nope" }] }) });
   assert.equal(r.status, 400);
 });
+
+test("MCP create_order is rate limited per client, and MCP traffic is counted publicly", async () => {
+  const call = (id) => fetch(`${base}/mcp`, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream" }, body: JSON.stringify({ jsonrpc: "2.0", id, method: "tools/call", params: { name: "create_order", arguments: { items: [{ asset_id: "pricing-card" }], max_total_usd: 1 } } }) });
+  const statuses = [];
+  for (let i = 0; i < 12; i++) statuses.push((await call(i)).status);
+  assert.equal(statuses.filter((s) => s === 429).length, 2, "the 11th and 12th orders in a minute are refused");
+  const limited = await (await call(99)).json();
+  assert.equal(limited.error.code, -32029);
+  const stats = await (await fetch(`${base}/api/stats/mcp`)).json();
+  assert.ok(stats.tools.create_order >= 10);
+});

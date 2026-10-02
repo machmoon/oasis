@@ -137,3 +137,25 @@ test("agent orders over the human's spending cap are refused; attribution reache
   assert.match(pp.calls.create.at(-1).opts.description, /Claude Code.*\$6 cap/);
   assert.equal(o.agentName, "Claude Code");
 });
+
+test("webhooks: PayPal's duplicate and replayed deliveries change nothing twice", async () => {
+  const pp = fakePaypal();
+  commerce.setPaypalClient(pp);
+  const o = await commerce.createCheckout([{ assetId: "pricing-card" }]);
+  const approved = { event_type: "CHECKOUT.ORDER.APPROVED", resource: { id: o.id } };
+  await Promise.all([commerce.handleWebhook(approved), commerce.handleWebhook(approved)]);
+  await commerce.handleWebhook(approved);
+  assert.equal(pp.calls.capture, 1, "three deliveries, one capture");
+  const once = await store.get("orders", o.id);
+  assert.equal(once.licenses.length, 1);
+  const refunded = { event_type: "PAYMENT.CAPTURE.REFUNDED", resource: { id: "R9", supplementary_data: { related_ids: { order_id: o.id } } } };
+  await commerce.handleWebhook(refunded);
+  await commerce.handleWebhook(refunded);
+  const after = await store.get("orders", o.id);
+  assert.equal(after.licenses.length, 1, "licences are revoked, not duplicated or recreated");
+  await assert.rejects(commerce.license(after.licenses[0].token), /refunded/);
+  // A late, replayed approval must not resurrect a refunded order.
+  await commerce.handleWebhook(approved);
+  assert.equal(pp.calls.capture, 1);
+  await assert.rejects(commerce.license(after.licenses[0].token), /refunded/);
+});

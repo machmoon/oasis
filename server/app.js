@@ -1,4 +1,5 @@
 import express from "express";
+import { rateLimit } from "express-rate-limit";
 import fs from "node:fs";
 import crypto from "node:crypto";
 import { config, paypalConfigured } from "./config.js";
@@ -16,6 +17,7 @@ export async function createApp() {
   await catalog.load();
   const app = express();
   app.disable("x-powered-by");
+  app.set("trust proxy", 1); // Render terminates TLS in front of us; rate limits key on the client's IP.
   app.use(express.json({ limit: "1mb" }));
 
   const wrap = (fn) => (req, res) =>
@@ -151,7 +153,36 @@ export async function createApp() {
     }
   }));
 
-  app.post("/mcp", handleMcp);
+  // Abuse controls for the unauthenticated endpoints, using express-rate-limit's fixed windows.
+  // Orders are the tightest: an agent has no reason to open more than a few a minute, and each is a PayPal call.
+  const limit = (limitPerMin, jsonRpc = false) => rateLimit({
+    windowMs: 60_000, limit: limitPerMin, standardHeaders: "draft-8", legacyHeaders: false,
+    handler: (req, res) => res.status(429).json(jsonRpc
+      ? { jsonrpc: "2.0", error: { code: -32029, message: "Rate limited. Slow down and retry in a minute." }, id: req.body?.id ?? null }
+      : { error: "Rate limited. Slow down and retry in a minute." }),
+  });
+  const mcpLimit = limit(120, true), mcpOrderLimit = limit(10, true), orderLimit = limit(10), agentLimit = limit(6);
+  app.use("/api/orders", (req, res, next) => (req.method === "POST" ? orderLimit(req, res, next) : next()));
+  app.use("/api/agent", agentLimit);
+
+  // A public count of MCP traffic, so "agents use this" is a number anyone can check.
+  const mcpStats = (await store.get("stats", "mcp")) || { since: new Date().toISOString(), requests: 0, tools: {}, clients: {} };
+  let statsDirty = false;
+  setInterval(() => { if (statsDirty) { statsDirty = false; store.put("stats", "mcp", mcpStats).catch(() => {}); } }, 10_000).unref();
+  const countMcp = (req, res, next) => {
+    const m = req.body || {};
+    mcpStats.requests++;
+    if (m.method === "tools/call" && m.params?.name) mcpStats.tools[m.params.name] = (mcpStats.tools[m.params.name] || 0) + 1;
+    if (m.method === "initialize") {
+      const c = String(m.params?.clientInfo?.name || "unknown").slice(0, 40);
+      mcpStats.clients[c] = (mcpStats.clients[c] || 0) + 1;
+    }
+    statsDirty = true;
+    next();
+  };
+  const isCreate = (req) => req.body?.method === "tools/call" && req.body?.params?.name === "create_order";
+  app.get("/api/stats/mcp", (req, res) => res.set("Cache-Control", "no-cache").json(mcpStats));
+  app.post("/mcp", mcpLimit, (req, res, next) => (isCreate(req) ? mcpOrderLimit(req, res, next) : next()), countMcp, handleMcp);
   app.get("/mcp", (req, res) => res.status(405).json({ jsonrpc: "2.0", error: { code: -32000, message: "Method not allowed. POST JSON-RPC to /mcp." }, id: null }));
 
   // PayPal sends the payer back here after approving an order an agent created.

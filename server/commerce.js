@@ -96,7 +96,8 @@ export function capture(orderId) {
 async function doCapture(orderId) {
   const existing = await store.get("orders", orderId);
   if (!existing) throw Object.assign(new Error("Unknown order"), { status: 404 });
-  if (existing.status === "COMPLETED") return existing;
+  // Terminal states never capture again: a replayed APPROVED webhook must not resurrect a refunded order.
+  if (["COMPLETED", "REFUNDED", "AMOUNT_MISMATCH"].includes(existing.status)) return existing;
   const result = await paypal.captureOrder(orderId);
   const cap = result.purchase_units?.[0]?.payments?.captures?.[0];
   // Licences are only issued for exactly the amount and currency this server priced.
