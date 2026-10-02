@@ -246,7 +246,7 @@ function pageHome() {
         <div><h2 class="title" style="margin:0 0 8px">The Oasis Town kit.</h2><p class="sub" style="margin:0">${townKit.length} dioramas on one grid, one light and one scale, so they sit side by side. Every one takes your brand.</p></div>
         <a class="btn" href="#/browse?kit=Oasis%20Town">Open the kit</a>
       </div>
-      <div class="kitrow">${townKit.slice(0, 8).map(card).join("")}</div>
+      <div class="kitrow${townKit.length % 4 && townKit.length % 3 === 0 ? " three" : ""}">${townKit.slice(0, townKit.length % 4 && townKit.length % 3 === 0 ? 9 : 8).map(card).join("")}</div>
     </section>` : ""}
 
     <section class="block reveal">

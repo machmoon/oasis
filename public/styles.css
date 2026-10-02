@@ -348,7 +348,8 @@ footer .wrap { display: flex; gap: 18px; flex-wrap: wrap; justify-content: space
 .kitchip { border-color: var(--accent); color: var(--accent); }
 .kitchip.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .kitrow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; margin-top: 24px; }
-@media (max-width: 1024px) { .kitrow { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.kitrow.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 1024px) { .kitrow, .kitrow.three { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .cap-field { display: flex; flex-direction: column; gap: 2px; }
