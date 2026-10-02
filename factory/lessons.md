@@ -1,0 +1,2 @@
+- When content grows toward a knob's maximum, reflow or paginate rather than silently hiding optional sections. Render the max case and check that every block from the default render is still present before shipping.
+- When you de-emphasise secondary elements (inactive screens, background cards), use scale, position, blur or a uniform overlay rather than fading text colour. Keep any text that remains visible at legible contrast in every brand theme. Also check that each preset differs visibly from the defaults before shipping it.
