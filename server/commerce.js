@@ -1,6 +1,7 @@
 // Carts become PayPal orders; captured orders become licences; licence revenue flows back up the
 // fork lineage as royalties, paid with PayPal Payouts.
 import crypto from "node:crypto";
+import { EventEmitter } from "node:events";
 import * as mandates from "./mandates.js";
 import * as catalog from "./catalog.js";
 import * as paypalApi from "./paypal.js";
@@ -11,6 +12,10 @@ export function setPaypalClient(client) { paypal = client || paypalApi; }
 import * as store from "./store.js";
 import { config } from "./config.js";
 import { diffFromDefaults } from "./knobs.js";
+
+/** Every completed sale, for the live feed (/api/feed). */
+export const events = new EventEmitter();
+events.setMaxListeners(200);
 
 const PLATFORM_AUTHORS = new Set(["oasis", "oasis-factory"]);
 
@@ -73,6 +78,76 @@ export async function createCheckout(items, { agent = false, agentName = null, m
     claimToken: crypto.randomBytes(16).toString("hex"),
   };
   await store.put("orders", order.id, doc);
+  return doc;
+}
+
+/**
+ * An agent buys with a funded mandate: one PayPal order charged to the human's vaulted wallet, no redirect.
+ * The mandate's budget is reserved first (and released if PayPal declines), PayPal returns the order COMPLETED
+ * in the same call, and the same fulfil() as human checkout issues licences and books each creator's royalty.
+ */
+export async function buyWithMandate(mandateToken, items, { agentName = null } = {}) {
+  const m = await mandates.recordByToken(mandateToken);
+  if (!m) throw Object.assign(new Error("Unknown or revoked mandate token. Ask the human for an Oasis budget at /#/budget."), { status: 403 });
+  if (!m.vault) throw Object.assign(new Error(`Mandate ${m.id} is not funded: every order on it needs the human to approve in PayPal. Use create_order instead.`), { status: 409 });
+  const lines = priceCart(items);
+  const paid = lines.filter((l) => l.price > 0);
+  const total = paid.reduce((s, l) => s + l.price, 0);
+  const ref = crypto.randomBytes(6).toString("hex");
+  const doc = {
+    id: null, ref, status: "CREATED", agent: true, agentName: agentName || "AI agent", mandateId: m.id, funded: true,
+    createdAt: new Date().toISOString(), total,
+    items: lines.map((l) => ({ assetId: l.asset.id, title: l.asset.title, price: l.price, knobs: l.values, author: l.asset.author })),
+    claimToken: crypto.randomBytes(16).toString("hex"),
+  };
+  if (!paid.length) return freeLicences(doc);
+  const hold = await mandates.reserve(mandateToken, { totalUsd: total, assetIds: paid.map((l) => l.asset.id), agentName });
+  let order;
+  try {
+    order = await paypal.createVaultedOrder(
+      paid.map((l, i) => ({
+        name: `${l.asset.title} licence`, sku: `${l.asset.id}:${ref}:${i}`, price: l.price, url: `${config.baseUrl}/#/a/${l.asset.id}`,
+        description: Object.entries(diffFromDefaults(l.asset.params, l.values)).slice(0, 4).map(([k, v]) => `${k}=${v}`).join(", ") || "default knobs",
+      })),
+      { vaultId: hold.mandate.vault.paymentTokenId, customId: ref, requestId: `oasis-agent-${ref}`, description: `Bought by ${doc.agentName} within your $${(hold.mandate.budgetCents / 100).toFixed(0)} Oasis budget (${m.id})` },
+    );
+  } catch (e) {
+    await hold.release();
+    throw Object.assign(new Error(`PayPal declined the charge on the saved wallet: ${e.message}. Nothing was licensed.`), { status: e.status === 422 ? 402 : e.status || 502 });
+  }
+  await hold.bind(order.id);
+  doc.id = order.id;
+  doc.status = order.status;
+  doc.items = doc.items.filter((it) => it.price > 0);
+  doc.freeItems = lines.filter((l) => l.price <= 0).map((l) => ({ assetId: l.asset.id, title: l.asset.title, knobs: l.values }));
+  const p = order.payer || {};
+  doc.payer = { name: [p.name?.given_name, p.name?.surname].filter(Boolean).join(" "), email: p.email_address || hold.mandate.vault.payerEmail };
+  await store.put("orders", order.id, doc);
+  const cap = order.purchase_units?.[0]?.payments?.captures?.[0];
+  if (order.status !== "COMPLETED" || cap?.status !== "COMPLETED") {
+    if (cap?.status === "PENDING") { doc.status = "CAPTURE_PENDING"; doc.captureId = cap.id; await store.put("orders", order.id, doc); return doc; }
+    await mandates.settle(m.id, order.id, "released");
+    doc.status = cap?.status || order.status;
+    await store.put("orders", order.id, doc);
+    throw Object.assign(new Error(`PayPal did not complete the payment (${doc.status}). Nothing was licensed.`), { status: 402 });
+  }
+  if (!(await amountOk(doc, cap))) throw Object.assign(new Error("Captured amount did not match; refunded"), { status: 409 });
+  const done = await fulfil(doc, cap);
+  for (const f of doc.freeItems) await issueFree(done, f);
+  return done;
+}
+
+async function issueFree(o, f) {
+  const token = crypto.randomBytes(16).toString("hex");
+  await store.put("licenses", token, { token, orderId: o.id, assetId: f.assetId, title: f.title, knobs: f.knobs, price: 0, licensee: o.payer || {}, createdAt: new Date().toISOString() });
+  o.licenses.push({ token, assetId: f.assetId, title: f.title });
+  if (o.id) await store.put("orders", o.id, o);
+}
+
+async function freeLicences(doc) {
+  doc.id = `free-${doc.ref}`; doc.status = "COMPLETED"; doc.licenses = [];
+  for (const it of doc.items) await issueFree(doc, it);
+  await store.put("orders", doc.id, doc);
   return doc;
 }
 
@@ -198,7 +273,20 @@ async function fulfil(existing, cap) {
   }
   await store.put("orders", orderId, existing);
   for (const [i, l] of ledger.entries()) await store.put("ledger", `${orderId}-${i}`, l);
+  events.emit("sale", saleEvent(existing));
   return existing;
+}
+
+/** A sale as the public feed shows it: who bought, what, and which creators earned how much. No secrets. */
+export function saleEvent(o) {
+  const creators = {};
+  for (const r of o.royalties || []) if (r.role !== "platform") creators[r.author] = (creators[r.author] || 0) + r.cents;
+  return {
+    orderId: o.id, at: new Date().toISOString(), agent: o.agent ? o.agentName : null, funded: !!o.funded, total: o.total,
+    items: o.items.map((i) => ({ assetId: i.assetId, title: i.title, price: i.price })),
+    creators: Object.entries(creators).map(([author, cents]) => ({ author, usd: cents / 100 })),
+    payoutAfter: o.payoutHold?.releaseAfter || null,
+  };
 }
 
 export async function license(token) {

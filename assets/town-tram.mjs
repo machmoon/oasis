@@ -1,5 +1,5 @@
 // Tram: a two-car city tram. Block asset.
-export const meta = { title: "City Tram", kind: "3d", format: "blocks", kit: "Oasis Town", price: 3, author: "oasis", footprint: [8, 2], size: [1000, 700],
+export const meta = { title: "City Tram", kind: "3d", format: "blocks", kit: "Oasis Town", price: 3, author: "tramworks", payout: "tramworks@creators.oasis.example", footprint: [8, 2], size: [1000, 700],
   description: "A two-car city tram with lit windows and a pantograph. Body colour, stripe and cars are knobs.",
   tags: ["3d", "low poly", "tram", "train", "vehicle", "transport", "town", "kit", "block"] };
 export const params = { knobs: {

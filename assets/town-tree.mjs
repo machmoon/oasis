@@ -1,5 +1,5 @@
 // Town Tree: a blocky cherry, maple or pine on a little planter, in any season. Block asset.
-export const meta = { title: "Blossom Tree", kind: "3d", format: "blocks", kit: "Oasis Town", price: 0, author: "oasis", footprint: [2, 2], size: [800, 900],
+export const meta = { title: "Blossom Tree", kind: "3d", format: "blocks", kit: "Oasis Town", price: 1, author: "parkline", payout: "parkline@creators.oasis.example", footprint: [2, 2], size: [800, 900],
   description: "A toy tree made of stacked blocks: cherry blossom, round summer tree or pine, with a season and a size.",
   tags: ["3d", "low poly", "tree", "cherry blossom", "sakura", "nature", "town", "kit", "block"] };
 export const params = { knobs: {

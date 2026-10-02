@@ -27,6 +27,13 @@ function fakePaypal({ captureAmount, captureStatus = "COMPLETED", declineFirst =
       const value = (captureAmount ?? o.total).toFixed(2);
       return { id, status: "COMPLETED", payer: { name: { given_name: "Ada", surname: "Lovelace" }, email_address: "buyer@example.com" }, purchase_units: [{ payments: { captures: [{ id: `CAP-${id}`, status: captureStatus, ...(captureStatus === "PENDING" ? { status_details: { reason: "ECHECK" } } : {}), amount: { currency_code: "USD", value } }] } }] };
     },
+    async createVaultedOrder(lines, opts) {
+      calls.vaulted = (calls.vaulted || []).concat({ lines, opts });
+      if (declineFirst && calls.vaulted.length === 1) throw Object.assign(new Error("UNPROCESSABLE_ENTITY: INSTRUMENT_DECLINED"), { status: 422 });
+      const value = (captureAmount ?? lines.reduce((s, l) => s + l.price, 0)).toFixed(2);
+      const id = `VORDER${++n}`;
+      return { id, status: "COMPLETED", payer: { email_address: "buyer@example.com" }, purchase_units: [{ payments: { captures: [{ id: `CAP-${id}`, status: captureStatus, amount: { currency_code: "USD", value } }] } }] };
+    },
     async refundCapture(captureId, opts) { calls.refunds.push({ captureId, opts }); return { id: `REF-${captureId}`, status: "COMPLETED" }; },
     async sendPayouts(batchId, items) { calls.payouts.push({ batchId, items }); return { batch_header: { payout_batch_id: `PB-${batchId}`, batch_status: "PENDING" } }; },
   };
@@ -292,4 +299,48 @@ test("mandates: the human can revoke one at once, and every agent order is in it
   assert.ok(revoked.revoked_at);
   assert.equal(revoked.remaining_usd, 0);
   await assert.rejects(tools.createOrder({ items: [{ assetId: "pricing-card" }], mandate: token }), /revoked/);
+});
+
+// ---------- funded mandates: the human approves once in PayPal Vault, the agent buys unattended ----------
+async function fundedMandate(usd) {
+  const mandates = await import("../server/mandates.js");
+  const { mandate, token } = await mandates.issue({ maxTotalUsd: usd, funded: true });
+  await mandates.attachSetup(mandate.id, { setupTokenId: `ST-${mandate.id}`, approveUrl: "https://sandbox.paypal.com/agreements/approve" });
+  return { mandates, mandate, token };
+}
+
+test("a funded mandate cannot spend before the human approves it in PayPal", async () => {
+  commerce.setPaypalClient(fakePaypal());
+  const { token } = await fundedMandate(20);
+  await assert.rejects(commerce.buyWithMandate(token, [{ assetId: "town-shop" }]), /waiting for the human/);
+});
+
+test("an agent buys with a funded mandate: one vaulted order, licences issued, budget spent, creators booked", async () => {
+  const pp = fakePaypal();
+  commerce.setPaypalClient(pp);
+  const { mandates, mandate, token } = await fundedMandate(20);
+  await mandates.activate(mandate.id, { paymentTokenId: "VAULT-1", payerEmail: "buyer@example.com" });
+  const items = [{ assetId: "town-shop", knobs: { floors: 3 } }, { assetId: "town-tram" }];
+  const total = items.reduce((s, i) => s + catalog.getAsset(i.assetId).price, 0);
+  const seen = [];
+  commerce.events.once("sale", (e) => seen.push(e));
+  const o = await commerce.buyWithMandate(token, items, { agentName: "Claude Code" });
+  assert.equal(pp.calls.vaulted.length, 1, "one PayPal order for the whole scene");
+  assert.equal(pp.calls.vaulted[0].opts.vaultId, "VAULT-1");
+  assert.equal(o.status, "COMPLETED");
+  assert.equal(o.licenses.length, 2);
+  assert.equal((await mandates.get(mandate.id)).spent_usd, total);
+  assert.equal(seen[0].orderId, o.id);
+  assert.ok(seen[0].creators.length >= 1);
+});
+
+test("a funded mandate refuses an order over what is left, and a decline gives the budget back", async () => {
+  const pp = fakePaypal({ declineFirst: true });
+  commerce.setPaypalClient(pp);
+  const { mandates, mandate, token } = await fundedMandate(5);
+  await mandates.activate(mandate.id, { paymentTokenId: "VAULT-2", payerEmail: "buyer@example.com" });
+  await assert.rejects(commerce.buyWithMandate(token, [{ assetId: "town-shop" }, { assetId: "town-flats" }]), /over what mandate/);
+  assert.equal(pp.calls.vaulted, undefined, "nothing reaches PayPal when the budget says no");
+  await assert.rejects(commerce.buyWithMandate(token, [{ assetId: "town-shop" }]), /declined/);
+  assert.equal((await mandates.get(mandate.id)).remaining_usd, 5);
 });

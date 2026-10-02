@@ -1,5 +1,5 @@
 // Agent Kiosk: Oasis's little robot shopkeeper. Block asset.
-export const meta = { title: "Agent Kiosk", kind: "3d", format: "blocks", kit: "Oasis Town", price: 0, author: "oasis", footprint: [2, 2], size: [800, 900],
+export const meta = { title: "Agent Kiosk", kind: "3d", format: "blocks", kit: "Oasis Town", price: 1, author: "tramworks", payout: "tramworks@creators.oasis.example", footprint: [2, 2], size: [800, 900],
   description: "The Oasis agent as a toy robot on a plinth: a screen face, an antenna and a cube it is about to deliver. Face, body and cube colours are knobs.",
   tags: ["3d", "low poly", "robot", "agent", "mascot", "character", "town", "kit", "block"] };
 export const params = { knobs: {

@@ -1,5 +1,5 @@
 // Town House: a pitched-roof house with a door, windows and a chimney. Block asset.
-export const meta = { title: "Cottage", kind: "3d", format: "blocks", kit: "Oasis Town", price: 3, author: "oasis", footprint: [6, 6], size: [1000, 1000],
+export const meta = { title: "Cottage", kind: "3d", format: "blocks", kit: "Oasis Town", price: 3, author: "mika-blocks", payout: "mika-blocks@creators.oasis.example", footprint: [6, 6], size: [1000, 1000],
   description: "A cosy pitched-roof cottage with a front door, lit windows and a chimney. Walls, roof, size and floors are knobs.",
   tags: ["3d", "low poly", "house", "home", "cottage", "building", "town", "kit", "block"] };
 export const params = { knobs: {

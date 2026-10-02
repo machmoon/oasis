@@ -1,5 +1,5 @@
 // Approval Gate: a toll gate that only opens when the human approves. Block asset.
-export const meta = { title: "Approval Gate", kind: "3d", format: "blocks", kit: "Oasis Town", price: 0, author: "oasis", footprint: [6, 3], size: [1000, 800],
+export const meta = { title: "Approval Gate", kind: "3d", format: "blocks", kit: "Oasis Town", price: 2, author: "shrinewright", payout: "shrinewright@creators.oasis.example", footprint: [6, 3], size: [1000, 800],
   description: "A toll booth and barrier across a 6 m road: closed while an order waits, raised once you approve. The checkout, as a toy.",
   tags: ["3d", "low poly", "gate", "barrier", "toll", "checkout", "booth", "town", "kit", "block"] };
 export const params = { knobs: {

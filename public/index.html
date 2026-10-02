@@ -3,41 +3,42 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Oasis: design assets your agent can brand and buy</title>
-  <meta name="description" content="Every icon set, illustration, UI kit, mockup and poster on Oasis is a small program with knobs. Remix it, then license your exact remix with PayPal — or let the Oasis agent build your whole kit." />
+  <title>Oasis: 3D assets your agent can buy</title>
+  <meta name="description" content="A registry of 3D assets written as code. Approve one PayPal budget, and AI agents license every piece they import while each creator gets paid." />
+  <meta property="og:title" content="Oasis: 3D assets your agent can buy" />
+  <meta property="og:description" content="Approve one PayPal budget. Agents license every 3D piece they import, and every creator gets paid." />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+  <link rel="stylesheet" href="/site.css" />
 </head>
 <body>
-  <header class="top" id="top">
+  <a class="skip" href="#app">Skip to content</a>
+  <header class="top">
     <div class="wrap">
-      <a class="logo" href="#/">
-        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3 28 10 16 17 4 10Z" fill="#FF5B37"/><path d="M4 10 16 17V30L4 23Z" fill="#15171C"/><path d="M28 10 16 17V30L28 23Z" fill="#3C424D"/><path d="M16 6.5 22 10 16 13.5 10 10Z" fill="#FFD58A"/></svg>
+      <a class="logo" href="#/" aria-label="Oasis home">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3 28 10 16 17 4 10Z" fill="#E0484D"/><path d="M4 10 16 17V30L4 23Z" fill="#16181D"/><path d="M28 10 16 17V30L28 23Z" fill="#3C424D"/><path d="M16 6.5 22 10 16 13.5 10 10Z" fill="#FFD58A"/></svg>
         Oasis
       </a>
-      <nav class="nav">
-        <a href="#/browse" data-nav="browse">Browse</a>
-        <a href="#/agent" data-nav="agent">Agent</a>
-        <a href="#/creators" data-nav="creators" class="hide-sm">Creators</a>
-        <a href="#/agents" data-nav="agents" class="hide-sm">For AI</a>
-        <a href="#/status" data-nav="status" class="hide-sm">Proof</a>
-        <button class="brand-pill" id="brand-pill" title="Brand mode: re-skin every asset in your brand"></button>
-        <a href="#/cart" data-nav="cart" class="cart-pill">Cart <b id="cart-count">0</b></a>
+      <nav class="nav" aria-label="Main">
+        <a href="#/kit" data-nav="kit">Kit</a>
+        <a href="#/ledger" data-nav="ledger">Ledger</a>
+        <a href="/llms.txt" class="hide-sm">For agents</a>
+        <a href="#/budget" data-nav="budget">Budget</a>
       </nav>
     </div>
   </header>
-  <main id="app"></main>
+  <main id="app" tabindex="-1"></main>
   <footer>
     <div class="wrap">
-      <span>Oasis. Design assets you can reshape. Payments run in the PayPal sandbox.</span>
-      <span><a href="/llms.txt">llms.txt</a> <a href="https://github.com/machmoon/oasis" target="_blank" rel="noopener">Source</a></span>
+      <span>Oasis runs on the PayPal sandbox. Creator accounts are sandbox accounts.</span>
+      <span><a href="/llms.txt">llms.txt</a><a href="https://github.com/machmoon/oasis" target="_blank" rel="noopener">Source</a></span>
     </div>
   </footer>
-  <div class="toast" id="toast"></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/" } }</script>
-  <script type="module" src="/app.js"></script>
+  <script type="module" src="/site.js"></script>
 </body>
 </html>

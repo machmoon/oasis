@@ -1,5 +1,5 @@
 // Town Lamp: a street lamp that glows at night. Block asset.
-export const meta = { title: "Street Lamp", kind: "3d", format: "blocks", kit: "Oasis Town", price: 0, author: "oasis", footprint: [1, 1], size: [600, 900],
+export const meta = { title: "Street Lamp", kind: "3d", format: "blocks", kit: "Oasis Town", price: 1, author: "parkline", payout: "parkline@creators.oasis.example", footprint: [1, 1], size: [600, 900],
   description: "A street lamp with a lantern head that lights up at night. Post colour, height and lantern style are knobs.",
   tags: ["3d", "low poly", "lamp", "street light", "light", "town", "kit", "block"] };
 export const params = { knobs: {

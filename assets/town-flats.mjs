@@ -1,5 +1,5 @@
 // Flats: a mid-rise apartment block with balconies. Block asset.
-export const meta = { title: "Apartment Flats", kind: "3d", format: "blocks", kit: "Oasis Town", price: 5, author: "oasis", footprint: [6, 6], size: [1000, 1100],
+export const meta = { title: "Apartment Flats", kind: "3d", format: "blocks", kit: "Oasis Town", price: 5, author: "mika-blocks", payout: "mika-blocks@creators.oasis.example", footprint: [6, 6], size: [1000, 1100],
   description: "A mid-rise block of flats with balconies, potted plants, a lobby canopy and a rooftop water tank. Floors and every colour rebuild live.",
   tags: ["3d", "low poly", "apartments", "flats", "building", "city", "town", "kit", "block"] };
 export const params = { knobs: {

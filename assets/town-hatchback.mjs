@@ -1,5 +1,5 @@
 // Hatchback: a boxy toy car. Block asset.
-export const meta = { title: "Toy Hatchback", kind: "3d", format: "blocks", kit: "Oasis Town", price: 2, author: "oasis", footprint: [4, 2], size: [900, 700],
+export const meta = { title: "Toy Hatchback", kind: "3d", format: "blocks", kit: "Oasis Town", price: 2, author: "tramworks", payout: "tramworks@creators.oasis.example", footprint: [4, 2], size: [900, 700],
   description: "A boxy little hatchback with tinted windows, chunky wheels and headlights that glow at night.",
   tags: ["3d", "low poly", "car", "vehicle", "hatchback", "traffic", "town", "kit", "block"] };
 export const params = { knobs: {

@@ -22,6 +22,8 @@ function record(id, source, extra = {}) {
     tags: meta.tags || [],
     price: Math.max(0, Number(meta.price) || 0),
     author: meta.author || "oasis",
+    // Creator accounts in this sandbox build are PayPal sandbox payees (meta.payout); forks carry their own.
+    payoutEmail: meta.payout || null,
     credit: meta.credit || null,
     size: meta.size || [800, 600],
     // "blocks": build(p) returns 3D parts (server/blocks.js); "svg": render(p) returns an SVG.

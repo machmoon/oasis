@@ -1,5 +1,5 @@
 // Market Stall: a striped stall stacked with goods. Block asset.
-export const meta = { title: "Market Stall", kind: "3d", format: "blocks", kit: "Oasis Town", price: 2, author: "oasis", footprint: [4, 3], size: [900, 800],
+export const meta = { title: "Market Stall", kind: "3d", format: "blocks", kit: "Oasis Town", price: 2, author: "mika-blocks", payout: "mika-blocks@creators.oasis.example", footprint: [4, 3], size: [900, 800],
   description: "A street-market stall with a striped canopy and a counter stacked with goods. Canopy, goods and stock level are knobs.",
   tags: ["3d", "low poly", "market", "stall", "shop", "street food", "town", "kit", "block"] };
 export const params = { knobs: {

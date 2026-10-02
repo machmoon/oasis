@@ -6,6 +6,14 @@
 // because every Oasis order is still approved by the human in PayPal. AP2's human-present IntentMandate carries no
 // amount; Oasis adds a server-held budget, because the risk it closes is an agent restating its own cap
 // (max_total_usd is only the agent's word). The agent holds a bearer token; the server holds the balance.
+//
+// A mandate can also be funded: the human approves a PayPal Vault setup token once, and from then on the agent's
+// orders are charged to that saved wallet with no human in the loop (user_cart_confirmation_required: false, which
+// AP2 defines as "the agent can make purchases on the user's behalf once all purchase conditions have been
+// satisfied"). view() also projects the mandate as AP2's newer open payment mandate
+// (code/sdk/schemas/ap2/open_payment_mandate.json): a payment.budget constraint checked the way AP2's
+// BudgetEvaluator does (code/sdk/python/ap2/sdk/constraints.py: past spend + this payment <= max), plus
+// payment.execution_date and payment.allowed_payees.
 import crypto from "node:crypto";
 import * as store from "./store.js";
 
@@ -13,7 +21,7 @@ export const UNCAPTURED_HOLD_MS = 3 * 60 * 60 * 1000; // an order nobody approve
 const cents = (usd) => Math.round(Number(usd) * 100);
 const hash = (token) => crypto.createHash("sha256").update(String(token)).digest("hex");
 
-export async function issue({ description, maxTotalUsd, expiresInHours = 24, skus = null, now = Date.now() }) {
+export async function issue({ description, maxTotalUsd, expiresInHours = 24, skus = null, funded = false, now = Date.now() }) {
   const budget = cents(maxTotalUsd);
   if (!(budget >= 100 && budget <= 50000)) throw Object.assign(new Error("Budget must be between $1 and $500"), { status: 400 });
   const hours = Math.min(168, Math.max(1, Number(expiresInHours) || 24));
@@ -23,7 +31,9 @@ export async function issue({ description, maxTotalUsd, expiresInHours = 24, sku
     tokenHash: hash(token), // only the hash is stored: a leaked data dir doesn't leak spendable tokens
     natural_language_description: String(description || "Design assets for my project").slice(0, 300),
     skus: Array.isArray(skus) && skus.length ? skus.map(String).slice(0, 50) : null,
-    user_cart_confirmation_required: true,
+    user_cart_confirmation_required: !funded,
+    // funded mandates: { state: "awaiting_approval" | "active" | "closed", setupTokenId, paymentTokenId, payerEmail }
+    vault: funded ? { state: "awaiting_approval" } : null,
     intent_expiry: new Date(now + hours * 3600_000).toISOString(),
     budgetCents: budget,
     holds: [], // { orderId, cents, at, state: "held" | "spent" | "released" }
@@ -47,9 +57,21 @@ const committed = (m) => m.holds.filter((h) => h.state !== "released").reduce((s
 
 export function view(m, now = Date.now()) {
   live(m, now);
+  const spent = m.holds.filter((h) => h.state === "spent").reduce((s, h) => s + h.cents, 0);
   return {
     id: m.id, natural_language_description: m.natural_language_description, skus: m.skus,
-    user_cart_confirmation_required: true, intent_expiry: m.intent_expiry, expired: now > Date.parse(m.intent_expiry),
+    user_cart_confirmation_required: !m.vault, intent_expiry: m.intent_expiry, expired: now > Date.parse(m.intent_expiry),
+    funding: m.vault ? { state: m.vault.state, payer: m.vault.payerEmail || null, approve_url: m.vault.state === "awaiting_approval" ? m.vault.approveUrl || null : null } : null,
+    spent_usd: spent / 100,
+    open_mandate: {
+      vct: "mandate.payment.open.1",
+      constraints: [
+        { type: "payment.budget", max: m.budgetCents / 100, currency: "USD" },
+        { type: "payment.execution_date", not_after: m.intent_expiry },
+        ...(m.skus ? [{ type: "checkout.line_items", allowed: m.skus }] : []),
+      ],
+      payment_instrument: m.vault ? { type: "paypal.vault", payer: m.vault.payerEmail || null } : { type: "paypal.checkout_per_order" },
+    },
     revoked_at: m.revokedAt || null,
     budget_usd: m.budgetCents / 100, remaining_usd: m.revokedAt ? 0 : (m.budgetCents - committed(m)) / 100,
     // The audit log: every order an agent created against this mandate, by whom and when.
@@ -78,6 +100,7 @@ export async function reserve(token, { totalUsd, assetIds, agentName = null, now
   return locked(found.id, async () => {
     const m = live(await store.get("mandates", found.id), now);
     if (m.revokedAt) throw Object.assign(new Error(`Mandate ${m.id} was revoked by the human at ${m.revokedAt}.`), { status: 403 });
+    if (m.vault && m.vault.state !== "active") throw Object.assign(new Error(`Mandate ${m.id} is waiting for the human to approve it in PayPal${m.vault.approveUrl ? ` (${m.vault.approveUrl})` : ""}.`), { status: 403 });
     if (now > Date.parse(m.intent_expiry)) throw Object.assign(new Error(`Mandate ${m.id} expired at ${m.intent_expiry}.`), { status: 403 });
     if (m.skus && assetIds.some((a) => !m.skus.includes(a))) throw Object.assign(new Error(`Mandate ${m.id} only allows: ${m.skus.join(", ")}.`), { status: 403 });
     const want = cents(totalUsd), left = m.budgetCents - committed(m);
@@ -104,6 +127,34 @@ export async function settle(mandateId, orderId, state) {
     await store.put("mandates", mandateId, m);
   });
 }
+
+/** Funding: remembers the setup token the human is about to approve. */
+export async function attachSetup(id, { setupTokenId, approveUrl }) {
+  return locked(id, async () => {
+    const m = await store.get("mandates", id);
+    m.vault = { ...m.vault, setupTokenId, approveUrl };
+    await store.put("mandates", id, m);
+    return m;
+  });
+}
+
+export async function bySetupToken(setupTokenId) {
+  return (await store.list("mandates")).find((m) => m.vault?.setupTokenId === setupTokenId) || null;
+}
+
+/** The human approved in PayPal: the vaulted wallet is now this mandate's payment instrument. */
+export async function activate(id, { paymentTokenId, payerEmail }) {
+  return locked(id, async () => {
+    const m = await store.get("mandates", id);
+    if (m.vault.state === "active") return view(m);
+    m.vault = { ...m.vault, state: "active", paymentTokenId, payerEmail, approvedAt: new Date().toISOString() };
+    await store.put("mandates", id, m);
+    return view(m);
+  });
+}
+
+/** Internal: the full record for a bearer token (commerce needs the vault id to charge). */
+export const recordByToken = byToken;
 
 export async function byTokenView(token) {
   const m = await byToken(token);

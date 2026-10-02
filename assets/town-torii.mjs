@@ -1,5 +1,5 @@
 // Torii Gate: a shrine gate. Block asset.
-export const meta = { title: "Torii Gate", kind: "3d", format: "blocks", kit: "Oasis Town", price: 2, author: "oasis", footprint: [4, 2], size: [900, 800],
+export const meta = { title: "Torii Gate", kind: "3d", format: "blocks", kit: "Oasis Town", price: 2, author: "shrinewright", payout: "shrinewright@creators.oasis.example", footprint: [4, 2], size: [900, 800],
   description: "A vermilion shrine gate with two lintels. Colour, height and span are knobs.",
   tags: ["3d", "low poly", "torii", "gate", "shrine", "japan", "kyoto", "town", "kit", "block"] };
 export const params = { knobs: {

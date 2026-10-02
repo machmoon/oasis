@@ -15,6 +15,8 @@ import * as world from "./world.js";
 import { toGlb } from "./glb.js";
 import * as mandates from "./mandates.js";
 import { llmsTxt } from "./llms.js";
+import * as registry from "./registry.js";
+import * as paypal from "./paypal.js";
 
 export async function createApp() {
   await catalog.load();
@@ -57,6 +59,11 @@ export async function createApp() {
     res.json({ ...catalog.summary(a, { withKnobs: true }), parent: a.forkedFrom ? catalog.summary(catalog.getAsset(a.forkedFrom) || { ...a, params: {} }) : null, children: catalog.allAssets().filter((x) => x.forkedFrom === a.id).map((x) => catalog.summary(x)) });
   }));
 
+  app.get("/api/assets/:id/render.png", wrap(async (req, res) => {
+    const a = mustAsset(req.params.id);
+    const { svg } = await catalog.renderAsync(a, parseKnobs(req));
+    res.set("Content-Type", "image/png").set("Cache-Control", "public, max-age=300").send(catalog.toPng(svg, Math.min(1024, Number(req.query.w) || 640)));
+  }));
   app.get("/api/assets/:id/render.svg", wrap(async (req, res) => {
     const a = mustAsset(req.params.id);
     const { svg } = await catalog.renderAsync(a, parseKnobs(req));
@@ -178,6 +185,85 @@ export async function createApp() {
     if (!m) throw Object.assign(new Error("Unknown mandate"), { status: 404 });
     res.json(m);
   }));
+  // Budgets: the human approves one PayPal Vault setup token; the agent then buys inside the budget, unattended.
+  app.post("/api/budgets", mandateLimit, wrap(async (req, res) => {
+    const { description, usd, hours } = req.body || {};
+    const { mandate, token } = await mandates.issue({ description: description || "3D assets for my scene", maxTotalUsd: usd, expiresInHours: hours || 24, funded: true });
+    const setup = await paypal.createSetupToken({
+      description: `Oasis: up to $${Number(usd).toFixed(0)} for your agent's 3D assets`,
+      returnUrl: `${config.baseUrl}/budget/return?m=${mandate.id}`, cancelUrl: `${config.baseUrl}/#/budget?cancelled=${mandate.id}`,
+      requestId: `oasis-setup-${mandate.id}`,
+    });
+    await mandates.attachSetup(mandate.id, { setupTokenId: setup.id, approveUrl: setup.approveUrl });
+    res.json({ mandate: await mandates.get(mandate.id), token, approveUrl: setup.approveUrl });
+  }));
+  app.get("/budget/return", wrap(async (req, res) => {
+    const setupTokenId = String(req.query.approval_token_id || req.query.token || "");
+    const m = await mandates.bySetupToken(setupTokenId);
+    if (!m) throw Object.assign(new Error("Unknown approval"), { status: 404 });
+    if (m.vault.state !== "active") {
+      const pt = await paypal.createPaymentToken(setupTokenId);
+      await mandates.activate(m.id, { paymentTokenId: pt.id, payerEmail: pt.payerEmail });
+    }
+    res.redirect(`/#/budget/${m.id}`);
+  }));
+  // An agent with a funded mandate buys licences: one PayPal order on the vaulted wallet, no redirect.
+  const buyLimit = rateLimit({ windowMs: 60_000, limit: 30, standardHeaders: "draft-8", legacyHeaders: false });
+  const bearer = (req) => (req.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+  app.post("/api/buy", buyLimit, wrap(async (req, res) => {
+    const items = (req.body?.items || []).map((it) => (typeof it === "string" ? { assetId: it } : { assetId: it.asset_id || it.assetId, knobs: it.knobs }));
+    if (!items.length) throw Object.assign(new Error("items required: [{ asset_id, knobs? }]"), { status: 400 });
+    const o = await commerce.buyWithMandate(bearer(req), items, { agentName: req.body?.agent_name || req.get("X-Agent-Name") || null });
+    res.json(buyResult(o, await mandates.get(o.mandateId)));
+  }));
+  const buyResult = (o, m) => ({
+    order_id: o.id, status: o.status, total_usd: o.total,
+    imports: o.licenses.map((l) => ({ asset_id: l.assetId, title: l.title, module: registry.moduleUrl(l.assetId, l.token) })),
+    creators_paid: commerce.saleEvent(o).creators,
+    budget: { remaining_usd: m?.remaining_usd, spent_usd: m?.spent_usd, of_usd: m?.budget_usd },
+  });
+
+  // The live sales feed: Server-Sent Events, one event per completed sale.
+  app.get("/api/feed", (req, res) => {
+    res.set({ "Content-Type": "text/event-stream", "Cache-Control": "no-cache, no-transform", Connection: "keep-alive", "X-Accel-Buffering": "no" });
+    res.flushHeaders();
+    const send = (ev) => res.write(`event: sale\ndata: ${JSON.stringify(ev)}\n\n`);
+    commerce.events.on("sale", send);
+    const ping = setInterval(() => res.write(": ping\n\n"), 20000);
+    req.on("close", () => { clearInterval(ping); commerce.events.off("sale", send); });
+  });
+  app.get("/api/sales", wrap(async (req, res) => {
+    const orders = (await store.list("orders")).filter((o) => o.status === "COMPLETED" && o.royalties && o.funded).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+    res.json(orders.slice(0, 40).map(commerce.saleEvent).map((e, i) => ({ ...e, at: orders[i].createdAt })));
+  }));
+
+  // The registry: import any 3D asset from a URL; a licence makes it real (see server/registry.js).
+  app.get("/cdn/runtime.mjs", (req, res) => {
+    res.set({ "Content-Type": "text/javascript; charset=utf-8", "Access-Control-Allow-Origin": "*", "Cache-Control": "public, max-age=300" });
+    res.sendFile(new URL("../public/blocks-runtime.js", import.meta.url).pathname);
+  });
+  app.get("/cdn/:id.mjs", wrap(async (req, res) => {
+    const a = mustAsset(req.params.id);
+    if (a.format !== "blocks") throw Object.assign(new Error(`${a.id} is not a 3D asset`), { status: 404 });
+    res.set({ "Access-Control-Allow-Origin": "*", "Access-Control-Expose-Headers": "PAYMENT-REQUIRED, PAYMENT-RESPONSE", Vary: "Sec-Fetch-Dest, PAYMENT-SIGNATURE" });
+    const js = (body) => res.set({ "Content-Type": "text/javascript; charset=utf-8", "Cache-Control": "private, no-store" }).send(body);
+    if (req.query.lic) {
+      const lic = await commerce.license(String(req.query.lic)).catch((e) => { throw Object.assign(new Error(e.message), { status: e.status === 410 ? 410 : 403 }); });
+      if (lic.assetId !== a.id) throw Object.assign(new Error("That licence is for a different asset"), { status: 403 });
+      return js(registry.licensedModule(a, lic));
+    }
+    if (a.price <= 0) return js(registry.licensedModule(a, { token: "free", orderId: "free" }));
+    const sig = req.get("PAYMENT-SIGNATURE");
+    if (sig) {
+      const { lic, response } = await registry.settle(a, sig, { agentName: req.get("X-Agent-Name") });
+      res.set("PAYMENT-RESPONSE", response);
+      return js(registry.licensedModule(a, await commerce.license(lic.token)));
+    }
+    if (req.get("Sec-Fetch-Dest") === "script") return js(await registry.placeholderModule(a));
+    const pr = registry.paymentRequired(a);
+    res.status(402).set("PAYMENT-REQUIRED", registry.headerOf(pr)).json(pr);
+  }));
+
   // Anyone may trigger a capture (PayPal only captures approved orders), but only the owner sees the licences.
   app.post("/api/orders/:id/capture", wrap(async (req, res) => res.json(commerce.publicOrder(await commerce.capture(req.params.id), claimOf(req)))));
   app.get("/api/orders/:id", wrap(async (req, res) => {
@@ -289,7 +375,7 @@ export async function createApp() {
     statsDirty = true;
     next();
   };
-  const isCreate = (req) => req.body?.method === "tools/call" && req.body?.params?.name === "create_order";
+  const isCreate = (req) => req.body?.method === "tools/call" && ["create_order", "buy_assets"].includes(req.body?.params?.name);
   // Public evidence page: what the deploy can do and the PayPal objects it has actually produced.
   const numbers = fs.existsSync("docs/numbers.json") ? JSON.parse(fs.readFileSync("docs/numbers.json", "utf8")) : {};
   app.get("/api/status", wrap(async (req, res) => {

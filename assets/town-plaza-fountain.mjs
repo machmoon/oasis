@@ -1,5 +1,5 @@
 // Plaza Fountain: a stepped stone fountain with a water bowl. Block asset.
-export const meta = { title: "Plaza Fountain", kind: "3d", format: "blocks", kit: "Oasis Town", price: 2, author: "oasis", footprint: [4, 4], size: [900, 900],
+export const meta = { title: "Plaza Fountain", kind: "3d", format: "blocks", kit: "Oasis Town", price: 2, author: "parkline", payout: "parkline@creators.oasis.example", footprint: [4, 4], size: [900, 900],
   description: "A round stepped fountain for a town square: stone basin, a raised bowl and a spout, water in pale blue.",
   tags: ["3d", "low poly", "fountain", "plaza", "park", "water", "town", "kit", "block"] };
 export const params = { knobs: {

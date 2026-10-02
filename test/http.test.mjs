@@ -22,10 +22,10 @@ test("unsigned PayPal webhooks are rejected before anything is trusted", async (
   assert.equal(r.status, 400);
 });
 
-test("MCP lists the six commerce tools", async () => {
+test("MCP lists the registry tools", async () => {
   const r = await fetch(`${base}/mcp`, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }) });
   const j = await r.json();
-  assert.deepEqual(j.result.tools.map((t) => t.name).sort(), ["build_world", "create_order", "edit_world", "get_asset", "get_mandate", "get_order", "remix_asset", "search_assets"]);
+  assert.deepEqual(j.result.tools.map((t) => t.name).sort(), ["buy_assets", "get_asset", "get_budget", "preview_asset", "search_assets"]);
 });
 
 test("paid assets cannot be downloaded without a licence; free ones can", async () => {
@@ -47,15 +47,15 @@ test("a client cannot set its own price", async () => {
   assert.equal(r.status, 400);
 });
 
-test("MCP create_order is rate limited per client, and MCP traffic is counted publicly", async () => {
-  const call = (id) => fetch(`${base}/mcp`, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream" }, body: JSON.stringify({ jsonrpc: "2.0", id, method: "tools/call", params: { name: "create_order", arguments: { items: [{ asset_id: "pricing-card" }], max_total_usd: 1 } } }) });
+test("MCP buy_assets is rate limited per client, and MCP traffic is counted publicly", async () => {
+  const call = (id) => fetch(`${base}/mcp`, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream" }, body: JSON.stringify({ jsonrpc: "2.0", id, method: "tools/call", params: { name: "buy_assets", arguments: { items: [{ asset_id: "town-shop" }], mandate: "mdt_nope" } } }) });
   const statuses = [];
   for (let i = 0; i < 12; i++) statuses.push((await call(i)).status);
   assert.equal(statuses.filter((s) => s === 429).length, 2, "the 11th and 12th orders in a minute are refused");
   const limited = await (await call(99)).json();
   assert.equal(limited.error.code, -32029);
   const stats = await (await fetch(`${base}/api/stats/mcp`)).json();
-  assert.ok(stats.tools.create_order >= 10);
+  assert.ok(stats.tools.buy_assets >= 10);
 });
 
 test("the public proof page logs a forged webhook as rejected and reports readiness honestly", async () => {
@@ -65,4 +65,19 @@ test("the public proof page logs a forged webhook as rejected and reports readin
   assert.equal(w.verified, false);
   assert.match(w.result, /rejected/);
   assert.equal(typeof s.paypalReady, "boolean");
+});
+
+test("the registry: agents get an x402 402, browser imports get a placeholder, and a bad licence is refused", async () => {
+  const r = await fetch(`${base}/cdn/town-shop.mjs`);
+  assert.equal(r.status, 402);
+  const pr = JSON.parse(Buffer.from(r.headers.get("payment-required"), "base64").toString());
+  assert.equal(pr.x402Version, 2);
+  assert.equal(pr.accepts[0].network, "paypal:sandbox");
+  assert.equal(pr.accepts[0].asset, "USD");
+  const stub = await fetch(`${base}/cdn/town-shop.mjs`, { headers: { "Sec-Fetch-Dest": "script" } });
+  assert.equal(stub.status, 200);
+  assert.match(await stub.text(), /NOT LICENSED/);
+  assert.equal((await fetch(`${base}/cdn/town-shop.mjs?lic=nope`)).status, 403);
+  const settle = await fetch(`${base}/cdn/town-shop.mjs`, { headers: { "PAYMENT-SIGNATURE": Buffer.from(JSON.stringify({ x402Version: 2, accepted: pr.accepts[0], payload: { mandate: "mdt_nope" } })).toString("base64") } });
+  assert.equal(settle.status, 403, "an unknown mandate pays for nothing");
 });

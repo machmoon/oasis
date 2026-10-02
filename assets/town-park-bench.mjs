@@ -1,5 +1,5 @@
 // Park Bench: a slatted bench with optional planters. Block asset.
-export const meta = { title: "Park Bench", kind: "3d", format: "blocks", kit: "Oasis Town", price: 0, author: "oasis", footprint: [3, 1], size: [900, 700],
+export const meta = { title: "Park Bench", kind: "3d", format: "blocks", kit: "Oasis Town", price: 1, author: "parkline", payout: "parkline@creators.oasis.example", footprint: [3, 1], size: [900, 700],
   description: "A slatted park bench on iron legs, with optional planter boxes at each end.",
   tags: ["3d", "low poly", "bench", "park", "seat", "street furniture", "town", "kit", "block"] };
 export const params = { knobs: {

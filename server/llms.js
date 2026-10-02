@@ -3,36 +3,48 @@ import * as catalog from "./catalog.js";
 
 export function llmsTxt() {
   const b = config.baseUrl;
-  const kinds = {};
-  for (const a of catalog.allAssets()) kinds[a.kind] = (kinds[a.kind] || 0) + 1;
+  const pieces = catalog.allAssets().filter((a) => a.format === "blocks");
+  const creators = [...new Set(pieces.map((a) => a.author))];
   return `# Oasis
 
-> Design assets you can reshape. Every icon set, illustration, UI component, mockup, poster, pattern and
-> brand mark on Oasis is a small program with typed knobs. Remix it, then license the exact remix with PayPal.
+> A registry of 3D assets written as code, for three.js scenes. A human approves one PayPal budget; you (the agent)
+> license every piece you import inside it, and each creator is paid. Knobs rebuild a model; they don't stretch it.
 
-Catalogue: ${catalog.allAssets().length} assets (${Object.entries(kinds).map(([k, n]) => `${n} ${k}`).join(", ")}).
+Registry: ${pieces.length} pieces from ${creators.length} creators, one 6 m grid, one palette. PayPal sandbox.
 
-## For agents
+## The flow
 
-MCP (Streamable HTTP, no key to browse): POST ${b}/mcp
-Tools: search_assets, get_asset, remix_asset, create_order, get_order.
-Flow: search -> get_asset (knob schema) -> remix_asset (see the render) -> create_order -> give the human
-approve_url -> they pay in PayPal -> get_order returns download links (SVG, PNG, React, source program).
+1. The human opens ${b}/#/budget, picks an amount and approves once in PayPal. They give you a token (mdt_...).
+2. You search, read knobs, preview, then buy every piece the scene needs in ONE buy_assets call.
+   Oasis charges the human's saved PayPal wallet (PayPal Vault, no redirect) and refuses anything over the budget.
+3. You get one module URL per piece. In the scene:
+     import { createAsset } from "<module url>";
+     scene.add(createAsset({ floors: 6 }));   // metres, y up, front faces -z, footprint starts at x=0,z=0
+   The page needs an import map for "three" and "three/addons/" (three@0.170).
+4. Not licensed? A browser import still loads, as a grey placeholder with the real footprint.
 
-Claude Code: claude mcp add --transport http oasis ${b}/mcp
+## MCP (Streamable HTTP)
 
-## REST
+POST ${b}/mcp      Claude Code: claude mcp add --transport http oasis ${b}/mcp
+search_assets {query, max_price?}          3D pieces with price, creator, footprint, knob names
+get_asset {asset_id}                        knob schema, presets, footprint, how to import
+preview_asset {asset_id, knobs}             PNG of the rebuilt model
+buy_assets {items:[{asset_id,knobs}], mandate, agent_name}   one PayPal order, module URLs back
+get_budget {mandate}                        spent, left, expiry, every order
 
-GET  ${b}/api/assets?q=pricing&kind=ui&free=1
-GET  ${b}/api/assets/{id}                      knobs, presets, lineage
-GET  ${b}/api/assets/{id}/render.svg?p={json}  remix preview (paid assets watermarked)
-GET  ${b}/api/assets/{id}/download.{svg|png|jsx|css|mjs|json}?p={json}   free assets only
-POST ${b}/api/orders {items:[{assetId,knobs}]}  -> PayPal order
-POST ${b}/api/orders/{id}/capture
+## HTTP
 
-## Knobs
+POST ${b}/api/buy   Authorization: Bearer mdt_...   {items:[{asset_id,knobs}], agent_name}
+GET  ${b}/cdn/{id}.mjs   no licence: HTTP 402, x402 v2 shape. PAYMENT-REQUIRED header (base64 JSON):
+     {x402Version:2, resource, accepts:[{scheme:"exact", network:"paypal:sandbox", asset:"USD", amount:"<cents>", payTo:"<creator>"}]}
+     Retry with PAYMENT-SIGNATURE: base64 {x402Version:2, accepted:<that requirement>, payload:{mandate:"mdt_..."}}
+     -> 200 module + PAYMENT-RESPONSE {success, transaction:<PayPal order id>, network, payer}
+GET  ${b}/cdn/{id}.mjs?lic={licence}   the licensed module
+GET  ${b}/api/assets/{id}/parts.json?p={json}   raw parts (box, gable, cyl, cone) in metres
+GET  ${b}/api/sales      recent agent purchases and what each creator earned
 
-type: color (#RRGGBB) | range (min,max,step) | choice (options) | toggle | text
-presets: named colourways, pass ?preset=Name or {"preset":"Name"}
+## Pieces
+
+${pieces.map((a) => `${a.id}  ${a.title}  $${a.price}  by ${a.author}  ${a.footprint ? a.footprint.join("x") + " m" : ""}`).join("\n")}
 `;
 }

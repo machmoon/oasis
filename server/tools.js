@@ -14,6 +14,16 @@ export const previewUrl = (id, values, a) => {
   return `${config.baseUrl}/api/assets/${id}/render.svg${q}`;
 };
 
+/** 3D registry search: what an agent building a scene needs to choose pieces. */
+export function search3d({ query = "", max_price, limit = 20 }) {
+  const all = catalog.search({ query, maxPrice: max_price, limit: 200 }).filter((a) => a.format === "blocks");
+  const list = all.length || !query ? all : catalog.search({ query: "", maxPrice: max_price, limit: 200 }).filter((a) => a.format === "blocks");
+  return list.slice(0, limit).map((a) => ({
+    asset_id: a.id, title: a.title, author: a.author, price_usd: a.price, footprint_m: a.footprint, description: a.description,
+    knobs: Object.keys(a.params.knobs || {}), preview_png: `${config.baseUrl}/api/assets/${a.id}/render.png`,
+  }));
+}
+
 export function searchAssets({ query = "", kind, max_price, free_only, limit = 12 }) {
   return catalog.search({ query, kind, maxPrice: max_price, freeOnly: free_only, limit }).map((a) => ({
     asset_id: a.id, title: a.title, kind: a.kind, price_usd: a.price, description: a.description,
@@ -28,6 +38,18 @@ export function getAsset({ asset_id }) {
     asset_id: a.id, title: a.title, kind: a.kind, price_usd: a.price, description: a.description, author: a.author,
     knobs: a.params.knobs, colour_roles: Object.fromEntries(Object.entries(a.params.knobs).filter(([, k]) => k.role).map(([n, k]) => [n, k.role])), colourway_presets: a.params.presets || {}, default_size: a.size,
     forked_from: a.forkedFrom, preview_url: previewUrl(a.id, {}, null),
+  };
+}
+
+/** Everything an agent needs to place one 3D asset in a three.js scene. */
+export function get3d({ asset_id }) {
+  const a = catalog.getAsset(asset_id);
+  if (!a || a.format !== "blocks") throw new Error(`No 3D asset "${asset_id}". Use search_assets first.`);
+  return {
+    asset_id: a.id, title: a.title, author: a.author, price_usd: a.price, description: a.description,
+    footprint_m: a.footprint, units: "metres, y up, model sits on y=0, footprint starts at x=0,z=0, front faces -z",
+    knobs: a.params.knobs, presets: a.params.presets || {},
+    how_to_import: `Buy a licence with buy_assets, then: import { createAsset } from "<module url from buy_assets>"; scene.add(createAsset({ ...knobs })). The page needs an import map for "three" and "three/addons/". Without a licence the module renders a grey placeholder.`,
   };
 }
 
@@ -113,4 +135,18 @@ export async function editWorld({ world_id, request }) {
   if (!next) throw new Error("The world agent isn't available on this server");
   const plan = world.cleanPlan(next);
   return worldSummary(await saveWorld(plan), plan);
+}
+
+export async function buyAssets({ items, mandate, agent_name }) {
+  const { moduleUrl } = await import("./registry.js");
+  const mandates = await import("./mandates.js");
+  const o = await commerce.buyWithMandate(String(mandate || ""), items.map((i) => ({ assetId: i.asset_id, knobs: i.knobs })), { agentName: agent_name ? String(agent_name).slice(0, 40) : "an MCP agent" });
+  const m = await mandates.get(o.mandateId);
+  return {
+    order_id: o.id, paypal_status: o.status, total_usd: o.total,
+    imports: o.licenses.map((l) => ({ asset_id: l.assetId, title: l.title, module: moduleUrl(l.assetId, l.token) })),
+    creators_paid: commerce.saleEvent(o).creators,
+    budget: { spent_usd: m.spent_usd, remaining_usd: m.remaining_usd, of_usd: m.budget_usd },
+    ledger: `${config.baseUrl}/#/ledger`,
+  };
 }

@@ -8,7 +8,7 @@ export const meta = {
   description: "A little corner shop with a striped awning and flats above. Floors, width, roof and every colour rebuild live.",
   tags: ["3d", "low poly", "building", "shop", "store", "town", "city", "kit", "block"],
   price: 4,
-  author: "oasis",
+  author: "mika-blocks", payout: "mika-blocks@creators.oasis.example",
   footprint: [6, 6],
   size: [1000, 1000],
 };

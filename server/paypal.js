@@ -145,10 +145,10 @@ export async function refundCapture(captureId, { amount, note, requestId } = {})
   }
 }
 
-export async function rest(method, pathname, body) {
+export async function rest(method, pathname, body, { requestId } = {}) {
   const r = await fetch(`${config.paypal.apiBase}${pathname}`, {
     method,
-    headers: { Authorization: `Bearer ${await accessToken()}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${await accessToken()}`, "Content-Type": "application/json", Prefer: "return=representation", ...(requestId ? { "PayPal-Request-Id": requestId } : {}) },
     body: body ? JSON.stringify(body) : undefined,
   });
   const j = await r.json().catch(() => ({}));
@@ -181,4 +181,52 @@ export async function ensureWebhook(url) {
   if (existing) return existing.id;
   const w = await rest("POST", "/v1/notifications/webhooks", { url, event_types: events.map((name) => ({ name })) });
   return w.id;
+}
+
+// ---------- Vault: the human approves once, agents' orders charge the saved PayPal wallet ----------
+// Follows PayPal's "save PayPal with the Orders API / setup tokens" flow (v3 vault): a setup token the payer
+// approves, exchanged for a payment token, then orders with payment_source.paypal.vault_id and
+// stored_credential payment_initiator MERCHANT, because the buyer is not present when an agent buys.
+
+/** Starts a budget: returns { id, approveUrl } for the human to approve in PayPal. */
+export async function createSetupToken({ returnUrl, cancelUrl, description, requestId }) {
+  const j = await rest("POST", "/v3/vault/setup-tokens", {
+    payment_source: {
+      paypal: {
+        description: String(description || "Oasis agent budget").slice(0, 127),
+        usage_pattern: "UNSCHEDULED_PREPAID",
+        usage_type: "MERCHANT",
+        customer_type: "CONSUMER",
+        permit_multiple_payment_tokens: true,
+        experience_context: { brand_name: "Oasis", shipping_preference: "NO_SHIPPING", return_url: returnUrl, cancel_url: cancelUrl },
+      },
+    },
+  }, { requestId });
+  return { id: j.id, status: j.status, approveUrl: j.links?.find((l) => l.rel === "approve")?.href || null };
+}
+
+/** After approval: setup token -> long-lived payment token (vault id). */
+export async function createPaymentToken(setupTokenId) {
+  const j = await rest("POST", "/v3/vault/payment-tokens", { payment_source: { token: { id: setupTokenId, type: "SETUP_TOKEN" } } }, { requestId: `oasis-pt-${setupTokenId}` });
+  return { id: j.id, customerId: j.customer?.id || null, payerEmail: j.payment_source?.paypal?.email_address || null, payerName: [j.payment_source?.paypal?.name?.given_name, j.payment_source?.paypal?.name?.surname].filter(Boolean).join(" ") || null };
+}
+
+export const deletePaymentToken = (id) => rest("DELETE", `/v3/vault/payment-tokens/${encodeURIComponent(id)}`).catch(() => null);
+
+/** An order paid from a vaulted wallet with no buyer present. PayPal returns it COMPLETED in the same call. */
+export async function createVaultedOrder(lines, { vaultId, customId, description, requestId }) {
+  const total = lines.reduce((s, l) => s + l.price, 0);
+  const m = (n) => ({ currency_code: "USD", value: n.toFixed(2) });
+  return rest("POST", "/v2/checkout/orders", {
+    intent: "CAPTURE",
+    purchase_units: [{
+      reference_id: "oasis",
+      custom_id: customId,
+      description: String(description || `Oasis licences (${lines.length})`).slice(0, 127),
+      soft_descriptor: "OASIS",
+      amount: { ...m(total), breakdown: { item_total: m(total) } },
+      items: lines.map((l) => ({ name: l.name.slice(0, 127), unit_amount: m(l.price), quantity: "1", sku: l.sku.slice(0, 127), description: (l.description || "").slice(0, 127), category: "DIGITAL_GOODS", url: l.url })),
+    }],
+    payment_source: { paypal: { vault_id: vaultId, stored_credential: { payment_initiator: "MERCHANT", usage: "SUBSEQUENT", usage_pattern: "UNSCHEDULED_PREPAID" } } },
+  }, { requestId });
 }

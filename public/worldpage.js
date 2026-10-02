@@ -21,6 +21,8 @@ export async function pageWorld(app, h) {
   </div>`;
 
   const v = createViewer(document.getElementById("stage"), { time: "day" });
+  // A handle for automated demo recordings (scripts/record-worlds.mjs) to find a piece on screen.
+  window.__oasisWorld = { v, get plan() { return plan; }, get groups() { return groups; } };
   let plan = null, groups = [], building = 0;
 
   const keyOf = (p) => p.asset + "|" + JSON.stringify(p.knobs);
