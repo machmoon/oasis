@@ -74,7 +74,7 @@ export async function createApp() {
     }
     plan = world.cleanPlan(plan);
     const bill = world.billOf(plan);
-    res.json({ ...plan, bill, total: bill.reduce((s, l) => s + l.price, 0) });
+    res.json({ ...plan, bill, total: world.worldTotal(bill) });
   }));
   // Talk to the world: "make it night", "add a tram", "paint the shops mint". Claude edits the current plan.
   app.post("/api/world/edit", worldLimit, wrap(async (req, res) => {
@@ -86,7 +86,7 @@ export async function createApp() {
     if (!plan) throw Object.assign(new Error("The world agent isn't available on this server."), { status: 503 });
     plan = world.cleanPlan(plan);
     const bill = world.billOf(plan);
-    res.json({ ...plan, bill, total: bill.reduce((s, l) => s + l.price, 0) });
+    res.json({ ...plan, bill, total: world.worldTotal(bill) });
   }));
 
   // Saved worlds: a link anyone can open; the whole-world GLB unlocks with a completed order for that world.
@@ -102,7 +102,7 @@ export async function createApp() {
     const w = await store.get("worlds", req.params.id);
     if (!w) throw Object.assign(new Error("Unknown world"), { status: 404 });
     const bill = world.billOf(w);
-    res.json({ ...w, bill, total: bill.reduce((s, l) => s + l.price, 0) });
+    res.json({ ...w, bill, total: world.worldTotal(bill) });
   }));
   app.get("/api/worlds/:id/world.glb", wrap(async (req, res) => {
     const w = await store.get("worlds", req.params.id);

@@ -42,7 +42,7 @@ export async function createOrder({ items, max_total_usd, agent_name, mandate, w
   if (world_id) {
     const w = await store.get("worlds", world_id);
     if (!w) throw new Error("Unknown world_id");
-    items = world.billOf(w).filter((l) => l.price > 0).map((l) => ({ assetId: l.asset, knobs: l.knobs }));
+    items = world.worldItems(world.billOf(w));
   }
   const o = await commerce.createCheckout(items, {
     worldId: world_id || null,
@@ -97,7 +97,7 @@ async function saveWorld(plan) {
 const worldSummary = (id, plan) => {
   const bill = world.billOf(plan);
   return { world_id: id, link: worldLink(id), title: plan.title || plan.prompt, time: plan.time, pieces: plan.placements.length, note: plan.say || undefined,
-    bill: bill.filter((l) => l.price > 0).map((l) => ({ asset_id: l.asset, title: l.title, price_usd: l.price, placed: l.count })), total_usd: bill.reduce((s, l) => s + l.price, 0),
+    bill: world.worldItems(bill).map((i) => { const l = bill.find((x) => x.asset === i.assetId); return { asset_id: l.asset, title: l.title, price_usd: l.price, placed: bill.filter((x) => x.asset === l.asset).reduce((s, x) => s + x.count, 0) }; }), total_usd: world.worldTotal(bill),
     next: "Give the human the link to look around. To buy it, call create_order with world_id and their mandate." };
 };
 export async function buildWorld({ prompt, art_direct }) {

@@ -57,6 +57,8 @@ export function planWorld(prompt = "a cosy little town", { seed } = {}) {
     for (const [cz, rot] of [[3, 0], [1, 180]]) {
       if (market && cz === 1 && cx % 2 === 1) { place("town-stall", cx, cz, { canopy: pick(T.awnings), stock: 4 + Math.floor(r() * 5) }, { rot, dx: 1, dz: 1.5 }); continue; }
       if (T.torii && cz === 1 && cx === Math.floor(cols / 2)) { place("town-torii", cx, cz, {}, { rot, dx: 1, dz: 2 }); continue; }
+      const city = /city|downtown|urban|apartment|tower/.test(p);
+      if (r() < (city ? 0.45 : 0.15)) { place("town-flats", cx, cz, { wall: pick(T.walls), balcony: pick(T.awnings), trim: pick(T.roofs), floors: 3 + Math.floor(r() * (city ? 5 : 3)), lights: time !== "day" }, { rot }); continue; }
       const house = r() > 0.6;
       if (house) place("town-house", cx, cz, { wall: pick(T.walls), roof: pick(T.roofs), floors: 1 + Math.floor(r() * 2), lights: time !== "day" }, { rot });
       else place("town-shop", cx, cz, { wall: pick(T.walls), awning: pick(T.awnings), trim: pick(T.roofs), floors: 1 + Math.floor(r() * 3), roof: r() > 0.35 ? "gable" : "flat", lights: time !== "day" }, { rot });
@@ -69,7 +71,13 @@ export function planWorld(prompt = "a cosy little town", { seed } = {}) {
   }
   if (tram) placements.push({ asset: "town-tram", at: [CELL * 0.6, 0.1, CELL * 2 + 1.95], rot: 0, knobs: { body: pick(T.awnings), cars: 2, lights: time !== "day" } });
   // props: any small kit piece the factory has published (benches, fountains, carts...) dots the lawns
-  const CORE = new Set(["town-shop", "town-house", "town-stall", "town-torii", "town-tram", "town-robot", "town-gate", "town-road", "town-plaza", "town-tree", "town-lamp"]);
+  const CORE = new Set(["town-shop", "town-house", "town-stall", "town-torii", "town-tram", "town-robot", "town-gate", "town-road", "town-plaza", "town-tree", "town-lamp", "town-flats", "town-hatchback"]);
+  // parked cars along both kerbs
+  const cars = 2 + Math.floor(r() * 3);
+  for (let i = 0; i < cars; i++) {
+    const far = r() > 0.5, x = 1 + r() * (cols * CELL - 6);
+    placements.push({ asset: "town-hatchback", at: far ? [x + 4, 0.1, CELL * 2 + 5.2] : [x, 0.1, CELL * 2 + 0.75], rot: far ? 180 : 0, knobs: { body: pick([...T.awnings, "#F6EEE0", "#3A3F48"]), roof: r() > 0.85 ? "taxi" : "plain", lights: time !== "day" } });
+  }
   const props = catalog.allAssets().filter((a) => a.format === "blocks" && !CORE.has(a.id) && a.footprint && Math.max(...a.footprint) <= 4).sort((a, b) => a.id.localeCompare(b.id));
   if (props.length) for (let cx = 0; cx < cols; cx++) for (const cz of [0, 4]) if (r() > 0.45) {
     const a = pick(props);
@@ -91,6 +99,19 @@ export function cleanPlan(plan) {
     out.push({ id: pl.id, asset: a.id, title: a.title, price: a.price, author: a.author, at, rot: [0, 90, 180, 270].includes(pl.rot) ? pl.rot : 0, knobs });
   }
   return { ...plan, placements: out };
+}
+
+/** What a world costs: one licence per kit piece, covering every remix of it in the world. */
+export function worldTotal(bill) {
+  const seen = new Map();
+  for (const l of bill) if (!seen.has(l.asset)) seen.set(l.asset, l.price);
+  return [...seen.values()].reduce((s, v) => s + v, 0);
+}
+/** The licence lines for a world order: one per paid piece, carrying the first remix's knobs. */
+export function worldItems(bill) {
+  const seen = new Map();
+  for (const l of bill) if (l.price > 0 && !seen.has(l.asset)) seen.set(l.asset, { assetId: l.asset, knobs: l.knobs });
+  return [...seen.values()];
 }
 
 /** The bill of materials: one line per distinct remix, with how many times it is placed. */

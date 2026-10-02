@@ -113,17 +113,20 @@ export async function pageWorld(app, h) {
   }
 
   function drawPanel() {
-    const bill = plan.bill, paid = bill.filter((l) => l.price > 0).sort((a, b) => b.price - a.price), free = bill.filter((l) => !l.price), total = paid.reduce((s, l) => s + l.price, 0);
+    const bill = plan.bill, paid = bill.filter((l) => l.price > 0).sort((a, b) => b.price - a.price), free = bill.filter((l) => !l.price);
+    // one licence per kit piece, covering every remix of it in this world
+    const licences = [...new Map(paid.map((l) => [l.asset, l])).values()];
+    const total = licences.reduce((s, l) => s + l.price, 0);
     const creators = [...new Set(bill.map((l) => l.author))];
     $("#wpanel").innerHTML = `
       <p class="wkicker">${esc(plan.title || plan.prompt)}</p>
       <p class="wnote" id="wnote">${plan.say ? esc(plan.say) : plan.by === "agent" ? "" : "Talk to it below: “make it night”, “paint the shops mint”, “add more trees”."}</p>
       <form class="wedit" id="wedit"><input id="wask" maxlength="400" autocomplete="off" placeholder="Change it: add a tram, make it snow…" /><button class="btn small">Ask</button></form>
       <h2>${plan.placements.length} pieces, ${bill.length} remixes</h2>
-      <ul class="wbill">${Object.values(paid.reduce((m, l) => { const g = (m[l.asset] ||= { title: l.title, author: l.author, remixes: 0, placed: 0, sum: 0 }); g.remixes++; g.placed += l.count; g.sum += l.price; return m; }, {})).map((g) => `<li><span><b>${esc(g.title)}</b><em>${g.remixes} remix${g.remixes === 1 ? "" : "es"}, ${g.placed} placed · by ${esc(g.author)}</em></span><b>${money(g.sum)}</b></li>`).join("")}
+      <ul class="wbill">${Object.values(paid.reduce((m, l) => { const g = (m[l.asset] ||= { title: l.title, author: l.author, remixes: 0, placed: 0, sum: 0 }); g.remixes++; g.placed += l.count; g.sum = l.price; return m; }, {})).map((g) => `<li><span><b>${esc(g.title)}</b><em>${g.placed} placed${g.remixes > 1 ? `, ${g.remixes} remixes` : ""} · by ${esc(g.author)}</em></span><b>${money(g.sum)}</b></li>`).join("")}
         <li class="wfree"><span><b>${free.reduce((s, l) => s + l.count, 0)} free pieces</b><em>${[...new Set(free.map((l) => l.title))].join(", ")}</em></span><b>Free</b></li></ul>
       <div class="wtotal"><span>One licence for the whole world</span><b>${money(total)}</b></div>
-      <p class="muted wsplit">${paid.length} paid remixes from ${creators.length} creator${creators.length === 1 ? "" : "s"}. One PayPal approval pays every one of them.</p>
+      <p class="muted wsplit">${licences.length} licences from ${creators.length} creator${creators.length === 1 ? "" : "s"}, each covering every remix of that piece here. One PayPal approval pays them all.</p>
       <div id="wpp"></div>
       <div class="wbuyrow"><button class="btn primary wbuy" id="wbuy">Buy this world · ${money(total)}</button><button class="btn" id="wshare">Share</button></div>
       <p class="muted" style="font-size:12px;margin:10px 0 0">Buying gets you the whole world as one GLB for three.js, Unity, Godot or Blender, plus every piece's program.</p>`;
@@ -138,7 +141,7 @@ export async function pageWorld(app, h) {
       $("#wbuy").remove();
       const worldId = await save();
       mountPayPal($("#wpp"), {
-        createOrder: () => newOrder(paid.map((l) => ({ assetId: l.asset, knobs: l.knobs })), { worldId }),
+        createOrder: () => newOrder(licences.map((l) => ({ assetId: l.asset, knobs: l.knobs })), { worldId }),
         onDone: (o) => { location.hash = `#/order/${o.id}`; },
       });
     });
