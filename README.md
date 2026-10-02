@@ -1,4 +1,4 @@
-# Oasis. design assets you can reshape
+# Oasis: design assets you can reshape
 
 **Every icon set, illustration, UI kit, mockup, poster and brand mark on Oasis is a small program with knobs.**
 Remix it live, or brief the Oasis agent and it builds your whole brand kit. Then license the *exact remix* with
@@ -50,12 +50,12 @@ things Polyfork doesn't do: an **agent that shops for you** and **royalty-paying
 
 ## How AI is used
 
-- **The Oasis agent** (`server/agent.js`). Claude Opus 5.5 with tool use: search, read schemas, remix, add to cart,
+- **The Oasis agent** (`server/agent.js`): Claude Opus 5.5 with tool use: search, read schemas, remix, add to cart,
   create order, fork. Every remix returns a rendered PNG *to the model*, so it critiques its own output (contrast,
   clipping, clashing colours) and remixes again. History is kept server-side, append-only.
-- **Fork with AI** (`server/fork.js`). Claude rewrites an asset program to a new creative direction; the result must
+- **Fork with AI** (`server/fork.js`): Claude rewrites an asset program to a new creative direction; the result must
   load and render inside the sandbox before it's published.
-- **The asset factory** (`factory/factory.mjs`). how most of the catalogue was made: Claude writes a program from a
+- **The asset factory** (`factory/factory.mjs`): how most of the catalogue was made: Claude writes a program from a
   one-line brief, the sandbox renders it at defaults, presets and every range maxed, then Claude *looks at those
   renders* as a design director and revises. (Polyfork's equivalent publishes 175+ models a week.)
 

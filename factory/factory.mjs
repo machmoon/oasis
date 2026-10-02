@@ -63,7 +63,7 @@ async function ask(messages) {
   for (let attempt = 0; ; attempt++) {
     try {
       msg = await client.messages
-        .stream({ model: MODEL, max_tokens: 32000, output_config: { effort: "high" }, system: SYSTEM(), messages })
+        .stream({ model: MODEL, max_tokens: 64000, output_config: { effort: "high" }, system: SYSTEM(), messages })
         .finalMessage();
       break;
     } catch (e) {
@@ -72,6 +72,7 @@ async function ask(messages) {
     }
   }
   if (msg.stop_reason === "refusal") throw new Error("refused");
+  if (msg.stop_reason === "max_tokens") console.log("  (response hit max_tokens; module is likely truncated)");
   return msg.content.filter((b) => b.type === "text").map((b) => b.text).join("");
 }
 
