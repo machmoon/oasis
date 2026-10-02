@@ -217,13 +217,6 @@ function pageHome() {
     </section>
 
     <section class="block reveal">
-      <h2 class="title">One brand. Every asset.</h2>
-      <p class="sub">Every colour knob in Oasis knows its job: background, ink, primary, highlight. Pick a brand and the whole catalogue re-renders in it.</p>
-      <div class="brandbar">${BRAND_PRESETS.map((p, i) => `<button class="swatch-chip ${i === 0 ? "on" : ""}" data-bento="${i}" title="${esc(p.name)}">${swatches(p)}</button>`).join("")}<span class="muted" id="bento-name">${esc(BRAND_PRESETS[0].name)}</span></div>
-      <div class="bento" id="bento">${BENTO.map((id, i) => `<a class="cell c${i + 1} ${["bauhaus-poster", "oasis-town"].includes(id) ? "cover" : ""}" href="#/a/${id}"><img src="${thumbUrl(id, {}, BRAND_PRESETS[0])}" alt="${esc(CATALOG.find((a) => a.id === id)?.title || id)}" /></a>`).join("")}</div>
-    </section>
-
-    <section class="block reveal">
       <p class="eyebrow">Agentic commerce</p>
       <h2 class="title">Your agent shops. You approve.</h2>
       <p class="sub">Brief the Oasis agent, or any agent over MCP. It builds a branded kit, checks every render, and opens a PayPal order only you can pay.</p>
@@ -233,6 +226,13 @@ function pageHome() {
         <div class="flowstep"><h3>Kit in the cart</h3><p>Exact remixes, priced by the server, with a reason for each.</p><div class="thumbs"><img src="${thumbUrl("pricing-card", {}, BRAND_PRESETS[1])}" alt=""/><img src="${thumbUrl("beam-avatar", {}, BRAND_PRESETS[1])}" alt=""/></div></div>
         <div class="flowstep paypal"><h3>You pay in PayPal</h3><p>The agent creates the order. Approval happens in PayPal's own window. Licences and files unlock on capture.</p><div class="paychips"><span>Orders v2</span><span>Smart Buttons</span><span>Webhooks</span><span>Payouts</span></div></div>
       </div>
+    </section>
+
+    <section class="block reveal">
+      <h2 class="title">One brand. Every asset.</h2>
+      <p class="sub">Every colour knob in Oasis knows its job: background, ink, primary, highlight. Pick a brand and the whole catalogue re-renders in it.</p>
+      <div class="brandbar">${BRAND_PRESETS.map((p, i) => `<button class="swatch-chip ${i === 0 ? "on" : ""}" data-bento="${i}" title="${esc(p.name)}">${swatches(p)}</button>`).join("")}<span class="muted" id="bento-name">${esc(BRAND_PRESETS[0].name)}</span></div>
+      <div class="bento" id="bento">${BENTO.map((id, i) => `<a class="cell c${i + 1} ${["bauhaus-poster", "oasis-town"].includes(id) ? "cover" : ""}" href="#/a/${id}"><img src="${thumbUrl(id, {}, BRAND_PRESETS[0])}" alt="${esc(CATALOG.find((a) => a.id === id)?.title || id)}" /></a>`).join("")}</div>
     </section>
 
     <section class="block reveal">

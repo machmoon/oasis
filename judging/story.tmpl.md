@@ -68,7 +68,10 @@ window closes, so nobody is paid on a refunded sale.
   `platform_fees`) so refunds unwind it automatically.
 {{sandboxLine}}
 
-**The asset factory.** Most of the catalogue was written by an agent pipeline, and nothing ships on the builder's word:
+**The asset factory.** {{factoryAuthored}} of the {{assets}} assets were written by an agent pipeline ({{handAuthored}} are
+hand-written programs, {{forks}} are AI forks). The first {{factoryV1}} came from factory v1 (builder self-review only, all since
+re-checked by the harness). Every build since tonight's v2 goes through the full gate below: {{factoryBuilds}} builds,
+{{factoryPublished}} published, {{factoryRejected}} rejected so far. Nothing ships on the builder's word:
 1. Claude writes a program from a one-line brief and critiques its own renders.
 2. **A harness measures it.** Every asset is rendered across its knob space: defaults, presets, every range at min and
    max, random combinations, and a light and a dark brand. Blank output, slow renders, oversize SVG, missing brand

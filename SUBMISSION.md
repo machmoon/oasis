@@ -21,7 +21,7 @@ finish**. That second piece is what PayPal's order approval already is.
 ## What it does
 
 **Oasis is a store of design assets where nothing is finished.** Every asset is an ES module: typed knobs in, SVG out.
-48 assets and 479 knobs so far, from pricing cards and phone mockups to Bauhaus posters and Oasis Town,
+56 assets and 560 knobs so far, from pricing cards and phone mockups to Bauhaus posters and Oasis Town,
 an isometric street diorama that rebuilds as you turn its knobs.
 
 ![Change it after you find it](https://raw.githubusercontent.com/machmoon/oasis/main/docs/figures/01-rebuilt-not-stretched.png)
@@ -29,7 +29,7 @@ an isometric street diorama that rebuilds as you turn its knobs.
 The pricing card above is one program at two settings. It isn't stretched: it grows three feature rows and a badge.
 The city grows from 4 blocks to 25. A file can't do either.
 
-**Brand Mode.** 167 of 179 colour knobs in the catalogue declare a role: background, surface,
+**Brand Mode.** 193 of 205 colour knobs in the catalogue declare a role: background, surface,
 ink, muted, primary, secondary, highlight. Set your brand once and *every asset* re-renders in it, and components with
 a light/dark theme follow the brand's darkness on their own.
 
@@ -48,7 +48,8 @@ the approval screen. `get_order` captures after approval and returns licensed do
 
 **Forks pay upstream.** Fork any asset with AI ("make it art deco"). Claude rewrites the program, the sandbox and harness
 prove it renders, and it's published with its lineage. A $10 licence of a fork of a fork pays its creator $6, the
-parent $2, the grandparent $1 and Oasis $1, through **PayPal Payouts** the moment payment is captured.
+parent $2, the grandparent $1 and Oasis $1, through **PayPal Payouts**. Royalties are held until the 14-day refund
+window closes, so nobody is paid on a refunded sale.
 
 ![Forks pay upstream](https://raw.githubusercontent.com/machmoon/oasis/main/docs/figures/03-forks-pay-upstream.png)
 
@@ -66,10 +67,15 @@ parent $2, the grandparent $1 and Oasis $1, through **PayPal Payouts** the momen
 - **`PayPal-Request-Id` idempotency** on create, capture and refund.
 - **Webhooks**, verified with `verify-webhook-signature`: `CHECKOUT.ORDER.APPROVED` captures orders whose tab closed,
   `PAYMENT.CAPTURE.REFUNDED` revokes licences, `PAYMENT.PAYOUTS-ITEM.*` tracks each royalty.
-- **Payouts** for royalties; **refunds** within 14 days through the Payments API.
+- **Payouts** for royalties, held until the refund window closes and cancelled by a refund; **refunds** within 14 days
+  through the Payments API. In production the creator split moves to **PayPal Commerce Platform** (per-unit `payee` +
+  `platform_fees`) so refunds unwind it automatically.
 
 
-**The asset factory.** Most of the catalogue was written by an agent pipeline, and nothing ships on the builder's word:
+**The asset factory.** 48 of the 56 assets were written by an agent pipeline (5 are
+hand-written programs, 3 are AI forks). The first 36 came from factory v1 (builder self-review only, all since
+re-checked by the harness). Every build since tonight's v2 goes through the full gate below: 22 builds,
+12 published, 10 rejected so far. Nothing ships on the builder's word:
 1. Claude writes a program from a one-line brief and critiques its own renders.
 2. **A harness measures it.** Every asset is rendered across its knob space: defaults, presets, every range at min and
    max, random combinations, and a light and a dark brand. Blank output, slow renders, oversize SVG, missing brand
@@ -77,14 +83,14 @@ parent $2, the grandparent $1 and Oasis $1, through **PayPal Payouts** the momen
 3. **An independent grader in a fresh session**, which never saw the builder's reasoning, looks at those renders and
    publishes or rejects. It has caught real bugs a self-review missed: a checkout screen whose order total didn't add
    up, a login screen whose focus ring turned the error colour on one brand.
-4. Each verdict writes one general lesson into every later build's prompt (6 so far).
+4. Each verdict writes one general lesson into every later build's prompt (41 so far).
 
 **Safety.** Asset programs, including AI-written forks, run in QuickJS compiled to WebAssembly: no `require`, no file
 system, no network, a 48 MB heap. An allocation storm can outrun QuickJS's own interrupt (it took 8.3 s to die in
 testing), so every server render runs in a worker thread that is **terminated at 3 s**. Output must be SVG and is only
 shown through `<img>`. Paid source never leaves the server; catalogue previews are low-res raster comps.
 
-**Tested.** 22/22 tests pass: price tampering, the capture race, amount-mismatch refunds, refund revocation,
+**Tested.** 23/23 tests pass: price tampering, the capture race, amount-mismatch refunds, refund revocation,
 webhook handling, the spending cap, royalty cents along a fork chain, sandbox escapes and the deadline kill.
 
 **Stack.** Node + Express, a no-build vanilla JS store, Claude Opus 5.5 (agent, forks, factory, grader), MCP Streamable
@@ -105,7 +111,7 @@ HTTP, resvg, Playwright, Render.
 - An agent that goes from a one-paragraph brief to a coherent, branded kit and a PayPal order you approve, and throws
   away its own muddy first renders without being asked.
 - A fork of a fork that pays three parties automatically.
-- Brand Mode: one palette re-skins 48 assets.
+- Brand Mode: one palette re-skins 56 assets.
 
 ## What we learned
 
