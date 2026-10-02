@@ -81,7 +81,7 @@ export function cleanPlan(plan) {
     if (!a || a.format !== "blocks") continue;
     const knobs = resolveKnobs(a.params, pl.knobs || {});
     const at = (pl.at || [0, 0, 0]).slice(0, 3).map((v) => Math.max(-200, Math.min(200, Number(v) || 0)));
-    out.push({ asset: a.id, title: a.title, price: a.price, author: a.author, at, rot: [0, 90, 180, 270].includes(pl.rot) ? pl.rot : 0, knobs });
+    out.push({ id: pl.id, asset: a.id, title: a.title, price: a.price, author: a.author, at, rot: [0, 90, 180, 270].includes(pl.rot) ? pl.rot : 0, knobs });
   }
   return { ...plan, placements: out };
 }
@@ -97,18 +97,70 @@ export function billOf(plan) {
   return [...lines.values()];
 }
 
-/** Claude rewrites the procedural plan to fit the prompt better (names, colours, which pieces where). */
-export async function agentPlan(prompt, base) {
+// ---------- the agent: edits a world through small operations, never by rewriting it ----------
+const EDIT_TOOL = {
+  name: "edit_world",
+  description: "Change the world. Use set to recolour or reshape pieces, add to place a kit piece in a grid cell, remove to delete pieces, time for lighting, title to name the place.",
+  input_schema: {
+    type: "object",
+    properties: {
+      title: { type: "string", description: "A 2-5 word name for the place" },
+      time: { type: "string", enum: ["day", "dusk", "night"] },
+      say: { type: "string", description: "One short sentence to the user about what you changed" },
+      ops: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            op: { type: "string", enum: ["set", "add", "remove"] },
+            ids: { type: "array", items: { type: "string" }, description: "placement ids for set/remove" },
+            asset: { type: "string", description: "kit piece id; for set without ids, applies to every placement of this asset" },
+            cell: { type: "array", items: { type: "integer" }, description: "[cx, cz] grid cell for add" },
+            offset: { type: "array", items: { type: "number" }, description: "[dx, dz] metres inside the cell for add" },
+            rot: { type: "integer", enum: [0, 90, 180, 270] },
+            knobs: { type: "object", description: "knob values to set" },
+          },
+          required: ["op"],
+        },
+      },
+    },
+    required: ["ops"],
+  },
+};
+
+const withIds = (plan) => ({ ...plan, placements: plan.placements.map((p, i) => ({ id: p.id || `p${i}`, ...p })) });
+
+/** Applies agent operations to a plan. Unknown ids and assets are skipped; cleanPlan validates the rest. */
+export function applyOps(plan, edit) {
+  let placements = withIds(plan).placements.map((p) => ({ ...p, knobs: { ...p.knobs } }));
+  let n = placements.length;
+  for (const o of edit.ops || []) {
+    if (o.op === "remove") placements = placements.filter((p) => !(o.ids || []).includes(p.id));
+    else if (o.op === "set") {
+      for (const p of placements) if ((o.ids?.length ? o.ids.includes(p.id) : p.asset === o.asset) && o.knobs) Object.assign(p.knobs, o.knobs);
+    } else if (o.op === "add" && o.asset && Array.isArray(o.cell)) {
+      const [cx, cz] = o.cell, [dx, dz] = o.offset || [0, 0], rot = o.rot || 0;
+      placements.push({ id: `p${n++}`, asset: o.asset, at: [cx * CELL + dx + (rot === 180 ? CELL : 0), 0, cz * CELL + dz + (rot === 180 ? CELL : 0)], rot, knobs: o.knobs || {} });
+    }
+  }
+  return { ...plan, title: edit.title || plan.title, time: edit.time || plan.time, say: edit.say || "", placements };
+}
+
+/** Claude edits the world for a request: builds on the procedural plan, or changes the current one. */
+export async function agentEdit(request, plan) {
   if (!config.anthropicKey) return null;
-  const kit = catalog.allAssets().filter((a) => a.format === "blocks").map((a) => ({ id: a.id, title: a.title, footprint: a.footprint, knobs: Object.fromEntries(Object.entries(a.params.knobs).map(([k, v]) => [k, v.type === "choice" ? v.options : v.type])) }));
+  const kit = catalog.allAssets().filter((a) => a.format === "blocks").map((a) => ({ id: a.id, title: a.title, footprint: a.footprint, knobs: Object.fromEntries(Object.entries(a.params.knobs).map(([k, v]) => [k, v.type === "choice" ? v.options : v.type === "range" ? [v.min, v.max] : v.type])) }));
+  const cols = Math.round(plan.size[0] / CELL), rows = Math.round(plan.size[1] / CELL);
+  const view = withIds(plan).placements.map((p) => ({ id: p.id, asset: p.asset, cell: [Math.floor(p.at[0] / CELL), Math.floor(p.at[2] / CELL)], rot: p.rot, knobs: Object.fromEntries(Object.entries(p.knobs).filter(([, v]) => typeof v !== "boolean" || v)) }));
   const client = new Anthropic({ apiKey: config.anthropicKey });
   const msg = await client.messages.create({
     model: "claude-opus-5-5",
-    max_tokens: 6000,
-    system: "You design tiny toy-block worlds on a 6 m grid from a kit of parametric 3D pieces. Return only JSON.",
-    messages: [{ role: "user", content: `Prompt: ${prompt}\n\nKit (id, footprint in metres, knobs):\n${JSON.stringify(kit)}\n\nHere is a starting layout made by a procedural street generator. Improve it for the prompt: recolour pieces (hex colours), change which pieces go where, add or remove up to 12 placements, keep everything inside x 0..${base.size[0]} and z 0..${base.size[1]}, keep the road row and ground tiles. Keep rot to 0 or 180 (180 for the near row so fronts face the road).\n\n${JSON.stringify({ time: base.time, placements: base.placements.map(({ asset, at, rot, knobs }) => ({ asset, at, rot, knobs })) })}\n\nReply with JSON only: {"title": "<a 2-5 word place name>", "time": "day|dusk|night", "placements": [...]}` }],
+    max_tokens: 4000,
+    system: `You art-direct tiny toy-block worlds built from a kit of parametric 3D pieces on a ${CELL} m grid of ${cols} x ${rows} cells. Row 2 is the road; rows 1 and 3 hold buildings (row 1 pieces use rot 180 so their fronts face the road); rows 0 and 4 are lawns. Make tasteful, cohesive choices: a small palette, contrast between neighbours, details that tell the story of the place. Always answer by calling edit_world.`,
+    tools: [EDIT_TOOL],
+    messages: [{ role: "user", content: `Kit: ${JSON.stringify(kit)}\n\nCurrent world (time ${plan.time}): ${JSON.stringify(view)}\n\nRequest: ${request}` }],
   });
-  const text = msg.content.find((c) => c.type === "text")?.text || "";
-  const json = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1));
-  return { ...base, title: json.title, time: ["day", "dusk", "night"].includes(json.time) ? json.time : base.time, placements: json.placements || base.placements, by: "agent" };
+  const call = msg.content.find((c) => c.type === "tool_use");
+  if (!call) return null;
+  return { ...applyOps(plan, call.input), by: "agent" };
 }

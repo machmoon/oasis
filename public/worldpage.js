@@ -12,7 +12,7 @@ export async function pageWorld(app, h) {
       <h1>Describe a place. <em>Watch it build.</em></h1>
       <form id="wform" class="wform"><input id="wp" maxlength="300" autocomplete="off" placeholder="A Kyoto market street at dusk" /><button class="btn primary" id="wgo">Build</button></form>
       <div class="wchips">${EXAMPLES.map((e) => `<button class="chip" data-ex="${esc(e)}">${esc(e)}</button>`).join("")}</div>
-      <label class="wagent"><input type="checkbox" id="wagent" /> Let Claude plan the layout <span class="muted">(slower, smarter)</span></label>
+      <label class="wagent"><input type="checkbox" id="wagent" ${h.agentReady ? "checked" : "disabled"} /> Claude art-directs it <span class="muted">${h.agentReady ? "(about 20 s)" : "(agent offline)"}</span></label>
     </div>
     <div class="world-time" role="toolbar"><button class="btn small" data-t="day">Day</button><button class="btn small" data-t="dusk">Dusk</button><button class="btn small" data-t="night">Night</button></div>
     <aside class="world-panel" id="wpanel"><p class="muted" style="margin:0">Building…</p></aside>
@@ -23,39 +23,75 @@ export async function pageWorld(app, h) {
   const v = createViewer(document.getElementById("stage"), { time: "day" });
   let plan = null, groups = [], building = 0;
 
-  async function build(prompt, { agent = false } = {}) {
-    const run = ++building;
-    $("#wpanel").innerHTML = `<p class="muted" style="margin:0">${agent ? "Claude is planning your world…" : "Planning…"}</p>`;
-    $("#winspect").hidden = true; v.select(null);
-    const next = await api("/api/world/plan", { method: "POST", body: { prompt, agent } });
-    if (run !== building) return;
-    plan = next;
-    // one parts request for every distinct remix in the plan
-    const keys = [...new Set(plan.placements.map((p) => p.asset + "|" + JSON.stringify(p.knobs)))];
-    const { parts } = await api("/api/world/parts", { method: "POST", body: { items: keys.map((k) => { const [asset, knobs] = [k.slice(0, k.indexOf("|")), JSON.parse(k.slice(k.indexOf("|") + 1))]; return { asset, knobs }; }) } });
+  const keyOf = (p) => p.asset + "|" + JSON.stringify(p.knobs);
+  const sig = (p) => keyOf(p) + "|" + p.at.join(",") + "|" + p.rot;
+
+  // Shows a plan. Pieces that are unchanged since the last plan stay put; new or changed ones drop in.
+  async function show(next, run, { fresh = false } = {}) {
+    const keys = [...new Set(next.placements.map(keyOf))];
+    const { parts } = await api("/api/world/parts", { method: "POST", body: { items: keys.map((k) => ({ asset: k.slice(0, k.indexOf("|")), knobs: JSON.parse(k.slice(k.indexOf("|") + 1)) })) } });
     if (run !== building) return;
     const byKey = new Map(keys.map((k, i) => [k, parts[i]]));
-    v.clearWorld(); groups = [];
+    const old = new Map();
+    if (!fresh && plan) plan.placements.forEach((p, i) => { if (groups[i]) old.set(sig(p), [...(old.get(sig(p)) || []), groups[i]]); });
+    else v.clearWorld();
+    plan = next;
     v.setTime(plan.time);
     app.querySelectorAll("[data-t]").forEach((b) => b.classList.toggle("on", b.dataset.t === plan.time));
-    // ground first, then buildings, then the small things, so it reads as being built
-    const order = (a) => (a.startsWith("town-road") || a.startsWith("town-plaza") ? 0 : a === "town-shop" || a === "town-house" || a === "town-stall" || a === "town-torii" ? 1 : 2);
+    const order = (a) => (a.startsWith("town-road") || a.startsWith("town-plaza") ? 0 : ["town-shop", "town-house", "town-stall", "town-torii"].includes(a) ? 1 : 2);
     const idx = plan.placements.map((p, i) => i).sort((a, b) => order(plan.placements[a].asset) - order(plan.placements[b].asset) || plan.placements[a].at[0] - plan.placements[b].at[0]);
-    idx.forEach((i, n) => {
+    const nextGroups = [];
+    let dropped = 0;
+    idx.forEach((i) => {
       const pl = plan.placements[i];
-      const g = v.addPlaced(byKey.get(pl.asset + "|" + JSON.stringify(pl.knobs)), { at: pl.at, rot: pl.rot });
+      const reuse = old.get(sig(pl))?.pop();
+      if (reuse) { reuse.userData.idx = i; nextGroups[i] = reuse; return; }
+      const g = v.addPlaced(byKey.get(keyOf(pl)), { at: pl.at, rot: pl.rot });
       g.userData.idx = i;
-      groups[i] = g;
-      v.dropIn(g, order(pl.asset) === 0 ? n * 18 : 500 + n * 55);
+      nextGroups[i] = g;
+      v.dropIn(g, fresh ? (order(pl.asset) === 0 ? dropped * 18 : 500 + dropped * 55) : dropped * 70);
+      dropped++;
     });
-    if (!build.framed) {
+    for (const gs of old.values()) for (const g of gs) v.content.remove(g);
+    groups = nextGroups;
+    if (!show.framed) {
       const { THREE } = await import("/world3d.js");
-      const [w, d] = plan.size;
-      const wide = innerWidth > 860;
-      v.frame(new THREE.Box3(new THREE.Vector3(0, 0, 0), new THREE.Vector3(w, 6, d)), { fit: wide ? 1.12 : 1.3, shift: 0 });
-      build.framed = true;
+      const [w, d] = plan.size, wide = innerWidth > 860;
+      v.frame(new THREE.Box3(new THREE.Vector3(0, 0, 0), new THREE.Vector3(w, 6, d)), { fit: wide ? 1.12 : 1.3 });
+      show.framed = true;
     }
     drawPanel();
+  }
+
+  async function build(prompt, { agent = false } = {}) {
+    const run = ++building;
+    status(agent ? "Claude is planning your world. This takes about 20 seconds." : "Planning…");
+    $("#winspect").hidden = true; v.select(null);
+    // the procedural plan builds immediately; Claude's version replaces it when it arrives
+    const quick = await api("/api/world/plan", { method: "POST", body: { prompt } });
+    if (run !== building) return;
+    await show(quick, run, { fresh: true });
+    if (!agent) return;
+    status("Claude is art-directing this world…", true);
+    try {
+      const smart = await api("/api/world/plan", { method: "POST", body: { prompt, agent: true } });
+      if (run === building) await show(smart, run);
+    } catch (e) { if (run === building) toast(e.message); }
+  }
+
+  async function edit(request) {
+    if (!plan) return;
+    const run = ++building;
+    status(`Working on “${request}”…`, true);
+    try {
+      const next = await api("/api/world/edit", { method: "POST", body: { request, plan } });
+      if (run === building) await show(next, run);
+    } catch (e) { if (run === building) { toast(e.message); drawPanel(); } }
+  }
+
+  function status(text, keepBill) {
+    if (keepBill && plan) { const n = $("#wnote"); if (n) { n.textContent = text; n.classList.add("busy"); return; } }
+    $("#wpanel").innerHTML = `<p class="muted" style="margin:0">${esc(text)}</p>`;
   }
 
   function drawPanel() {
@@ -63,6 +99,8 @@ export async function pageWorld(app, h) {
     const creators = [...new Set(bill.map((l) => l.author))];
     $("#wpanel").innerHTML = `
       <p class="wkicker">${esc(plan.title || plan.prompt)}</p>
+      <p class="wnote" id="wnote">${plan.say ? esc(plan.say) : plan.by === "agent" ? "" : "Talk to it below: “make it night”, “paint the shops mint”, “add more trees”."}</p>
+      <form class="wedit" id="wedit"><input id="wask" maxlength="400" autocomplete="off" placeholder="Change it: add a tram, make it snow…" /><button class="btn small">Ask</button></form>
       <h2>${plan.placements.length} pieces, ${bill.length} remixes</h2>
       <ul class="wbill">${Object.values(paid.reduce((m, l) => { const g = (m[l.asset] ||= { title: l.title, author: l.author, remixes: 0, placed: 0, sum: 0 }); g.remixes++; g.placed += l.count; g.sum += l.price; return m; }, {})).map((g) => `<li><span><b>${esc(g.title)}</b><em>${g.remixes} remix${g.remixes === 1 ? "" : "es"}, ${g.placed} placed · by ${esc(g.author)}</em></span><b>${money(g.sum)}</b></li>`).join("")}
         <li class="wfree"><span><b>${free.reduce((s, l) => s + l.count, 0)} free pieces</b><em>${[...new Set(free.map((l) => l.title))].join(", ")}</em></span><b>Free</b></li></ul>
@@ -70,6 +108,7 @@ export async function pageWorld(app, h) {
       <p class="muted wsplit">${paid.length} paid remixes from ${creators.length} creator${creators.length === 1 ? "" : "s"}. One PayPal approval pays every one of them.</p>
       <div id="wpp"></div>
       <button class="btn primary wbuy" id="wbuy">Buy this world · ${money(total)}</button>`;
+    $("#wedit").addEventListener("submit", (e) => { e.preventDefault(); const q = $("#wask").value.trim(); if (q) edit(q); });
     $("#wbuy").addEventListener("click", () => {
       $("#wbuy").remove();
       mountPayPal($("#wpp"), {

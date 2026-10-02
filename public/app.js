@@ -1034,7 +1034,7 @@ async function route() {
   if (!parts.length) {
     setNav("");
     const { pageWorld } = await import("/worldpage.js");
-    return pageWorld(app, { api, esc, money, mountPayPal, knobControl, newOrder, toast, claims });
+    return pageWorld(app, { api, esc, money, mountPayPal, knobControl, newOrder, toast, claims, agentReady: CONFIG.agentReady });
   }
   if (parts[0] === "store") return pageHome();
   if (parts[0] === "browse") return pageBrowse(params);

@@ -69,12 +69,25 @@ export async function createApp() {
     const prompt = String(req.body?.prompt || "a cosy little town").slice(0, 300);
     let plan = world.planWorld(prompt, { seed: Number(req.body?.seed) || undefined });
     if (req.body?.agent) {
-      try { plan = (await world.agentPlan(prompt, plan)) || plan; } catch (e) { console.warn("agent plan", e.message); }
+      try { plan = (await world.agentEdit(`Make this world fit: "${prompt}". Name it, recolour it, and add or swap pieces so it tells the story of the place.`, plan)) || plan; } catch (e) { console.warn("agent plan", e.message); }
     }
     plan = world.cleanPlan(plan);
     const bill = world.billOf(plan);
     res.json({ ...plan, bill, total: bill.reduce((s, l) => s + l.price, 0) });
   }));
+  // Talk to the world: "make it night", "add a tram", "paint the shops mint". Claude edits the current plan.
+  app.post("/api/world/edit", worldLimit, wrap(async (req, res) => {
+    const request = String(req.body?.request || "").slice(0, 400);
+    const current = req.body?.plan;
+    if (!request || !current?.placements) throw Object.assign(new Error("request and plan are required"), { status: 400 });
+    const base = world.cleanPlan({ ...current, placements: current.placements.slice(0, 200) });
+    let plan = await world.agentEdit(request, base);
+    if (!plan) throw Object.assign(new Error("The world agent isn't available on this server."), { status: 503 });
+    plan = world.cleanPlan(plan);
+    const bill = world.billOf(plan);
+    res.json({ ...plan, bill, total: bill.reduce((s, l) => s + l.price, 0) });
+  }));
+
   app.post("/api/world/parts", worldLimit, wrap(async (req, res) => {
     const items = (req.body?.items || []).slice(0, 80);
     const out = await Promise.all(items.map(async ({ asset, knobs }) => {
