@@ -99,7 +99,7 @@ and released by `releaseDuePayouts()` (run hourly) only once the order is past t
 `COMPLETED`. A refund inside the window cancels the hold, so a creator is never paid on a refunded sale (tested:
 *a refund inside the window cancels held royalties*). The batch is idempotent on `sender_batch_id = oasis-<orderId>`.
 
-**Production path.** Payouts suits a hackathon marketplace with a few creators. At scale the right tool is **PayPal
+**Production path (future work, not built).** Payouts suits a hackathon marketplace with a few creators. At scale the right tool is **PayPal
 Commerce Platform**: onboard each creator as a seller, and split at capture with `payee` per purchase unit plus a
 `platform_fees` entry, so refunds unwind the split automatically. The split function already produces the
 per-party amounts that call needs.
@@ -130,6 +130,17 @@ get a 400; tested). Then:
 The live deploy lists every order, verified webhook and payout it has produced, with real sandbox IDs, at
 [`/#/status`](https://oasis-design.onrender.com/#/status). Until the sandbox keys are set there, those lists are empty
 and everything above is proven only by `test/commerce.test.mjs` against a fake client.
+
+## One command against the real sandbox
+
+```bash
+npm run sandbox-demo
+```
+
+`scripts/sandbox-demo.mjs` starts its own Oasis on port 8788 with a shortened refund window and walks the whole path
+against PayPal: a mandate, an over-budget order refused, an agent order you approve in PayPal's window, capture and a
+licensed download, a refund that revokes the licence and returns the budget, and a fork-of-a-fork sale whose royalties
+go out as a real Payouts batch. Every PayPal ID lands in [`docs/SANDBOX-RUN.md`](docs/SANDBOX-RUN.md).
 
 ## Sandbox quickstart (about five minutes)
 

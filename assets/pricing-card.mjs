@@ -18,6 +18,8 @@ export const params = {
     button: { type: "choice", label: "Button style", default: "solid", options: ["solid", "gradient", "outline"] },
     plan: { type: "text", label: "Plan name", default: "Pro" },
     price: { type: "text", label: "Price", default: "$29" },
+    tagline: { type: "text", label: "Tagline", default: "Everything a growing team needs", maxLength: 44 },
+    featureList: { type: "text", label: "Features (comma-separated)", default: "Unlimited projects, Advanced analytics, Custom domains, Team collaboration, Priority support, SSO & audit logs", maxLength: 240 },
     features: { type: "range", label: "Feature rows", default: 5, min: 3, max: 6, step: 1 },
     radius: { type: "range", label: "Corner radius", default: 20, min: 0, max: 40, step: 2 },
     popular: { type: "toggle", label: "Most popular ribbon", default: true },
@@ -69,6 +71,9 @@ export default function render(p) {
   const acc = p.accent;
   const accText = dark ? mix(acc, "#FFFFFF", 0.28) : acc;
   const n = clamp(Math.round(p.features), 3, 6);
+  // Your own feature copy, row by row; any missing rows fall back to the defaults so the card never shows a gap.
+  const own = String(p.featureList ?? "").split(",").map((s) => s.trim()).filter(Boolean).slice(0, 6).map((s) => esc(s.slice(0, 30)));
+  const feats = FEATURES.map((d, i) => own[i] || d);
   const cw = 360, pad = 32, cx = (W - cw) / 2;
   const bw = cw - pad * 2;
   const rowY0 = 226, gap = 38;
@@ -104,7 +109,7 @@ export default function render(p) {
     const y = rowY0 + i * gap;
     rows += `<rect x="${pad}" y="${y - 10}" width="20" height="20" rx="${cr}" fill="${acc}" fill-opacity="${dark ? 0.22 : 0.12}"/>`;
     rows += `<path d="M${pad + 5.6} ${y + 0.4}l2.9 2.9 5.9-6.1" fill="none" stroke="${accText}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
-    rows += `<text x="${pad + 34}" y="${y + 5}" font-size="15" fill="${T.text}" fill-opacity="0.9">${FEATURES[i]}</text>`;
+    rows += `<text x="${pad + 34}" y="${y + 5}" font-size="15" fill="${T.text}" fill-opacity="0.9">${feats[i]}</text>`;
   }
 
   let btn, btnInk;
@@ -134,7 +139,7 @@ export default function render(p) {
 <rect width="${cw}" height="${ch}" rx="${R}" fill="${T.card}" filter="url(#sh)"/>
 <g clip-path="url(#cc)"><rect width="${cw}" height="260" fill="url(#gl)"/>${dark ? `<rect width="${cw}" height="1" fill="#FFFFFF" fill-opacity="0.08"/>` : ""}</g>
 <text x="${pad}" y="52" font-size="${planFs}" font-weight="700" fill="${T.text}" letter-spacing="-0.2">${plan}</text>
-<text x="${pad}" y="76" font-size="14" fill="${T.muted}">Everything a growing team needs</text>
+<text x="${pad}" y="76" font-size="14" fill="${T.muted}">${esc(String(p.tagline ?? "Everything a growing team needs").slice(0, 44))}</text>
 <text x="${pad}" y="140" fill="${T.text}"><tspan font-size="${priceFs.toFixed(1)}" font-weight="700" letter-spacing="${priceLs}">${price}</tspan><tspan dx="8" font-size="15" font-weight="500" fill="${T.muted}">/ ${period}</tspan></text>
 <text x="${pad}" y="168" font-size="13" fill="${T.muted}">${note}</text>
 <rect x="${pad}" y="196" width="${bw}" height="1" fill="${T.line}"/>

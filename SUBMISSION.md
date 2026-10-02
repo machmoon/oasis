@@ -21,7 +21,7 @@ finish**. That second piece is what PayPal's order approval already is.
 ## What it does
 
 **Oasis is a store of design assets where nothing is finished.** Every asset is an ES module: typed knobs in, SVG out.
-67 assets (64 built-in programs and 3 AI forks) with 671 knobs, from pricing cards and phone mockups to Bauhaus posters and Oasis Town,
+67 assets (64 built-in programs and 3 AI forks) with 673 knobs, from pricing cards and phone mockups to Bauhaus posters and Oasis Town,
 an isometric street diorama that rebuilds as you turn its knobs.
 
 ![Change it after you find it](https://raw.githubusercontent.com/machmoon/oasis/main/docs/figures/01-rebuilt-not-stretched.png)

@@ -645,10 +645,15 @@ function pageAgent() {
     const items = replayKit || cart.items;
     const total = items.reduce((s, i) => s + i.price, 0);
     $("#kit").innerHTML = items.length
-      ? `<div class="kit${items.length >= 4 ? " compact" : ""}">${items.map((i) => `<div class="item" title="${esc(i.title)}"><img src="${esc(i.previewUrl)}" alt="${esc(i.title)}"/><div><span>${esc(i.title)}</span><b>${money(i.price)}</b></div></div>`).join("")}</div><div class="total"><span>Total</span><b>${money(total)}</b></div>${replayKit ? `<p class="muted" style="margin:10px 0 0;font-size:12.5px">A recorded run. Nothing was added to your cart.</p>` : ""}`
+      ? `<div class="kit${items.length >= 4 ? " compact" : ""}">${items.map((i) => `<div class="item" title="${esc(i.title)}"><img src="${esc(i.previewUrl)}" alt="${esc(i.title)}"/><div><span>${esc(i.title)}</span><b>${money(i.price)}</b></div></div>`).join("")}</div><div class="total"><span>Total</span><b>${money(total)}</b></div>${replayKit ? `<div class="replay-actions"><span class="muted">From a recorded run.</span><button class="btn small" id="take-kit">Add this kit to my cart</button></div>` : ""}`
       : `<div class="empty">Remixes the agent picks land here.</div>`;
   };
   drawKit();
+  $("#kit").addEventListener("click", (e) => {
+    if (!e.target.closest("#take-kit") || !replayKit) return;
+    for (const i of replayKit) cart.add({ ...i });
+    toast(`${replayKit.length} branded remixes added to your cart`);
+  });
   const add = (html, cls) => {
     const d = document.createElement("div");
     d.className = cls;
@@ -730,6 +735,13 @@ function pageAgent() {
     add(esc(rec.brief), "msg user");
     for (const [ev, data] of rec.events) {
       if (!document.body.contains(log) || run !== replayRun) return;
+      // The recording was made before this server had PayPal keys; it stops where the PayPal order opens.
+      if (ev === "tool" && data.name === "create_order") {
+        flushBot();
+        add(`<i></i>Opening a PayPal order`, "toolrow");
+        add(`<i></i>The recording stops here. In a live run the agent opens the PayPal order now, and you approve it in the Checkout panel. Nothing is charged until you do.`, "toolrow");
+        break;
+      }
       handle(ev, data);
     }
     flushBot();
