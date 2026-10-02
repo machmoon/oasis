@@ -21,7 +21,7 @@ finish**. That second piece is what PayPal's order approval already is.
 ## What it does
 
 **Oasis is a store of design assets where nothing is finished.** Every asset is an ES module: typed knobs in, SVG out.
-67 assets (64 built-in programs and 3 AI forks) with 673 knobs, from pricing cards and phone mockups to Bauhaus posters and Oasis Town,
+68 assets (65 built-in programs and 3 AI forks) with 683 knobs, from pricing cards and phone mockups to Bauhaus posters and Oasis Town,
 an isometric street diorama that rebuilds as you turn its knobs.
 
 ![Change it after you find it](https://raw.githubusercontent.com/machmoon/oasis/main/docs/figures/01-rebuilt-not-stretched.png)
@@ -29,7 +29,7 @@ an isometric street diorama that rebuilds as you turn its knobs.
 The pricing card above is one program at two settings. It isn't stretched: it grows three feature rows and a badge.
 The city grows from 4 blocks to 25. A file can't do either.
 
-**Brand Mode.** 235 of 247 colour knobs in the catalogue declare a role: background, surface,
+**Brand Mode.** 239 of 252 colour knobs in the catalogue declare a role: background, surface,
 ink, muted, primary, secondary, highlight. Set your brand once and *every asset* re-renders in it, and components with
 a light/dark theme follow the brand's darkness on their own.
 
@@ -73,7 +73,7 @@ window closes, so nobody is paid on a refunded sale.
   `platform_fees`) so refunds unwind it automatically.
 - **It runs against the real PayPal sandbox** ([docs/SANDBOX-RUN.md](https://github.com/machmoon/oasis/blob/main/docs/SANDBOX-RUN.md), `npm run sandbox-demo`): an over-budget agent order refused by the mandate; orders 47M93830FG9553221, 8V3397808V699150W captured (56834260T0051970X, 7BX91257JM822105U); refund 8GM623335Y0788449 revoking the licence (download then returns 410) and returning the budget; and a fork-of-a-fork sale paid upstream as Payouts batch CXTQ4BE5FC6GC. In that run, approval used PayPal's published sandbox test card instead of a person logging in.
 
-**The asset factory.** 59 of the 67 assets were written by an agent pipeline (5 are
+**The asset factory.** 59 of the 68 assets were written by an agent pipeline (6 are
 hand-written programs, 3 are AI forks). The first 36 came from factory v1 (builder self-review only, all since
 re-checked by the harness). Every build since tonight's v2 goes through the full gate below: 58 builds,
 23 published, 35 rejected (the factory is stopped for judging, so these match `factory/stats.jsonl` line for line). Nothing ships on the builder's word:
@@ -115,7 +115,7 @@ HTTP, resvg, Playwright, Render.
 - An agent that goes from a one-paragraph brief to a coherent, branded kit and a PayPal order you approve, and throws
   away its own muddy first renders without being asked.
 - A fork of a fork that pays three parties automatically.
-- Brand Mode: one palette re-skins 67 assets.
+- Brand Mode: one palette re-skins 68 assets.
 
 ## What we learned
 

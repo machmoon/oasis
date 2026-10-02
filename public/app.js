@@ -176,8 +176,6 @@ function setNav(name) {
 
 // ---------- pages ----------
 // ---------- home ----------
-const SEASONS = ["spring", "summer", "autumn", "winter"];
-const TIMES = ["day", "dusk", "night"];
 const BENTO = ["oasis-town", "pricing-card", "phone-mockup", "line-icons", "bauhaus-poster", "spot-illustrations", "app-icon"];
 
 function reveal(root) {
@@ -193,46 +191,38 @@ function swapImg(img, src) {
 
 function pageHome() {
   setNav("");
-  const town = { season: "spring", time: "day", brand: activeBrand() || BRAND_PRESETS[0] };
-  const townUrl = () => {
-    const knobs = {};
-    if (town.season !== "spring") knobs.season = town.season;
-    if (town.time !== "day") knobs.time = town.time;
-    return renderUrl("oasis-town", knobs, town.brand);
-  };
+  // Hero: the purchase flow as a diorama. One authored moment: the gate opens shortly after load.
+  const flow = { approved: false, brand: activeBrand() || BRAND_PRESETS[0] };
+  const flowUrl = () => renderUrl("oasis-checkout", flow.approved ? { approved: true } : {}, flow.brand);
   const fresh = CATALOG.filter((a) => !BENTO.includes(a.id) && !a.kit).slice(0, 8);
   const townKit = CATALOG.filter((a) => a.kit === "Oasis Town");
   app.innerHTML = `
   <div class="wrap">
     <section class="hero">
       <div>
-        <h1>Assets your agent can <em>brand and buy.</em></h1>
-        <p class="lede">Design assets built as tiny programs: icons, UI kits, whole towns. Your agent remixes them to your brand. You approve in PayPal.</p>
+        <h1>Your agent builds the kit. <em>You approve the buy.</em></h1>
+        <p class="lede">Design assets that reshape to your brand: icons, UI, posters, whole towns. Agents search, remix and fill a cart inside the budget you set. Nothing is paid until you approve it in PayPal.</p>
         <div class="cta">
-          <a class="btn primary" href="#/browse">Browse assets</a>
-          <a class="btn" href="#/agent">Brief the agent</a>
+          <a class="btn primary" href="#/agent">Brief the agent</a>
+          <a class="btn" href="#/browse">Browse assets</a>
         </div>
-        <a class="askcard" href="#/agent" aria-label="See how the agent asks and you approve">
-          <small>The Oasis agent asks</small>
-          <b>License 2 remixes · $10</b>
-          <span class="capmeter"><i style="width:50%"></i></span>
-          <span class="askfoot"><span>$10 of your $20 cap</span><span class="approve-pill">You approve in PayPal</span></span>
-        </a>
+        <ul class="flowkey">
+          <li><i style="background:#F6F7F9"></i>The agent picks and brands each piece</li>
+          <li><i style="background:var(--accent)"></i>The kit waits at the gate, inside your budget</li>
+          <li><i style="background:#3E7BFA"></i>You approve in PayPal, and it is delivered</li>
+        </ul>
       </div>
       <div class="stage">
-        <img class="town" id="town" src="${townUrl()}" alt="Oasis Town, an isometric street diorama rendered live from its program" />
-
-        <div class="dock" role="toolbar" aria-label="Oasis Town knobs">
-          <div class="grp">${SEASONS.map((s) => `<button class="knobbtn ${s === town.season ? "on" : ""}" data-season="${s}">${s}</button>`).join("")}</div>
-          <div class="grp">${TIMES.map((t) => `<button class="knobbtn ${t === town.time ? "on" : ""}" data-time="${t}">${t}</button>`).join("")}</div>
-          <div class="grp">${BRAND_PRESETS.map((p, i) => `<button class="swatch-chip ${p.slug === (town.brand.slug || "") ? "on" : ""}" data-brand="${i}" title="${esc(p.name)} brand">${swatches(p)}</button>`).join("")}</div>
+        <img class="town" id="flow" src="${flowUrl()}" alt="An isometric street: an agent kiosk, a stall of asset cubes, a toll gate that opens when you approve, and the buyer's house" />
+        <div class="dock" role="toolbar" aria-label="Checkout Street">
+          <div class="grp"><button class="knobbtn on" data-flow="0">Waiting</button><button class="knobbtn" data-flow="1">Approved</button></div>
+          <div class="grp">${BRAND_PRESETS.map((p, i) => `<button class="swatch-chip ${p.slug === (flow.brand.slug || "") ? "on" : ""}" data-flowbrand="${i}" title="${esc(p.name)} brand">${swatches(p)}</button>`).join("")}</div>
         </div>
       </div>
     </section>
 
     <section class="block reveal">
-      <p class="eyebrow">Agentic commerce</p>
-      <h2 class="title">Your agent shops. You approve.</h2>
+      <h2 class="title">How a kit gets bought.</h2>
       <p class="sub">Brief the Oasis agent, or any agent over MCP. It builds a branded kit, checks every render, and opens a PayPal order only you can pay.</p>
       <div class="flowtrack">
         <div class="flowstep"><h3>Brief</h3><p>“A calm meditation app in deep teal and coral. App icon, hero, pricing card. Under $20.”</p><div class="capchip"><span>Spending cap</span><b>$20</b><small>The server refuses any order above it.</small></div></div>
@@ -290,11 +280,13 @@ you approve in PayPal  get_order  files</pre>
     </section>
   </div>`;
 
-  const townImg = $("#town");
-  const redrawTown = () => swapImg(townImg, townUrl());
-  app.querySelectorAll("[data-season]").forEach((b) => b.addEventListener("click", () => { town.season = b.dataset.season; app.querySelectorAll("[data-season]").forEach((x) => x.classList.toggle("on", x === b)); redrawTown(); }));
-  app.querySelectorAll("[data-time]").forEach((b) => b.addEventListener("click", () => { town.time = b.dataset.time; app.querySelectorAll("[data-time]").forEach((x) => x.classList.toggle("on", x === b)); redrawTown(); }));
-  app.querySelectorAll("[data-brand]").forEach((b) => b.addEventListener("click", () => { town.brand = BRAND_PRESETS[+b.dataset.brand]; app.querySelectorAll("[data-brand]").forEach((x) => x.classList.toggle("on", x === b)); redrawTown(); }));
+  const flowImg = $("#flow");
+  const setFlow = (on) => { flow.approved = on; app.querySelectorAll("[data-flow]").forEach((x) => x.classList.toggle("on", +x.dataset.flow === +on)); swapImg(flowImg, flowUrl()); };
+  app.querySelectorAll("[data-flow]").forEach((b) => b.addEventListener("click", () => setFlow(b.dataset.flow === "1")));
+  app.querySelectorAll("[data-flowbrand]").forEach((b) => b.addEventListener("click", () => { flow.brand = BRAND_PRESETS[+b.dataset.flowbrand]; app.querySelectorAll("[data-flowbrand]").forEach((x) => x.classList.toggle("on", x === b)); swapImg(flowImg, flowUrl()); }));
+  new Image().src = renderUrl("oasis-checkout", { approved: true }, flow.brand);
+  if (!matchMedia("(prefers-reduced-motion: reduce)").matches) setTimeout(() => { if (document.body.contains(flowImg) && !flow.approved) setFlow(true); }, 2200);
+  else setFlow(true);
   app.querySelectorAll("[data-bento]").forEach((b) => b.addEventListener("click", () => {
     const brand = BRAND_PRESETS[+b.dataset.bento];
     app.querySelectorAll("[data-bento]").forEach((x) => x.classList.toggle("on", x === b));

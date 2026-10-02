@@ -425,3 +425,89 @@ ul.plain { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
 .replay-actions { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 10px; font-size: 12.5px; }
 .toolrow b { font-weight: 600; font-family: var(--sans, inherit); }
 .toolrow span { white-space: normal; }
+
+/* =====================================================================================================
+   Block world. Every surface is a lit block like the Oasis Town kit: a top face, a darker side face for its
+   edge, and a soft ink-tinted ground shadow. Face shading follows isomer (jdan/isomer js/isomer.js, light at
+   (2,-1,3), colorDifference 0.2) as obelisk.js steps it (src/colors/CubeColor.js): side ≈ base −11% lightness.
+   Press: the block sinks into its own edge (NES.css buttons.scss; neobrutalism-components button.tsx).
+   One action colour (taste-skill §4.3): awning red. Display face Fredoka, body Geist, mono only for money/IDs.
+   ===================================================================================================== */
+:root {
+  --bg: #e9ecf1; --bg-2: #dde3ea; --surface: #fbfcfd; --ink: #1f2430; --ink-2: #3a3f48; --muted: #5a5f68; --line: #d3dae3;
+  --accent: #e5484d; --accent-ink: #ffffff; --accent-soft: #fde3e3; --accent-side: #b83236;
+  --side: #c5ccd6; --side-deep: #aeb7c3; --ground: 0 14px 24px -10px rgb(31 36 48 / .22);
+  --sakura: #f7b8cf; --sakura-2: #fbd3e2; --leaf: #79b86a; --leaf-2: #4e8f4c; --sun: #f2b33d;
+  --ok: #2f7a55; --ok-soft: #dcefe4;
+  --edge: 0 solid transparent; --lift: 0 6px 0 var(--side), var(--ground); --lift-sm: 0 4px 0 var(--side), var(--ground);
+  --r-block: 12px; --r-card: 14px;
+  --display: "Fredoka", "Geist", system-ui, sans-serif;
+  --ease-out: cubic-bezier(.23, 1, .32, 1);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #171b24; --bg-2: #11141b; --surface: #232937; --ink: #eef1f6; --ink-2: #c9cfd9; --muted: #98a0ad; --line: #323a49;
+    --side: #0d1016; --side-deep: #07090d; --ground: 0 14px 24px -10px rgb(0 0 0 / .5); --accent-soft: #3b1d20; --ok-soft: #132a1f;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #171b24; --bg-2: #11141b; --surface: #232937; --ink: #eef1f6; --ink-2: #c9cfd9; --muted: #98a0ad; --line: #323a49;
+  --side: #0d1016; --side-deep: #07090d; --ground: 0 14px 24px -10px rgb(0 0 0 / .5); --accent-soft: #3b1d20; --ok-soft: #132a1f;
+}
+body { background: var(--bg); }
+h1, h2, h3, .logo { font-family: var(--display); font-weight: 600; letter-spacing: -0.02em; }
+.hero h1, .crumbs h1, h2.title { font-weight: 700; letter-spacing: -0.02em; line-height: 1.05; }
+
+/* nav: a sticky slab, no hairline */
+.top { background: var(--surface); box-shadow: 0 4px 0 var(--side); border: 0; backdrop-filter: none; }
+.top.scrolled { border: 0; box-shadow: 0 4px 0 var(--side), var(--ground); }
+.nav a { font-weight: 600; border-radius: 10px; }
+.nav a:hover { background: var(--bg); }
+.nav a.on { background: var(--bg-2); color: var(--ink); box-shadow: inset 0 3px 0 var(--side); }
+
+/* buttons: top face + side face; press sinks the block */
+.btn { border: 0; background: var(--surface); box-shadow: 0 4px 0 var(--side), var(--ground); border-radius: var(--r-block);
+  transition: transform 120ms var(--ease-out), box-shadow 120ms var(--ease-out), background .15s; }
+.btn.primary { background: var(--accent); color: #fff; box-shadow: 0 4px 0 var(--accent-side), 0 14px 24px -10px rgb(184 50 54 / .45); }
+.btn.palm { background: var(--ink); color: var(--surface); box-shadow: 0 4px 0 #000, var(--ground); }
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 0 var(--side), var(--ground); }
+  .btn.primary:hover { box-shadow: 0 6px 0 var(--accent-side), 0 16px 26px -10px rgb(184 50 54 / .5); }
+}
+.btn:active, .btn.primary:active, .btn.palm:active { transform: translateY(4px); box-shadow: 0 0 0 var(--side); }
+.btn.small { box-shadow: 0 3px 0 var(--side); }
+.btn.small:active { transform: translateY(3px); box-shadow: none; }
+.btn.ghost { box-shadow: none; background: transparent; }
+.btn.ghost:hover { background: var(--bg-2); transform: none; box-shadow: none; }
+
+/* cards are plinths: the asset sits in a recessed well on the top face, title on the front face */
+.card { border: 0; background: var(--surface); box-shadow: 0 8px 0 var(--side), var(--ground); border-radius: var(--r-card); overflow: visible; }
+.card .thumb { border: 0; border-radius: var(--r-card) var(--r-card) 0 0; background: var(--bg-2); box-shadow: inset 0 -3px 0 rgb(31 36 48 / .06); overflow: hidden; }
+@media (hover: hover) and (pointer: fine) { .card:hover { transform: translateY(-3px); box-shadow: 0 11px 0 var(--side), 0 18px 28px -10px rgb(31 36 48 / .28); } }
+.card:active { transform: translateY(5px); box-shadow: 0 3px 0 var(--side); }
+.badge { border: 0; box-shadow: 0 2px 0 var(--side); background: var(--surface); }
+.badge.free { background: var(--ok-soft); box-shadow: 0 2px 0 #b4d8c3; }
+.badge.fork { background: var(--sakura-2); color: #9b2c55; box-shadow: 0 2px 0 var(--sakura); }
+.card .meta { padding: 14px 16px 12px; }
+
+/* panels, viewer, stage, chat: all blocks */
+.panel, .viewer, .chat, .stage, .flowstep, .bento .cell, .kit .item, .stats4 > div, .stats3 div, .capchip, .askcard, .mandate-token {
+  border: 0 !important; box-shadow: 0 6px 0 var(--side), var(--ground); }
+.flowstep.paypal { background: var(--ink); box-shadow: 0 6px 0 #000, var(--ground); }
+.stage { border-radius: 22px; }
+.dock { border-top: 0; background: var(--bg); box-shadow: inset 0 3px 0 var(--side); }
+.knobbtn.on, .chip.on { background: var(--ink); color: var(--surface); }
+.chip { border: 0; box-shadow: 0 3px 0 var(--side); }
+.chip:hover { box-shadow: 0 3px 0 var(--side-deep); }
+.search, .composer textarea, .cap-input, .mandate-form input, .mandate-form select, .pastebrand input, .knob input[type="text"], .knob select {
+  border: 0 !important; background: var(--bg-2) !important; box-shadow: inset 0 3px 0 var(--side); border-radius: 12px; }
+.toolrow { border: 0; background: var(--bg-2); box-shadow: inset 0 -2px 0 var(--side); }
+.msg.user { box-shadow: 0 4px 0 #000; }
+.variant-row img, .kit .item, .lineage img { border: 0 !important; box-shadow: 0 4px 0 var(--side); }
+.askcard { transform: rotate(-1.5deg); }
+.swatch-chip.on { border-color: transparent; box-shadow: 0 0 0 2px var(--ink), 0 3px 0 2px var(--side); }
+@media (prefers-reduced-motion: reduce) { .btn, .card { transition: none; } }
+.flowkey { list-style: none; padding: 0; margin: 28px 0 0; display: grid; gap: 10px; font-size: 15px; color: var(--ink-2); }
+.flowkey li { display: flex; align-items: center; gap: 12px; }
+.flowkey i { width: 16px; height: 16px; border-radius: 4px; flex: none; box-shadow: 0 3px 0 var(--side); }
+.stage .town { transition: opacity .35s var(--ease-out); }
