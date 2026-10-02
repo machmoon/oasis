@@ -58,7 +58,13 @@ export async function pageWorld(app, h) {
     if (!show.framed) {
       const { THREE } = await import("/world3d.js");
       const [w, d] = plan.size, wide = innerWidth > 860;
-      v.frame(new THREE.Box3(new THREE.Vector3(0, 0, 0), new THREE.Vector3(w, 6, d)), { fit: wide ? 1.12 : 1.3 });
+      const box = new THREE.Box3(new THREE.Vector3(0, 0, 0), new THREE.Vector3(w, 8, d));
+      v.frame(box, { fit: 1.2 });
+      // fit the world inside the canvas area the panels leave free (left panel only covers the top)
+      const el = document.getElementById("stage"), W = el.clientWidth, H = el.clientHeight;
+      const right = wide ? 1 - (document.getElementById("wpanel").offsetWidth + 48) / W : 0.97;
+      const top = wide ? 0.06 : 0.04, left = wide ? 0.03 : 0.03;
+      v.fitToRect(box, [left, top, right, 0.86]);
       show.framed = true;
     }
     drawPanel();

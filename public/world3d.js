@@ -125,8 +125,8 @@ export function createViewer(el, { time = "day", ground = true, autoRotate = fal
     night = t === "night";
     const [top] = SKY[t] || SKY.day;
     scene.background = new THREE.Color(top);
-    hemi.intensity = night ? 0.5 : t === "dusk" ? 1.5 : 2.2;
-    ambient.intensity = night ? 0.12 : 0.55;
+    hemi.intensity = night ? 0.95 : t === "dusk" ? 1.5 : 2.2;
+    ambient.intensity = night ? 0.35 : 0.55;
     hemi.color.set(night ? "#7d8fc4" : "#ffffff");
     sun.intensity = night ? 0.3 : t === "dusk" ? 1.7 : 2.1;
     sun.color.set(night ? "#9fb2ff" : t === "dusk" ? "#ffb98a" : "#fff4e0");
@@ -141,6 +141,7 @@ export function createViewer(el, { time = "day", ground = true, autoRotate = fal
     // shift: move the subject left (-) or right (+) on screen, as a fraction of its size, to clear side panels
     const target = center.clone().add(new THREE.Vector3(1, 0, -1).normalize().multiplyScalar(-shift * radius));
     if (!keepAngle) camera.position.set(target.x - dist * 0.6, target.y + dist * 0.68, target.z - dist * 0.42);
+    else camera.position.copy(target).add(camera.position.clone().sub(controls.target).normalize().multiplyScalar(dist));
     controls.target.copy(target);
     camera.near = dist / 100; camera.far = dist * 20; camera.updateProjectionMatrix();
     const span = Math.max(size.x, size.z) + 4;
@@ -151,6 +152,27 @@ export function createViewer(el, { time = "day", ground = true, autoRotate = fal
     controls.minDistance = dist * 0.25; controls.maxDistance = dist * 3;
   }
 
+  /**
+   * Pulls the camera back along its current direction until every corner of `box` projects inside `rect`
+   * (fractions of the canvas: [left, top, right, bottom]); a binary search on distance, measured not guessed.
+   */
+  function fitToRect(box, rect = [0.05, 0.05, 0.95, 0.95]) {
+    const center = box.getCenter(new THREE.Vector3());
+    const dir = camera.position.clone().sub(controls.target).normalize();
+    controls.target.copy(center);
+    const corners = [];
+    for (const x of [box.min.x, box.max.x]) for (const y of [box.min.y, box.max.y]) for (const z of [box.min.z, box.max.z]) corners.push(new THREE.Vector3(x, y, z));
+    const fits = (d) => {
+      camera.position.copy(center).addScaledVector(dir, d);
+      camera.lookAt(center); camera.updateMatrixWorld(); camera.updateProjectionMatrix();
+      return corners.every((c) => { const p = c.clone().project(camera); const sx = (p.x + 1) / 2, sy = (1 - p.y) / 2; return sx >= rect[0] && sx <= rect[2] && sy >= rect[1] && sy <= rect[3]; });
+    };
+    let lo = 1, hi = 2000;
+    for (let i = 0; i < 40; i++) { const mid = (lo + hi) / 2; if (fits(mid)) hi = mid; else lo = mid; }
+    fits(hi);
+    controls.minDistance = hi * 0.25; controls.maxDistance = hi * 3;
+  }
+
   /** Replaces the scene contents with one model; reframes on first load or when asked. */
   function setParts(parts, { reframe = false } = {}) {
     const next = partsToGroup(parts, { night });
@@ -159,7 +181,9 @@ export function createViewer(el, { time = "day", ground = true, autoRotate = fal
     content = next;
     scene.add(content);
     if (wire) setWireframe(true);
-    if (reframe || !setParts.framed) { frame(new THREE.Box3().setFromObject(content)); setParts.framed = true; }
+    const box = new THREE.Box3().setFromObject(content), size = box.getSize(new THREE.Vector3()).length();
+    if (reframe || !setParts.framed) { frame(box); setParts.framed = true; setParts.size = size; }
+    else if (size > setParts.size * 1.2 || size < setParts.size * 0.6) { frame(box, { keepAngle: true }); setParts.size = size; }
   }
 
   /** Adds a placed model to the world and returns its Group (for selection, animation and removal). */
@@ -175,11 +199,16 @@ export function createViewer(el, { time = "day", ground = true, autoRotate = fal
     content.clear();
   }
 
+  // offsetX shifts the rendered centre left (+) so a subject stays centred in the space side panels leave free
+  let offsetX = 0;
   const resize = () => {
     const w = el.clientWidth, h = el.clientHeight || 1;
     renderer.setSize(w, h, false);
-    camera.aspect = w / h; camera.updateProjectionMatrix();
+    camera.aspect = w / h;
+    if (offsetX) camera.setViewOffset(w, h, offsetX, 0, w, h); else camera.clearViewOffset();
+    camera.updateProjectionMatrix();
   };
+  const setOffset = (px) => { offsetX = px; resize(); };
   const ro = new ResizeObserver(resize);
   ro.observe(el);
   resize();
@@ -246,5 +275,5 @@ export function createViewer(el, { time = "day", ground = true, autoRotate = fal
     return new Blob([buf], { type: "model/gltf-binary" });
   }
 
-  return { scene, camera, controls, renderer, setParts, addPlaced, clearWorld, setTime, pick, select, refreshSelection, dropIn, setWireframe, stats, frame: (b, o) => frame(b || new THREE.Box3().setFromObject(content), o), tickers, exportGlb, dispose, get content() { return content; } };
+  return { scene, camera, controls, renderer, setParts, addPlaced, clearWorld, setTime, pick, select, refreshSelection, dropIn, setWireframe, stats, setOffset, fitToRect, frame: (b, o) => frame(b || new THREE.Box3().setFromObject(content), o), tickers, exportGlb, dispose, get content() { return content; } };
 }
