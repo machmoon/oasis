@@ -21,7 +21,7 @@ finish**. That second piece is what PayPal's order approval already is.
 ## What it does
 
 **Oasis is a store of design assets where nothing is finished.** Every asset is an ES module: typed knobs in, SVG out.
-56 assets and 560 knobs so far, from pricing cards and phone mockups to Bauhaus posters and Oasis Town,
+66 assets and 661 knobs so far, from pricing cards and phone mockups to Bauhaus posters and Oasis Town,
 an isometric street diorama that rebuilds as you turn its knobs.
 
 ![Change it after you find it](https://raw.githubusercontent.com/machmoon/oasis/main/docs/figures/01-rebuilt-not-stretched.png)
@@ -29,7 +29,7 @@ an isometric street diorama that rebuilds as you turn its knobs.
 The pricing card above is one program at two settings. It isn't stretched: it grows three feature rows and a badge.
 The city grows from 4 blocks to 25. A file can't do either.
 
-**Brand Mode.** 193 of 205 colour knobs in the catalogue declare a role: background, surface,
+**Brand Mode.** 231 of 243 colour knobs in the catalogue declare a role: background, surface,
 ink, muted, primary, secondary, highlight. Set your brand once and *every asset* re-renders in it, and components with
 a light/dark theme follow the brand's darkness on their own.
 
@@ -72,10 +72,10 @@ window closes, so nobody is paid on a refunded sale.
   `platform_fees`) so refunds unwind it automatically.
 
 
-**The asset factory.** 48 of the 56 assets were written by an agent pipeline (5 are
+**The asset factory.** 58 of the 66 assets were written by an agent pipeline (5 are
 hand-written programs, 3 are AI forks). The first 36 came from factory v1 (builder self-review only, all since
-re-checked by the harness). Every build since tonight's v2 goes through the full gate below: 22 builds,
-12 published, 10 rejected so far. Nothing ships on the builder's word:
+re-checked by the harness). Every build since tonight's v2 goes through the full gate below: 47 builds,
+22 published, 25 rejected so far. Nothing ships on the builder's word:
 1. Claude writes a program from a one-line brief and critiques its own renders.
 2. **A harness measures it.** Every asset is rendered across its knob space: defaults, presets, every range at min and
    max, random combinations, and a light and a dark brand. Blank output, slow renders, oversize SVG, missing brand
@@ -83,7 +83,7 @@ re-checked by the harness). Every build since tonight's v2 goes through the full
 3. **An independent grader in a fresh session**, which never saw the builder's reasoning, looks at those renders and
    publishes or rejects. It has caught real bugs a self-review missed: a checkout screen whose order total didn't add
    up, a login screen whose focus ring turned the error colour on one brand.
-4. Each verdict writes one general lesson into every later build's prompt (41 so far).
+4. Each verdict writes one general lesson into every later build's prompt (96 so far).
 
 **Safety.** Asset programs, including AI-written forks, run in QuickJS compiled to WebAssembly: no `require`, no file
 system, no network, a 48 MB heap. An allocation storm can outrun QuickJS's own interrupt (it took 8.3 s to die in
@@ -111,7 +111,7 @@ HTTP, resvg, Playwright, Render.
 - An agent that goes from a one-paragraph brief to a coherent, branded kit and a PayPal order you approve, and throws
   away its own muddy first renders without being asked.
 - A fork of a fork that pays three parties automatically.
-- Brand Mode: one palette re-skins 56 assets.
+- Brand Mode: one palette re-skins 66 assets.
 
 ## What we learned
 
