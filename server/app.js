@@ -1,4 +1,5 @@
 import express from "express";
+import fs from "node:fs";
 import crypto from "node:crypto";
 import { config, paypalConfigured } from "./config.js";
 import * as catalog from "./catalog.js";
@@ -25,6 +26,7 @@ export async function createApp() {
   const parseKnobs = (req) => {
     try {
       const p = req.query.p ? JSON.parse(String(req.query.p)) : {};
+      if (req.query.brand) p.brand = JSON.parse(String(req.query.brand));
       return req.query.preset ? { ...p, preset: String(req.query.preset) } : p;
     } catch {
       throw Object.assign(new Error("p must be URL-encoded JSON"), { status: 400 });
@@ -37,7 +39,7 @@ export async function createApp() {
   };
 
   app.get("/api/config", (req, res) =>
-    res.json({ paypalClientId: config.paypal.clientId || null, paypalReady: paypalConfigured(), agentReady: !!config.anthropicKey, ...catalog.stats() }),
+    res.json({ prerendered: fs.existsSync(new URL("../public/prerender/", import.meta.url).pathname), paypalClientId: config.paypal.clientId || null, paypalReady: paypalConfigured(), agentReady: !!config.anthropicKey, ...catalog.stats() }),
   );
 
   app.get("/api/assets", wrap((req, res) => {
@@ -50,23 +52,23 @@ export async function createApp() {
     res.json({ ...catalog.summary(a, { withKnobs: true }), parent: a.forkedFrom ? catalog.summary(catalog.getAsset(a.forkedFrom) || { ...a, params: {} }) : null, children: catalog.allAssets().filter((x) => x.forkedFrom === a.id).map((x) => catalog.summary(x)) });
   }));
 
-  app.get("/api/assets/:id/render.svg", wrap((req, res) => {
+  app.get("/api/assets/:id/render.svg", wrap(async (req, res) => {
     const a = mustAsset(req.params.id);
-    const { svg } = catalog.render(a, parseKnobs(req));
+    const { svg } = await catalog.renderAsync(a, parseKnobs(req));
     const out = a.price > 0 ? catalog.watermark(svg, catalog.sizeOf(svg, a.size)) : svg;
     res.set("Content-Type", "image/svg+xml").set("Cache-Control", "no-cache").send(out);
   }));
 
-  app.get("/api/assets/:id/download.:fmt", wrap((req, res) => {
+  app.get("/api/assets/:id/download.:fmt", wrap(async (req, res) => {
     const a = mustAsset(req.params.id);
     if (a.price > 0) throw Object.assign(new Error("This asset needs a licence: check out with PayPal first."), { status: 402 });
-    sendFormat(res, a, parseKnobs(req), req.params.fmt);
+    await sendFormat(res, a, parseKnobs(req), req.params.fmt);
   }));
 
-  function sendFormat(res, a, knobs, fmt) {
+  async function sendFormat(res, a, knobs, fmt) {
     const f = FORMATS[fmt];
     if (!f) throw Object.assign(new Error(`Unknown format ${fmt}`), { status: 400 });
-    const { svg, values } = catalog.render(a, knobs);
+    const { svg, values } = await catalog.renderAsync(a, knobs);
     res.set("Content-Type", f.type).set("Content-Disposition", `attachment; filename="${a.id}.${f.ext}"`).send(f.make(svg, a, values));
   }
 
@@ -88,10 +90,19 @@ export async function createApp() {
     res.json(o);
   }));
 
+  app.post("/api/orders/:id/refund", wrap(async (req, res) => res.json(await commerce.refund(req.params.id, req.body || {}))));
+
+  // PayPal webhooks, verified with verify-webhook-signature before anything is trusted.
+  app.post("/api/paypal/webhook", wrap(async (req, res) => {
+    const { verifyWebhook } = await import("./paypal.js");
+    if (!(await verifyWebhook(req.headers, req.body))) return res.status(400).json({ error: "signature verification failed" });
+    res.json({ ok: true, result: await commerce.handleWebhook(req.body) });
+  }));
+
   app.get("/api/licenses/:token", wrap(async (req, res) => res.json(await commerce.license(req.params.token))));
   app.get("/api/licenses/:token/download.:fmt", wrap(async (req, res) => {
     const lic = await commerce.license(req.params.token);
-    sendFormat(res, mustAsset(lic.assetId), lic.knobs, req.params.fmt);
+    await sendFormat(res, mustAsset(lic.assetId), lic.knobs, req.params.fmt);
   }));
 
   app.get("/api/ledger", wrap(async (req, res) => {
@@ -152,6 +163,16 @@ export async function createApp() {
     }
     res.redirect(`/#/order/${encodeURIComponent(id)}`);
   }));
+
+  // Assets published after the build (new forks) have no pre-rendered preview: render them live.
+  app.get("/prerender/:file", async (req, res, next) => {
+    const m = req.params.file.match(/^(.+)--([a-z0-9-]+)\.(svg|png)$/);
+    if (!m || fs.existsSync(new URL(`../public/prerender/${req.params.file}`, import.meta.url).pathname)) return next();
+    const { BRAND_PRESETS } = await import("../public/brands.js");
+    const b = BRAND_PRESETS.find((x) => x.slug === m[2]);
+    const q = b ? `?brand=${encodeURIComponent(JSON.stringify((({ name, slug, ...c }) => c)(b)))}` : "";
+    res.redirect(302, `/api/assets/${encodeURIComponent(m[1])}/render.svg${q}`);
+  });
 
   app.get("/llms.txt", (req, res) => res.type("text/plain").send(llmsTxt()));
   app.get("/api", (req, res) => res.type("text/plain").send(llmsTxt()));

@@ -14,12 +14,13 @@ export const meta = {
 export const params = {
   knobs: {
     name: { type: "text", label: "Name", default: "Maya Angelou" },
-    c1: { type: "color", label: "Colour 1", default: "#264653" },
-    c2: { type: "color", label: "Colour 2", default: "#2A9D8F" },
-    c3: { type: "color", label: "Colour 3", default: "#E9C46A" },
-    c4: { type: "color", label: "Colour 4", default: "#F4A261" },
-    c5: { type: "color", label: "Colour 5", default: "#E76F51" },
+    c1: { type: "color", role: "ink", label: "Colour 1", default: "#264653" },
+    c2: { type: "color", role: "secondary", label: "Colour 2", default: "#2A9D8F" },
+    c3: { type: "color", role: "background", label: "Colour 3", default: "#E9C46A" },
+    c4: { type: "color", role: "highlight", label: "Colour 4", default: "#F4A261" },
+    c5: { type: "color", role: "primary", label: "Colour 5", default: "#E76F51" },
     shape: { type: "choice", label: "Shape", default: "circle", options: ["circle", "squircle", "square"] },
+    layout: { type: "choice", label: "Layout", default: "team", options: ["single", "team"] },
   },
   presets: {
     Desert: { c1: "#264653", c2: "#2A9D8F", c3: "#E9C46A", c4: "#F4A261", c5: "#E76F51" },
@@ -39,9 +40,9 @@ function contrast(hex) {
   return (r * 299 + g * 587 + b * 114) / 1000 >= 128 ? "#000000" : "#FFFFFF";
 }
 
-export default function render(p) {
+function face(p, name, uid) {
   const colors = [p.c1, p.c2, p.c3, p.c4, p.c5];
-  const n = hashCode(p.name || "oasis");
+  const n = hashCode(name || "oasis");
   const wrap = colors[n % 5];
   const ptx = unit(n, 10, 1), tx = ptx < 5 ? ptx + SIZE / 9 : ptx;
   const pty = unit(n, 10, 2), ty = pty < 5 ? pty + SIZE / 9 : pty;
@@ -55,10 +56,19 @@ export default function render(p) {
   const mouthPath = open
     ? `<path d="M15 ${19 + mouth}c2 1 4 1 6 0" stroke="${face}" fill="none" stroke-linecap="round"/>`
     : `<path d="M13,${19 + mouth} a1,0.75 0 0,0 10,0" fill="${face}"/>`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SIZE} ${SIZE}" width="360" height="360">
-<mask id="m" maskUnits="userSpaceOnUse" x="0" y="0" width="${SIZE}" height="${SIZE}"><rect width="${SIZE}" height="${SIZE}" rx="${rx}" fill="#FFFFFF"/></mask>
-<g mask="url(#m)"><rect width="${SIZE}" height="${SIZE}" fill="${bg}"/>
+  return `
+<mask id="m${uid}" maskUnits="userSpaceOnUse" x="0" y="0" width="${SIZE}" height="${SIZE}"><rect width="${SIZE}" height="${SIZE}" rx="${rx}" fill="#FFFFFF"/></mask>
+<g mask="url(#m${uid})"><rect width="${SIZE}" height="${SIZE}" fill="${bg}"/>
 <rect x="0" y="0" width="${SIZE}" height="${SIZE}" transform="translate(${tx} ${ty}) rotate(${rot} ${SIZE / 2} ${SIZE / 2}) scale(${scale})" fill="${wrap}" rx="${circ ? SIZE : SIZE / 6}"/>
 <g transform="translate(${fx} ${fy}) rotate(${frot} ${SIZE / 2} ${SIZE / 2})">${mouthPath}
-<rect x="${14 - eye}" y="14" width="1.5" height="2" rx="1" fill="${face}"/><rect x="${20 + eye}" y="14" width="1.5" height="2" rx="1" fill="${face}"/></g></g></svg>`;
+<rect x="${14 - eye}" y="14" width="1.5" height="2" rx="1" fill="${face}"/><rect x="${20 + eye}" y="14" width="1.5" height="2" rx="1" fill="${face}"/></g></g>`;
+}
+
+export default function render(p) {
+  if (p.layout === "single") return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SIZE} ${SIZE}" width="360" height="360">${face(p, p.name, "a")}</svg>`;
+  // A team: the name plus three seeded teammates, so a whole palette shows at once.
+  const first = (p.name || "Oasis").split(" ")[0];
+  const names = [p.name, first + " Rivera", first + " Okafor", first + " Lindqvist"];
+  const cells = names.map((nm, i) => `<svg x="${(i % 2) * 19}" y="${Math.floor(i / 2) * 19}" width="17" height="17" viewBox="0 0 ${SIZE} ${SIZE}">${face(p, nm, "t" + i)}</svg>`).join("");
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SIZE} ${SIZE}" width="360" height="360">${cells}</svg>`;
 }

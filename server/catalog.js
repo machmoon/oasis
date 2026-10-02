@@ -4,7 +4,8 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { Resvg } from "@resvg/resvg-js";
 import { inspect, renderSource } from "./sandbox.js";
-import { resolveKnobs, applyPreset } from "./knobs.js";
+import { renderInPool } from "./pool.js";
+import { resolveKnobs, applyPreset, brandKnobs } from "./knobs.js";
 import * as store from "./store.js";
 
 const ASSET_DIR = new URL("../assets/", import.meta.url).pathname;
@@ -67,6 +68,7 @@ export function summary(a, { withKnobs = false } = {}) {
     forkedFrom: a.forkedFrom, lineage: a.lineage, createdAt: a.createdAt,
     presets: Object.keys(a.params.presets || {}),
     knobCount: Object.keys(a.params.knobs || {}).length,
+    roles: Object.fromEntries(Object.entries(a.params.knobs || {}).filter(([, k]) => k.type === "color" && k.role).map(([n, k]) => [n, k.role])),
     forks: allAssets().filter((x) => x.forkedFrom === a.id).length,
   };
   if (withKnobs) {
@@ -101,12 +103,32 @@ export function search({ query = "", kind, maxPrice, freeOnly, limit = 24 } = {}
 const cache = new Map();
 /** Renders a remix. Input may name a colourway `preset`; everything is validated against the schema. */
 export function render(a, input = {}) {
-  const { preset, ...rest } = input || {};
-  const values = resolveKnobs(a.params, preset ? applyPreset(a.params, preset, rest) : rest);
+  const { preset, brand, ...rest } = input || {};
+  const base = brand ? { ...brandKnobs(a.params, brand), ...rest } : rest;
+  const values = resolveKnobs(a.params, preset ? applyPreset(a.params, preset, base) : base);
   const key = a.id + JSON.stringify(values);
   let svg = cache.get(key);
   if (!svg) {
     svg = renderSource(a.source, values);
+    if (cache.size > 500) cache.delete(cache.keys().next().value);
+    cache.set(key, svg);
+  }
+  return { svg, values };
+}
+
+export function resolveInput(a, input) {
+  const { preset, brand, ...rest } = input || {};
+  const base = brand ? { ...brandKnobs(a.params, brand), ...rest } : rest;
+  return resolveKnobs(a.params, preset ? applyPreset(a.params, preset, base) : base);
+}
+
+/** Same as render, but on the worker pool: the HTTP preview path. */
+export async function renderAsync(a, input = {}) {
+  const values = resolveInput(a, input);
+  const key = a.id + JSON.stringify(values);
+  let svg = cache.get(key);
+  if (!svg) {
+    svg = await renderInPool(a.source, values);
     if (cache.size > 500) cache.delete(cache.keys().next().value);
     cache.set(key, svg);
   }

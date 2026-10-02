@@ -6,6 +6,7 @@ export const config = {
   paypal: {
     clientId: process.env.PAYPAL_CLIENT_ID || "",
     clientSecret: process.env.PAYPAL_CLIENT_SECRET || "",
+    webhookId: process.env.PAYPAL_WEBHOOK_ID || "",
     apiBase: "https://api-m.sandbox.paypal.com",
   },
   anthropicKey: process.env.ANTHROPIC_API_KEY || "",

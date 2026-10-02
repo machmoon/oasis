@@ -11,9 +11,9 @@ export const meta = {
 
 export const params = {
   knobs: {
-    color1: { type: "color", label: "Ring 1 (outer)", default: "#FA114F" },
-    color2: { type: "color", label: "Ring 2", default: "#A6F12C" },
-    color3: { type: "color", label: "Ring 3 (inner)", default: "#1EEAEF" },
+    color1: { type: "color", role: "primary", label: "Ring 1 (outer)", default: "#FA114F" },
+    color2: { type: "color", role: "secondary", label: "Ring 2", default: "#A6F12C" },
+    color3: { type: "color", role: "highlight", label: "Ring 3 (inner)", default: "#1EEAEF" },
     theme: { type: "choice", label: "Theme", default: "dark", options: ["dark", "light"] },
     rings: { type: "range", label: "Rings", default: 3, min: 1, max: 3, step: 1 },
     value1: { type: "range", label: "Ring 1 %", default: 86, min: 0, max: 200, step: 1 },

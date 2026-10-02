@@ -11,10 +11,10 @@ export const meta = {
 
 export const params = {
   knobs: {
-    sky: { type: "color", label: "Night sky", default: "#1B0B3A" },
-    sunTop: { type: "color", label: "Sun top", default: "#FFD23F" },
-    sunBottom: { type: "color", label: "Sun bottom", default: "#FF2D95" },
-    grid: { type: "color", label: "Grid neon", default: "#FF4FD8" },
+    sky: { type: "color", role: "background", label: "Night sky", default: "#1B0B3A" },
+    sunTop: { type: "color", role: "highlight", label: "Sun top", default: "#FFD23F" },
+    sunBottom: { type: "color", role: "primary", label: "Sun bottom", default: "#FF2D95" },
+    grid: { type: "color", role: "secondary", label: "Grid neon", default: "#FF4FD8" },
     headline: { type: "text", label: "Headline", default: "Midnight" },
     tagline: { type: "text", label: "Tagline", default: "Outrun the city lights" },
     titleStyle: { type: "choice", label: "Headline style", default: "chrome", options: ["chrome", "neon", "sunset"] },

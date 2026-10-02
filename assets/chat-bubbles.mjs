@@ -11,9 +11,9 @@ export const meta = {
 
 export const params = {
   knobs: {
-    sent: { type: "color", label: "Sent bubble", default: "#2F6BFF" },
-    received: { type: "color", label: "Received bubble", default: "#E9EBEF" },
-    background: { type: "color", label: "Background", default: "#FFFFFF" },
+    sent: { type: "color", role: "primary", label: "Sent bubble", default: "#2F6BFF" },
+    received: { type: "color", role: "surface", label: "Received bubble", default: "#E9EBEF" },
+    background: { type: "color", role: "background", label: "Background", default: "#FFFFFF" },
     message: { type: "text", label: "First message", default: "Are we still on for Friday?" },
     firstFrom: { type: "choice", label: "First message from", default: "them", options: ["them", "me"] },
     count: { type: "range", label: "Messages", default: 5, min: 4, max: 6, step: 1 },

@@ -11,10 +11,10 @@ export const meta = {
 
 export const params = {
   knobs: {
-    leaf: { type: "color", label: "Leaf", default: "#2E6B4A" },
-    leafLight: { type: "color", label: "Leaf highlight", default: "#7DBE8C" },
-    pot: { type: "color", label: "Pot", default: "#D97B54" },
-    background: { type: "color", label: "Background", default: "#F4EEE4" },
+    leaf: { type: "color", role: "primary", label: "Leaf", default: "#2E6B4A" },
+    leafLight: { type: "color", role: "highlight", label: "Leaf highlight", default: "#7DBE8C" },
+    pot: { type: "color", role: "secondary", label: "Pot", default: "#D97B54" },
+    background: { type: "color", role: "background", label: "Background", default: "#F4EEE4" },
     plant: { type: "choice", label: "Plant", default: "monstera", options: ["monstera", "snake plant", "fern"] },
     potShape: { type: "choice", label: "Pot shape", default: "tapered", options: ["tapered", "belly", "cylinder", "bowl"] },
     leaves: { type: "range", label: "Leaf count", default: 7, min: 3, max: 12, step: 1 },

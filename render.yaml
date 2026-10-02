@@ -5,7 +5,7 @@ services:
     runtime: node
     plan: free
     region: oregon
-    buildCommand: npm ci
+    buildCommand: npm ci && node scripts/prerender.mjs
     startCommand: node server/local.js
     healthCheckPath: /api/config
     envVars:

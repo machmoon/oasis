@@ -11,10 +11,10 @@ export const meta = {
 
 export const params = {
   knobs: {
-    sky: { type: "color", label: "Sky", default: "#2B2D5C" },
-    horizon: { type: "color", label: "Horizon", default: "#F4A47C" },
-    ridge: { type: "color", label: "Nearest ridge", default: "#1B1838" },
-    light: { type: "color", label: "Sun / moon", default: "#FFE3B0" },
+    sky: { type: "color", role: "background", label: "Sky", default: "#2B2D5C" },
+    horizon: { type: "color", role: "primary", label: "Horizon", default: "#F4A47C" },
+    ridge: { type: "color", role: "ink", label: "Nearest ridge", default: "#1B1838" },
+    light: { type: "color", role: "highlight", label: "Sun / moon", default: "#FFE3B0" },
     celestial: { type: "choice", label: "Sky body", default: "sun", options: ["sun", "moon", "none"] },
     extras: { type: "choice", label: "Details", default: "both", options: ["none", "birds", "clouds", "both"] },
     layers: { type: "range", label: "Ranges", default: 5, min: 3, max: 8, step: 1 },

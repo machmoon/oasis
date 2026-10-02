@@ -11,10 +11,10 @@ export const meta = {
 
 export const params = {
   knobs: {
-    top: { type: "color", label: "Gradient top", default: "#3EC6FF" },
-    bottom: { type: "color", label: "Gradient bottom", default: "#2B5BFF" },
-    ink: { type: "color", label: "Glyph colour", default: "#FFFFFF" },
-    backdrop: { type: "color", label: "Backdrop", default: "#EEF1F6" },
+    top: { type: "color", role: "secondary", label: "Gradient top", default: "#3EC6FF" },
+    bottom: { type: "color", role: "primary", label: "Gradient bottom", default: "#2B5BFF" },
+    ink: { type: "color", role: "surface", label: "Glyph colour", default: "#FFFFFF" },
+    backdrop: { type: "color", role: "background", label: "Backdrop", default: "#EEF1F6" },
     glyph: { type: "choice", label: "Glyph", default: "camera", options: ["camera", "note", "wave", "leaf", "bolt", "compass"] },
     style: { type: "choice", label: "Glyph style", default: "solid", options: ["solid", "outline", "duotone"] },
     scale: { type: "range", label: "Glyph size", default: 56, min: 40, max: 78, step: 1 },

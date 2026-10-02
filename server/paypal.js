@@ -2,10 +2,10 @@
 // (paypal-examples/docs-examples, standard-integration/server/node/server.js): OrdersController from
 // @paypal/paypal-server-sdk, create with intent CAPTURE, capture on approval. Payouts are not in that
 // SDK, so creator royalties use the REST Payouts API with the same client credentials.
-import { CheckoutPaymentIntent, Client, Environment, ItemCategory, LogLevel, OrdersController, PaypalExperienceUserAction, ApiError } from "@paypal/paypal-server-sdk";
+import { CheckoutPaymentIntent, Client, Environment, ItemCategory, LogLevel, OrdersController, PaymentsController, PaypalExperienceUserAction, ApiError } from "@paypal/paypal-server-sdk";
 import { config, paypalConfigured } from "./config.js";
 
-let orders;
+let orders, payments;
 function controller() {
   if (!paypalConfigured()) throw new Error("PayPal sandbox credentials are not configured (PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET).");
   if (!orders) {
@@ -16,6 +16,7 @@ function controller() {
       logging: { logLevel: LogLevel.Warn },
     });
     orders = new OrdersController(client);
+    payments = new PaymentsController(client);
   }
   return orders;
 }
@@ -50,7 +51,8 @@ export async function createOrder(lines, { returnUrl, cancelUrl, customId } = {}
       : undefined,
   };
   try {
-    const { body: raw } = await controller().createOrder({ body, prefer: "return=representation" });
+    // PayPal-Request-Id makes a retried create return the same order instead of a duplicate.
+    const { body: raw } = await controller().createOrder({ body, prefer: "return=representation", paypalRequestId: customId ? `oasis-create-${customId}` : undefined });
     return JSON.parse(raw);
   } catch (e) {
     throw describe(e);
@@ -68,7 +70,7 @@ export async function getOrder(id) {
 
 export async function captureOrder(id) {
   try {
-    const { body } = await controller().captureOrder({ id, prefer: "return=representation" });
+    const { body } = await controller().captureOrder({ id, prefer: "return=representation", paypalRequestId: `oasis-capture-${id}` });
     return JSON.parse(body);
   } catch (e) {
     throw describe(e);
@@ -116,4 +118,57 @@ export async function sendPayouts(batchId, items) {
   const j = await r.json();
   if (!r.ok) throw new Error(j.details?.[0]?.issue || j.message || `payouts failed (${r.status})`);
   return j;
+}
+
+export async function refundCapture(captureId, { amount, note, requestId } = {}) {
+  controller();
+  try {
+    const { body } = await payments.refundCapturedPayment({
+      captureId,
+      prefer: "return=representation",
+      paypalRequestId: requestId,
+      body: { amount: amount ? money(amount) : undefined, noteToPayer: note },
+    });
+    return JSON.parse(body);
+  } catch (e) {
+    throw describe(e);
+  }
+}
+
+async function rest(method, pathname, body) {
+  const r = await fetch(`${config.paypal.apiBase}${pathname}`, {
+    method,
+    headers: { Authorization: `Bearer ${await accessToken()}`, "Content-Type": "application/json" },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw Object.assign(new Error(j.details?.[0]?.issue || j.message || `PayPal ${r.status}`), { status: r.status });
+  return j;
+}
+
+export const getPayoutBatch = (batchId) => rest("GET", `/v1/payments/payouts/${encodeURIComponent(batchId)}`);
+
+/** Verifies a webhook's signature with PayPal (the documented verify-webhook-signature call). */
+export async function verifyWebhook(headers, event) {
+  if (!config.paypal.webhookId) return false;
+  const j = await rest("POST", "/v1/notifications/verify-webhook-signature", {
+    auth_algo: headers["paypal-auth-algo"],
+    cert_url: headers["paypal-cert-url"],
+    transmission_id: headers["paypal-transmission-id"],
+    transmission_sig: headers["paypal-transmission-sig"],
+    transmission_time: headers["paypal-transmission-time"],
+    webhook_id: config.paypal.webhookId,
+    webhook_event: event,
+  });
+  return j.verification_status === "SUCCESS";
+}
+
+/** Registers this server's webhook URL for the events Oasis acts on; returns the webhook id. */
+export async function ensureWebhook(url) {
+  const events = ["CHECKOUT.ORDER.APPROVED", "PAYMENT.CAPTURE.COMPLETED", "PAYMENT.CAPTURE.REFUNDED", "PAYMENT.CAPTURE.REVERSED", "PAYMENT.PAYOUTS-ITEM.SUCCEEDED", "PAYMENT.PAYOUTS-ITEM.UNCLAIMED", "PAYMENT.PAYOUTS-ITEM.FAILED", "PAYMENT.PAYOUTS-ITEM.RETURNED"];
+  const list = await rest("GET", "/v1/notifications/webhooks");
+  const existing = (list.webhooks || []).find((w) => w.url === url);
+  if (existing) return existing.id;
+  const w = await rest("POST", "/v1/notifications/webhooks", { url, event_types: events.map((name) => ({ name })) });
+  return w.id;
 }

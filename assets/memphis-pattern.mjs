@@ -11,11 +11,11 @@ export const meta = {
 
 export const params = {
   knobs: {
-    background: { type: "color", label: "Background", default: "#F6EFE3" },
-    color1: { type: "color", label: "Colour 1", default: "#FF5A5F" },
-    color2: { type: "color", label: "Colour 2", default: "#2EC4B6" },
-    color3: { type: "color", label: "Colour 3", default: "#FFC93C" },
-    color4: { type: "color", label: "Colour 4", default: "#1D1D3F" },
+    background: { type: "color", role: "background", label: "Background", default: "#F6EFE3" },
+    color1: { type: "color", role: "primary", label: "Colour 1", default: "#FF5A5F" },
+    color2: { type: "color", role: "secondary", label: "Colour 2", default: "#2EC4B6" },
+    color3: { type: "color", role: "highlight", label: "Colour 3", default: "#FFC93C" },
+    color4: { type: "color", role: "ink", label: "Colour 4", default: "#1D1D3F" },
     style: { type: "choice", label: "Fill style", default: "mixed", options: ["mixed", "solid", "outline", "shadowed"] },
     density: { type: "range", label: "Density", default: 5, min: 1, max: 10, step: 1 },
     size: { type: "range", label: "Shape size", default: 1, min: 0.5, max: 2, step: 0.05 },

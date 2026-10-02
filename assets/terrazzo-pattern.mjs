@@ -11,11 +11,11 @@ export const meta = {
 
 export const params = {
   knobs: {
-    base: { type: "color", label: "Base", default: "#EFE8DC" },
-    chip1: { type: "color", label: "Chip 1 (most)", default: "#C8553D" },
-    chip2: { type: "color", label: "Chip 2", default: "#7A9E7E" },
-    chip3: { type: "color", label: "Chip 3", default: "#2F2F33" },
-    chip4: { type: "color", label: "Chip 4 (accent)", default: "#E3B04B" },
+    base: { type: "color", role: "background", label: "Base", default: "#EFE8DC" },
+    chip1: { type: "color", role: "primary", label: "Chip 1 (most)", default: "#C8553D" },
+    chip2: { type: "color", role: "secondary", label: "Chip 2", default: "#7A9E7E" },
+    chip3: { type: "color", role: "ink", label: "Chip 3", default: "#2F2F33" },
+    chip4: { type: "color", role: "highlight", label: "Chip 4 (accent)", default: "#E3B04B" },
     shape: { type: "choice", label: "Chip shape", default: "shards", options: ["shards", "pebbles", "slivers", "mixed"] },
     count: { type: "range", label: "Chip count", default: 210, min: 20, max: 400, step: 5 },
     size: { type: "range", label: "Chip size", default: 34, min: 8, max: 70, step: 1 },

@@ -1,0 +1,242 @@
+[
+ {
+  "slug": "checkout-payment",
+  "brief": "Checkout screen with card form, order summary, and pay button. Knobs: accent color, card network chip style, light/dark mode, field corner radius, number of line items, and currency symbol. Price: 8"
+ },
+ {
+  "slug": "invoice-template",
+  "brief": "Clean A4/Letter invoice with header logo slot, client block, line-item table, tax and total rows. Knobs: accent color, font pairing, row count, paid/unpaid stamp toggle, and currency format. Price: 6"
+ },
+ {
+  "slug": "receipt-slip",
+  "brief": "Thermal-style receipt with a torn zigzag edge, monospace line items, and an optional barcode. Knobs: paper tint, item count, tear-edge depth, barcode or QR toggle, and footer message. Price: 0"
+ },
+ {
+  "slug": "gift-card",
+  "brief": "Credit-card-ratio gift card with amount, recipient line, and decorative background. Knobs: denomination, gradient or pattern fill, foil-shine overlay, corner radius, and front/back view. Price: 5"
+ },
+ {
+  "slug": "onboarding-screens",
+  "brief": "Three-step mobile onboarding carousel with illustration area, headline, body copy, pagination dots, and CTA. Knobs: step count, active step, accent color, dot style, and skip-link toggle. Price: 9"
+ },
+ {
+  "slug": "settings-panel",
+  "brief": "Settings page with grouped rows, toggles, selects, and section headers. Knobs: row count per group, toggle on/off states, theme mode, density (compact/comfortable), and sidebar toggle. Price: 7"
+ },
+ {
+  "slug": "login-screen",
+  "brief": "Sign-in screen with email and password fields, generic social-auth buttons, and a split-image or centered-card layout. Knobs: layout variant, brand color, error state toggle, remember-me checkbox, and dark mode. Price: 0"
+ },
+ {
+  "slug": "pricing-table",
+  "brief": "Multi-tier pricing comparison table with feature checkmark rows and a highlighted plan. Knobs: tier count (2-4), featured tier, monthly/annual toggle state, feature row count, and accent color. Price: 8"
+ },
+ {
+  "slug": "navbar",
+  "brief": "Responsive top navigation bar with logo slot, links, search, and avatar or CTA. Knobs: link count, active item, sticky blur background, alignment, mobile hamburger view, and theme mode. Price: 0"
+ },
+ {
+  "slug": "hero-section",
+  "brief": "Landing page hero with headline, subcopy, dual CTAs, and a product-shot or abstract visual area. Knobs: layout (left, center, split), background style, headline length, badge pill toggle, and accent color. Price: 10"
+ },
+ {
+  "slug": "data-table",
+  "brief": "Dashboard data table with sortable headers, status pills, avatar cells, row selection, and pagination. Knobs: row and column count, zebra striping, density, selected rows, and status color mapping. Price: 9"
+ },
+ {
+  "slug": "bar-chart",
+  "brief": "Vertical or horizontal bar chart with axis, gridlines, labels, and tooltip callout. Knobs: data values, orientation, grouped/stacked mode, bar radius, palette, and gridline toggle. Price: 0"
+ },
+ {
+  "slug": "donut-chart",
+  "brief": "Donut chart with segment labels, center total, and legend. Knobs: segment values, ring thickness, gap between segments, palette, center text, and legend position. Price: 0"
+ },
+ {
+  "slug": "line-chart",
+  "brief": "Smooth or straight-segment line chart with area fill, data points, and a hover marker. Knobs: series count, data values, curve tension, gradient area fill, point visibility, and axis labels. Price: 6"
+ },
+ {
+  "slug": "funnel-chart",
+  "brief": "Conversion funnel with tapered stages, percentages, and drop-off annotations. Knobs: stage count, values, taper style (smooth/stepped), orientation, palette, and label placement. Price: 7"
+ },
+ {
+  "slug": "kanban-card",
+  "brief": "Task card for kanban boards with title, tags, assignee avatars, due date, and progress. Knobs: tag colors, priority indicator, avatar count, checklist progress, cover-image toggle, and column header. Price: 5"
+ },
+ {
+  "slug": "notification-center",
+  "brief": "Dropdown notification panel with grouped items, unread dots, avatars, and action buttons. Knobs: item count, unread count, tabs (all/mentions), empty-state toggle, and theme mode. Price: 7"
+ },
+ {
+  "slug": "file-upload-dropzone",
+  "brief": "Drag-and-drop upload area with a file list showing progress bars and success/error rows. Knobs: dropzone state (idle, hover, uploading), file count, progress values, border dash style, and accent color. Price: 0"
+ },
+ {
+  "slug": "music-player",
+  "brief": "Audio player card with album art, track info, scrubber, and transport controls. Knobs: size (mini/full), progress position, waveform or bar scrubber, art gradient, and play/pause state. Price: 6"
+ },
+ {
+  "slug": "map-card",
+  "brief": "Stylized vector map card with streets, location pin, route line, and info overlay. Knobs: map palette, pin style, route toggle, zoom density of streets, and overlay content. Price: 8"
+ },
+ {
+  "slug": "onboarding-scenes",
+  "brief": "Set of welcome-flow illustrations: person waving, setting up profile, celebrating. Knobs: skin tone, outfit palette, background blob shape, line weight, and flat or outlined style. Price: 10"
+ },
+ {
+  "slug": "error-404-illustration",
+  "brief": "Playful 404 scene with a lost character, broken path, or floating astronaut and big numerals. Knobs: scene variant, palette, numeral style, character toggle, and background depth. Price: 0"
+ },
+ {
+  "slug": "success-state-illustration",
+  "brief": "Celebration illustration with a checkmark badge, confetti burst, and optional character. Knobs: confetti density, accent color, badge shape, character toggle, and animation-ready layering. Price: 0"
+ },
+ {
+  "slug": "error-state-illustration",
+  "brief": "Friendly failure illustration such as a disconnected plug, warning sign, or spilled coffee. Knobs: scenario variant, severity color (warning or error), background shape, and line weight. Price: 5"
+ },
+ {
+  "slug": "team-illustration",
+  "brief": "Group of diverse people collaborating around a board or table. Knobs: people count (2-6), skin tones, outfit palette, pose set, and background setting (office, abstract). Price: 12"
+ },
+ {
+  "slug": "workspace-desk-illustration",
+  "brief": "Cozy desk setup with laptop, plant, lamp, mug, and window. Knobs: time of day lighting, palette, object toggles, perspective (front or isometric), and wall art. Price: 9"
+ },
+ {
+  "slug": "abstract-hero-shapes",
+  "brief": "Composition of floating 3D-feeling geometric shapes (spheres, toruses, pills) for hero backgrounds. Knobs: shape count, palette, gradient shading intensity, random seed, and blur depth. Price: 7"
+ },
+ {
+  "slug": "video-call-illustration",
+  "brief": "Remote-work scene with a laptop showing a video grid of faces. Knobs: participant count, room style, palette, screen UI detail, and character expression. Price: 8"
+ },
+ {
+  "slug": "security-shield-illustration",
+  "brief": "Privacy and security spot with a shield, lock, keyhole, and orbiting particles. Knobs: shield shape, palette, lock state (open/closed), particle count, and glow toggle. Price: 0"
+ },
+ {
+  "slug": "delivery-package-illustration",
+  "brief": "Shipping scene with boxes, a delivery van or scooter, and a route pin. Knobs: vehicle type, box count, palette, motion lines toggle, and background city or abstract. Price: 6"
+ },
+ {
+  "slug": "business-card",
+  "brief": "Standard 3.5x2 business card front and back with name, title, contact rows, and logo slot. Knobs: layout variant, accent color, font pairing, background pattern, and QR toggle. Price: 0"
+ },
+ {
+  "slug": "letterhead",
+  "brief": "Brand letterhead with header logo, footer contact strip, and a content area guide. Knobs: page size, header layout, accent bar position, margin size, and watermark toggle. Price: 5"
+ },
+ {
+  "slug": "badge-emblem",
+  "brief": "Circular or shield-shaped emblem with curved top/bottom text, center icon, and stars. Knobs: outline shape, text strings, ring count, center icon, and est.-year text. Price: 6"
+ },
+ {
+  "slug": "wax-seal",
+  "brief": "Wax or embossed foil seal with irregular edge and monogram center. Knobs: seal color, edge wobble, monogram letters, shine highlight, and drip toggle. Price: 4"
+ },
+ {
+  "slug": "social-banner",
+  "brief": "Profile cover banner sized for common social platforms with headline, tagline, and decorative shapes. Knobs: aspect ratio preset, background style, text alignment, safe-zone guides, and palette. Price: 0"
+ },
+ {
+  "slug": "email-header",
+  "brief": "600px-wide newsletter header with logo, issue title, date, and hero graphic band. Knobs: height, background gradient or pattern, issue number, text color, and divider style. Price: 4"
+ },
+ {
+  "slug": "packaging-label",
+  "brief": "Product label for jars, bottles, or bags with product name, variant, net weight, and ornament border. Knobs: shape (rectangle, oval, circle), palette, border style, variant text, and texture overlay. Price: 8"
+ },
+ {
+  "slug": "coupon-voucher",
+  "brief": "Discount coupon with perforated tear edge, big percentage, code box, and expiry. Knobs: discount value, perforation side, palette, code text, and notch-cutout style. Price: 0"
+ },
+ {
+  "slug": "event-name-badge",
+  "brief": "Conference lanyard badge with attendee name, role ribbon, event mark, and punch hole. Knobs: role color, name, layout orientation, pattern header, and QR toggle. Price: 5"
+ },
+ {
+  "slug": "certificate-award",
+  "brief": "Formal certificate with ornate border, title, recipient line, signature lines, and seal. Knobs: border ornament style, palette (gold, navy, mono), orientation, text fields, and seal toggle. Price: 7"
+ },
+ {
+  "slug": "herringbone-pattern",
+  "brief": "Seamless herringbone tile pattern. Knobs: plank length and width, angle, grout gap, color variation per plank, and palette. Price: 0"
+ },
+ {
+  "slug": "grain-gradient",
+  "brief": "Soft multi-stop gradient with film-grain noise overlay. Knobs: color stops, gradient type (linear, radial, conic), grain intensity, grain scale, and angle. Price: 5"
+ },
+ {
+  "slug": "grid-paper-background",
+  "brief": "Graph or blueprint grid background with major/minor lines. Knobs: cell size, major-line interval, line color and opacity, background tint, and radial fade mask. Price: 0"
+ },
+ {
+  "slug": "isometric-grid",
+  "brief": "Isometric triangle or dot grid with optional extruded cubes. Knobs: cell size, line or dot mode, cube density, shading palette, and random seed. Price: 4"
+ },
+ {
+  "slug": "layered-waves-background",
+  "brief": "Stacked wavy bands for section backgrounds. Knobs: layer count, amplitude, frequency, palette ramp, smoothness, and random seed. Price: 0"
+ },
+ {
+  "slug": "noise-texture",
+  "brief": "Tileable organic noise texture for subtle surfaces. Knobs: noise type (fractal, turbulence), scale, octaves, contrast, tint, and seed. Price: 3"
+ },
+ {
+  "slug": "circle-packing-pattern",
+  "brief": "Packed circles background with varying sizes. Knobs: min/max radius, padding, fill or outline mode, palette, and seed. Price: 6"
+ },
+ {
+  "slug": "chevron-pattern",
+  "brief": "Seamless zigzag chevron stripes. Knobs: stripe height, zig width, stripe count per tile, palette, and stroke-only mode. Price: 0"
+ },
+ {
+  "slug": "plaid-tartan-pattern",
+  "brief": "Woven plaid/tartan pattern with overlapping translucent bands. Knobs: band widths, color sett sequence, twill texture toggle, scale, and opacity. Price: 5"
+ },
+ {
+  "slug": "polka-dot-pattern",
+  "brief": "Classic polka dot pattern with offset rows. Knobs: dot size, spacing, offset grid or straight, size jitter, and palette. Price: 0"
+ },
+ {
+  "slug": "arrow-set",
+  "brief": "Set of 24 arrows: straight, curved, hand-drawn, and looped. Knobs: stroke width, head style, line cap, hand-drawn wobble, and color. Price: 0"
+ },
+ {
+  "slug": "ornamental-frames",
+  "brief": "Decorative frames: art deco, floral, minimal double-line, and badge shapes. Knobs: frame style, aspect ratio, corner ornament, line weight, and color. Price: 6"
+ },
+ {
+  "slug": "flourish-dividers",
+  "brief": "Ornamental horizontal dividers with flourishes, dots, and diamonds. Knobs: style variant, width, center ornament, line weight, and symmetry. Price: 3"
+ },
+ {
+  "slug": "rubber-stamp",
+  "brief": "Distressed ink stamp like APPROVED, PAID, or DRAFT in rectangle or circle shapes. Knobs: text, shape, ink color, distress amount, and rotation. Price: 4"
+ },
+ {
+  "slug": "ribbon-banners",
+  "brief": "Folded ribbon banners for labels and headings. Knobs: ribbon style (flat, folded, curved), tail cut, text, palette, and shadow depth. Price: 5"
+ },
+ {
+  "slug": "number-set",
+  "brief": "Decorative numerals 0-9 in badge, outlined, and stacked styles for steps and rankings. Knobs: style, container shape, fill/outline, font weight, and palette. Price: 4"
+ },
+ {
+  "slug": "reaction-emoji-set",
+  "brief": "Round face reaction icons: like, love, laugh, wow, sad, angry, and more. Knobs: face color, outline weight, flat or gradient shading, and size. Price: 0"
+ },
+ {
+  "slug": "weather-icons",
+  "brief": "Set of 20 weather icons: sun, clouds, rain, snow, storm, fog, wind, and moon phases. Knobs: style (line, filled, duotone), stroke width, palette, and corner rounding. Price: 5"
+ },
+ {
+  "slug": "file-type-icons",
+  "brief": "Document icons with folded corner and extension label (PDF, DOC, XLS, ZIP, MP4, PNG, etc.). Knobs: extension text, label color mapping, corner fold size, and outline/filled style. Price: 0"
+ },
+ {
+  "slug": "social-icons-generic",
+  "brief": "Generic social action and channel icons (share, chat, video, photo, mail, link, RSS) in unbranded shapes. Knobs: container shape (circle, square, none), style, size, and palette. Price: 0"
+ }
+]

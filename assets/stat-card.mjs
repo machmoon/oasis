@@ -11,8 +11,8 @@ export const meta = {
 
 export const params = {
   knobs: {
-    accent: { type: "color", label: "Accent", default: "#5B5BF6" },
-    canvas: { type: "color", label: "Canvas", default: "#EEF0F5" },
+    accent: { type: "color", role: "primary", label: "Accent", default: "#5B5BF6" },
+    canvas: { type: "color", role: "background", label: "Canvas", default: "#EEF0F5" },
     label: { type: "text", label: "Label", default: "Monthly revenue" },
     value: { type: "text", label: "Value", default: "$48,290" },
     theme: { type: "choice", label: "Theme", default: "light", options: ["light", "dark"] },

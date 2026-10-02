@@ -11,9 +11,9 @@ export const meta = {
 
 export const params = {
   knobs: {
-    background: { type: "color", label: "Hero background", default: "#14213D" },
-    from: { type: "color", label: "Back wave", default: "#3A5BA0" },
-    to: { type: "color", label: "Front wave (next section)", default: "#F6F1E7" },
+    background: { type: "color", role: "ink", label: "Hero background", default: "#14213D" },
+    from: { type: "color", role: "primary", label: "Back wave", default: "#3A5BA0" },
+    to: { type: "color", role: "background", label: "Front wave (next section)", default: "#F6F1E7" },
     style: { type: "choice", label: "Wave style", default: "organic", options: ["smooth", "organic", "crest"] },
     layers: { type: "range", label: "Layers", default: 4, min: 2, max: 5, step: 1 },
     amplitude: { type: "range", label: "Amplitude", default: 60, min: 0, max: 100, step: 1 },

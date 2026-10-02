@@ -11,9 +11,9 @@ export const meta = {
 
 export const params = {
   knobs: {
-    primary: { type: "color", label: "Primary", default: "#4F46E5" },
-    secondary: { type: "color", label: "Secondary", default: "#22D3EE" },
-    background: { type: "color", label: "Background", default: "#F6F6FA" },
+    primary: { type: "color", role: "primary", label: "Primary", default: "#4F46E5" },
+    secondary: { type: "color", role: "secondary", label: "Secondary", default: "#22D3EE" },
+    background: { type: "color", role: "background", label: "Background", default: "#F6F6FA" },
     style: { type: "choice", label: "Petal style", default: "petal", options: ["petal", "drop", "arc", "fan"] },
     petals: { type: "range", label: "Petals", default: 8, min: 3, max: 12, step: 1 },
     rotation: { type: "range", label: "Rotation", default: 24, min: -75, max: 75, step: 1 },

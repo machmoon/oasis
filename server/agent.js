@@ -14,7 +14,7 @@ const SYSTEM = `You are Oasis, a creative director who sources design assets for
 How you work:
 - Read the brief for brand, mood, audience, deliverables and budget. If there is no budget, keep the total modest.
 - Search broadly (several queries), then choose the few assets that cover the deliverables. Prefer fewer, stronger pieces.
-- Decide ONE palette for the whole set (4-5 hex colours) and apply it to every asset so the kit is coherent. Put the brand's own words in text knobs.
+- Decide ONE brand palette by role (background, ink, primary, secondary, highlight; surface and muted are derived) and pass the same brand to every remix so the kit is coherent; colour knobs declare roles. Override individual knobs only where a render needs it. Put the brand's own words in text knobs.
 - Use remix_asset to set knobs. You will see the rendered image: judge it honestly and remix again if it looks off (contrast, clashing colours, clipped text).
 - add_to_cart only finished remixes, each with a one-line reason.
 - Free assets need no payment; paid ones are licensed through PayPal. When the cart is ready, call create_order once. The person approves payment themselves in PayPal; never claim to have paid.
@@ -49,6 +49,7 @@ const TOOL_DEFS = [
       properties: {
         asset_id: { type: "string" },
         preset: { type: "string", description: "Optional colourway preset name to start from" },
+        brand: { type: "object", description: "Brand palette by role; every colour knob with a matching role takes it. Keys: background, surface, ink, muted, primary, secondary, highlight (#RRGGBB). Explicit knobs override it.", properties: { background: { type: "string" }, surface: { type: "string" }, ink: { type: "string" }, muted: { type: "string" }, primary: { type: "string" }, secondary: { type: "string" }, highlight: { type: "string" } } },
         knobs: { type: "object", description: "Knob name -> value. Colours are #RRGGBB.", additionalProperties: true },
       },
       required: ["asset_id", "knobs"],
@@ -62,6 +63,7 @@ const TOOL_DEFS = [
       properties: {
         asset_id: { type: "string" },
         preset: { type: "string" },
+        brand: { type: "object", description: "Brand palette by role; every colour knob with a matching role takes it. Keys: background, surface, ink, muted, primary, secondary, highlight (#RRGGBB). Explicit knobs override it.", properties: { background: { type: "string" }, surface: { type: "string" }, ink: { type: "string" }, muted: { type: "string" }, primary: { type: "string" }, secondary: { type: "string" }, highlight: { type: "string" } } },
         knobs: { type: "object", additionalProperties: true },
         reason: { type: "string", description: "One line: why this piece is in the kit" },
       },
@@ -138,12 +140,12 @@ async function execute(call, cart, emit) {
     case "get_asset":
       return JSON.stringify(tools.getAsset(input));
     case "remix_asset": {
-      const r = tools.remixAsset(input);
+      const r = await tools.remixAsset(input);
       emit("variant", { assetId: r.asset.id, title: r.asset.title, price: r.price_usd, knobs: r.values, previewUrl: r.preview_url });
       return [{ type: "text", text: JSON.stringify({ asset_id: r.asset.id, knobs: r.values, price_usd: r.price_usd }) }, imageBlock(r.svg)];
     }
     case "add_to_cart": {
-      const r = tools.remixAsset(input);
+      const r = await tools.remixAsset(input);
       const item = { assetId: r.asset.id, title: r.asset.title, price: r.price_usd, knobs: r.values, reason: input.reason || "", previewUrl: r.preview_url };
       cart.push(item);
       emit("cart_add", item);
@@ -157,7 +159,7 @@ async function execute(call, cart, emit) {
     case "fork_asset": {
       emit("status", { message: "Writing a new asset program…" });
       const fork = await forkAsset({ assetId: input.asset_id, instruction: input.instruction, author: "oasis-agent" });
-      const { svg } = catalog.render(fork, {});
+      const { svg } = await catalog.renderAsync(fork, {});
       emit("fork", { assetId: fork.id, title: fork.title, forkedFrom: fork.forkedFrom });
       return [{ type: "text", text: JSON.stringify(tools.getAsset({ asset_id: fork.id })) }, imageBlock(svg)];
     }

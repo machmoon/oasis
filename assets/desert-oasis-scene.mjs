@@ -11,12 +11,12 @@ export const meta = {
 
 export const params = {
   knobs: {
-    sky: { type: "color", label: "Sky", default: "#F2A55E" },
-    sun: { type: "color", label: "Sun / moon", default: "#FFE7B0" },
-    sand: { type: "color", label: "Sand", default: "#EDB27A" },
-    shade: { type: "color", label: "Shadow", default: "#7E3F3A" },
-    water: { type: "color", label: "Water", default: "#2F7F8A" },
-    palm: { type: "color", label: "Palms", default: "#3D4A32" },
+    sky: { type: "color", role: "background", label: "Sky", default: "#F2A55E" },
+    sun: { type: "color", role: "highlight", label: "Sun / moon", default: "#FFE7B0" },
+    sand: { type: "color", role: "surface", label: "Sand", default: "#EDB27A" },
+    shade: { type: "color", role: "muted", label: "Shadow", default: "#7E3F3A" },
+    water: { type: "color", role: "primary", label: "Water", default: "#2F7F8A" },
+    palm: { type: "color", role: "ink", label: "Palms", default: "#3D4A32" },
     orb: { type: "choice", label: "Sky body", default: "glow", options: ["glow", "striped", "crescent"] },
     palms: { type: "range", label: "Palm trees", default: 3, min: 2, max: 4, step: 1 },
     dunes: { type: "range", label: "Dune layers", default: 4, min: 1, max: 6, step: 1 },

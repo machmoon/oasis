@@ -11,9 +11,9 @@ export const meta = {
 
 export const params = {
   knobs: {
-    brand: { type: "color", label: "Brand", default: "#5B5BF0" },
-    ink: { type: "color", label: "Text", default: "#1C1D2B" },
-    background: { type: "color", label: "Background", default: "#FAF8F5" },
+    brand: { type: "color", role: "primary", label: "Brand", default: "#5B5BF0" },
+    ink: { type: "color", role: "ink", label: "Text", default: "#1C1D2B" },
+    background: { type: "color", role: "background", label: "Background", default: "#FAF8F5" },
     subject: { type: "choice", label: "Scene", default: "inbox", options: ["inbox", "folder", "search"] },
     style: { type: "choice", label: "Style", default: "duotone", options: ["line", "duotone", "filled"] },
     title: { type: "text", label: "Title", default: "You're all caught up" },

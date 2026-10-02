@@ -11,10 +11,10 @@ export const meta = {
 
 export const params = {
   knobs: {
-    accent: { type: "color", label: "Accent", default: "#E2553B" },
-    paper: { type: "color", label: "Paper", default: "#F7F0E3" },
-    ink: { type: "color", label: "Ink", default: "#1F1B16" },
-    backdrop: { type: "color", label: "Backdrop", default: "#25262E" },
+    accent: { type: "color", role: "primary", label: "Accent", default: "#E2553B" },
+    paper: { type: "color", role: "surface", label: "Paper", default: "#F7F0E3" },
+    ink: { type: "color", role: "ink", label: "Ink", default: "#1F1B16" },
+    backdrop: { type: "color", role: "background", label: "Backdrop", default: "#25262E" },
     eventName: { type: "text", label: "Event name", default: "Midnight Arcadia" },
     date: { type: "text", label: "Date", default: "Sat 14 Jun 2025" },
     seat: { type: "text", label: "Seat", default: "Row F · Seat 12" },

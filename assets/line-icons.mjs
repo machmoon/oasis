@@ -16,10 +16,10 @@ const ICONS = {"house":"<path d=\"M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8\" /
 export const params = {
   knobs: {
     icon: { type: "choice", label: "Icon", default: "palette", options: Object.keys(ICONS) },
-    layout: { type: "choice", label: "Layout", default: "single", options: ["single", "sheet"] },
-    color: { type: "color", label: "Stroke", default: "#1C1A17" },
-    accent: { type: "color", label: "Accent", default: "#E8A33D" },
-    background: { type: "color", label: "Background", default: "#F5F1EA" },
+    layout: { type: "choice", label: "Layout", default: "sheet", options: ["single", "sheet"] },
+    color: { type: "color", role: "ink", label: "Stroke", default: "#1C1A17" },
+    accent: { type: "color", role: "primary", label: "Accent", default: "#E8A33D" },
+    background: { type: "color", role: "background", label: "Background", default: "#F5F1EA" },
     stroke: { type: "range", label: "Stroke width", default: 2, min: 0.75, max: 3, step: 0.25 },
     style: { type: "choice", label: "Style", default: "duotone", options: ["outline", "duotone", "glyph"] },
     container: { type: "choice", label: "Container", default: "squircle", options: ["none", "circle", "squircle", "square"] },
@@ -57,6 +57,8 @@ export default function render(p) {
     let out = "";
     names.forEach((n, i) => {
       const cx = (i % cols) * cell, cy = Math.floor(i / cols) * cell + (S - cell * 4) / 2;
+      // The chosen icon is lifted out of the sheet with a ring, so the sheet doubles as a picker.
+      if (n === p.icon) out += `<rect x="${cx + pad - 4}" y="${cy + pad - 4}" width="${box + 8}" height="${box + 8}" rx="${p.container === "circle" ? (box + 8) / 2 : box * 0.34}" fill="none" stroke="${p.accent}" stroke-width="3"/>`;
       out += container(p, cx + pad, cy + pad, box);
       const g = box * (p.container === "none" ? 0.8 : 0.56);
       out += glyph(n, p, cx + cell / 2 - g / 2, cy + cell / 2 - g / 2, g / 24);

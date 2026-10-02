@@ -12,9 +12,9 @@ export const meta = {
 
 export const params = {
   knobs: {
-    fill: { type: "color", label: "Fill", default: "#2F6B4F" },
-    fill2: { type: "color", label: "Gradient to", default: "#8FD3B6" },
-    background: { type: "color", label: "Background", default: "#F5F1EA" },
+    fill: { type: "color", role: "primary", label: "Fill", default: "#2F6B4F" },
+    fill2: { type: "color", role: "secondary", label: "Gradient to", default: "#8FD3B6" },
+    background: { type: "color", role: "background", label: "Background", default: "#F5F1EA" },
     seed: { type: "range", label: "Seed", default: 12, min: 1, max: 200, step: 1 },
     points: { type: "range", label: "Complexity", default: 6, min: 3, max: 12, step: 1 },
     randomness: { type: "range", label: "Randomness", default: 8, min: 0, max: 40, step: 1 },

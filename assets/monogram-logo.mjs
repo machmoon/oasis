@@ -11,9 +11,9 @@ export const meta = {
 
 export const params = {
   knobs: {
-    primary: { type: "color", label: "Mark colour", default: "#1E2A44" },
-    ink: { type: "color", label: "Letter colour (on fill)", default: "#F3EBDD" },
-    background: { type: "color", label: "Background", default: "#E9E2D6" },
+    primary: { type: "color", role: "primary", label: "Mark colour", default: "#1E2A44" },
+    ink: { type: "color", role: "surface", label: "Letter colour (on fill)", default: "#F3EBDD" },
+    background: { type: "color", role: "background", label: "Background", default: "#E9E2D6" },
     letters: { type: "text", label: "Letters (1-3)", default: "MR" },
     container: { type: "choice", label: "Container", default: "circle", options: ["circle", "squircle", "hexagon", "shield", "none"] },
     font: { type: "choice", label: "Typeface", default: "serif", options: ["serif", "sans", "geometric", "mono"] },

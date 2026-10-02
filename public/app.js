@@ -1,4 +1,5 @@
 // Oasis client. Plain modules, hash routing, no build step.
+import { BRAND_PRESETS } from "./brands.js";
 const $ = (s, el = document) => el.querySelector(s);
 const app = $("#app");
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -20,10 +21,74 @@ function toast(msg) {
   clearTimeout(toast.t);
   toast.t = setTimeout(() => t.classList.remove("on"), 2200);
 }
-const renderUrl = (id, knobs = {}) => {
-  const q = Object.keys(knobs).length ? `?p=${encodeURIComponent(JSON.stringify(knobs))}` : "";
-  return `/api/assets/${encodeURIComponent(id)}/render.svg${q}`;
+// ---------- Brand Mode ----------
+// A brand is colours by role; every colour knob in the catalogue declares a role, so one brand
+// re-skins every asset. Surface and muted are derived, matching server/knobs.js completeBrand.
+const hexRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+const mixHex = (a, b, t) => "#" + hexRgb(a).map((v, i) => Math.round(v + (hexRgb(b)[i] - v) * t).toString(16).padStart(2, "0")).join("").toUpperCase();
+function completeBrand(b) {
+  const o = { background: "#FFFFFF", ink: "#1C1A17", ...b };
+  o.surface ||= mixHex(o.background, o.ink, 0.06);
+  o.muted ||= mixHex(o.ink, o.background, 0.55);
+  return o;
+}
+const brandState = { get() { return store.get("oasis.brand", { on: false, ...BRAND_PRESETS[1] }); }, set(v) { store.set("oasis.brand", v); } };
+const activeBrand = () => { const b = brandState.get(); return b.on ? b : null; };
+const brandParam = (b) => { const { name, on, ...c } = b; return encodeURIComponent(JSON.stringify(c)); };
+const presetSlug = (b) => {
+  if (!b) return "default";
+  const p = BRAND_PRESETS.find((x) => ["background", "ink", "primary", "secondary", "highlight"].every((r) => (x[r] || "").toUpperCase() === (b[r] || "").toUpperCase()) && !b.surface && !b.muted);
+  return p ? p.slug : null;
 };
+/** Card/hero thumbnail: a pre-rendered PNG comp when one exists, else a live render. */
+const thumbUrl = (id, knobs = {}, brand = activeBrand()) => {
+  const slug = Object.keys(knobs).length ? null : presetSlug(brand);
+  return slug && CONFIG.prerendered ? `/prerender/${encodeURIComponent(id)}--${slug}.png` : renderUrl(id, knobs, brand);
+};
+const renderUrl = (id, knobs = {}, brand = activeBrand()) => {
+  // Defaults and preset brands are pre-rendered at build time; only real remixes hit the sandbox.
+  const slug = Object.keys(knobs).length ? null : presetSlug(brand);
+  if (slug && CONFIG.prerendered) return `/prerender/${encodeURIComponent(id)}--${slug}.svg`;
+  const q = [];
+  if (Object.keys(knobs).length) q.push(`p=${encodeURIComponent(JSON.stringify(knobs))}`);
+  if (brand) q.push(`brand=${brandParam(brand)}`);
+  return `/api/assets/${encodeURIComponent(id)}/render.svg${q.length ? "?" + q.join("&") : ""}`;
+};
+const swatches = (b) => ["background", "ink", "primary", "secondary", "highlight"].map((r) => `<span style="background:${b[r]}"></span>`).join("");
+
+function drawBrandPill() {
+  const b = brandState.get();
+  const pill = $("#brand-pill");
+  pill.classList.toggle("on", b.on);
+  pill.innerHTML = `<i class="dots">${swatches(b)}</i>${b.on ? esc(b.name) : "Brand mode"}`;
+}
+function openBrandPanel() {
+  let panel = $("#brand-panel");
+  if (panel) { panel.remove(); return; }
+  const b = brandState.get();
+  panel = document.createElement("div");
+  panel.id = "brand-panel";
+  panel.className = "brand-panel";
+  const roles = [["background", "Background"], ["ink", "Ink"], ["primary", "Primary"], ["secondary", "Secondary"], ["highlight", "Highlight"]];
+  panel.innerHTML = `<div class="bp-head"><b>Brand mode</b><label class="bp-on"><input type="checkbox" class="toggle" id="bp-on" ${b.on ? "checked" : ""}/> On</label></div>
+    <p class="muted">Set your brand once. Every asset in the catalogue re-renders in it: colour knobs declare roles.</p>
+    <div class="bp-presets">${BRAND_PRESETS.map((p, i) => `<button class="swatch-chip ${p.name === b.name ? "on" : ""}" data-bp="${i}" title="${esc(p.name)}">${swatches(p)}</button>`).join("")}</div>
+    <input class="bp-name" id="bp-name" value="${esc(b.name)}" maxlength="30" />
+    <div class="bp-roles">${roles.map(([r, l]) => `<label><input type="color" data-role="${r}" value="${b[r]}"/>${l}</label>`).join("")}</div>`;
+  document.body.appendChild(panel);
+  const save = (patch) => { const next = { ...brandState.get(), ...patch }; brandState.set(next); drawBrandPill(); clearTimeout(save.t); save.t = setTimeout(route, 120); };
+  panel.querySelector("#bp-on").addEventListener("change", (e) => save({ on: e.target.checked }));
+  panel.querySelectorAll("[data-bp]").forEach((btn) => btn.addEventListener("click", () => {
+    const p = BRAND_PRESETS[+btn.dataset.bp];
+    panel.querySelectorAll("[data-bp]").forEach((x) => x.classList.toggle("on", x === btn));
+    panel.querySelector("#bp-name").value = p.name;
+    panel.querySelectorAll("[data-role]").forEach((inp) => (inp.value = p[inp.dataset.role]));
+    panel.querySelector("#bp-on").checked = true;
+    save({ ...p, on: true });
+  }));
+  panel.querySelector("#bp-name").addEventListener("input", (e) => save({ name: e.target.value || "My brand" }));
+  panel.querySelectorAll("[data-role]").forEach((inp) => inp.addEventListener("input", () => { panel.querySelector("#bp-on").checked = true; save({ [inp.dataset.role]: inp.value.toUpperCase(), on: true }); }));
+}
 const COVER_KINDS = new Set(["background", "pattern", "poster", "illustration"]);
 const KINDS = ["icons", "ui", "mockup", "illustration", "pattern", "background", "poster", "brand", "avatar", "shape", "type"];
 
@@ -88,7 +153,7 @@ async function mountPayPal(el, { createOrder, onDone }) {
 function card(a) {
   const cover = COVER_KINDS.has(a.kind) ? "cover" : "";
   return `<a class="card" href="#/a/${esc(a.id)}">
-    <div class="thumb ${cover}"><img loading="lazy" src="${renderUrl(a.id)}" alt="${esc(a.title)}" />
+    <div class="thumb ${cover}"><img loading="lazy" src="${thumbUrl(a.id)}" alt="${esc(a.title)}" />
       <div class="badges">${a.price === 0 ? `<span class="badge free">Free</span>` : ""}${a.forkedFrom ? `<span class="badge fork">Fork</span>` : ""}<span class="badge right">${a.knobCount} knobs</span></div>
     </div>
     <div class="meta"><b>${esc(a.title)}</b><span>${a.price === 0 ? esc(a.kind) : money(a.price)}</span></div>
@@ -101,24 +166,14 @@ function setNav(name) {
 
 // ---------- pages ----------
 const HERO_SET = [
-  { id: "mesh-gradient", map: { base: 0, c1: 1, c2: 2, c3: 3 }, extra: { aspect: "square" } },
-  { id: "line-icons", map: { background: 0, color: 4, accent: 2 }, extra: { layout: "sheet", container: "circle" } },
-  { id: "beam-avatar", map: { c1: 1, c2: 2, c3: 3, c4: 4, c5: 0 }, extra: { name: "Oasis" } },
-  { id: "organic-blob", map: { background: 0, fill: 1, fill2: 3 }, extra: { style: "stack" } },
-];
-const HERO_PALETTES = [
-  { name: "Oasis", colors: ["#F5F1EA", "#2F6B4F", "#E8A33D", "#5CC8B5", "#1C1A17"] },
-  { name: "Dusk", colors: ["#1B1530", "#FF6B8B", "#FFB86B", "#8F7CFF", "#F7F3FF"] },
-  { name: "Matcha", colors: ["#EEF2E6", "#5B7553", "#C8D5B9", "#8FC0A9", "#1F2A1D"] },
-  { name: "Coral", colors: ["#FFF6EE", "#FF6F59", "#254441", "#43AA8B", "#1D1D1D"] },
+  { id: "desert-oasis-scene", extra: {} },
+  { id: "line-icons", extra: { layout: "sheet", container: "squircle" } },
+  { id: "isometric-city", extra: {} },
+  { id: "spot-illustrations", extra: {} },
 ];
 
-function heroTiles(palette) {
-  return HERO_SET.map((h) => {
-    const knobs = { ...h.extra };
-    for (const [k, idx] of Object.entries(h.map)) knobs[k] = palette.colors[idx];
-    return `<div class="tile"><img src="${renderUrl(h.id, knobs)}" alt="" /></div>`;
-  }).join("");
+function heroTiles(brand) {
+  return HERO_SET.map((h) => `<div class="tile"><img src="${thumbUrl(h.id, {}, brand)}" alt="" /></div>`).join("");
 }
 
 function pageHome() {
@@ -136,10 +191,10 @@ function pageHome() {
         <div class="works">Exports to <b>SVG</b><b>PNG</b><b>React</b><b>CSS</b><b>Figma</b> and the <b>source program</b></div>
       </div>
       <div class="stage">
-        <div class="stage-grid" id="hero-tiles">${heroTiles(HERO_PALETTES[0])}</div>
+        <div class="stage-grid" id="hero-tiles">${heroTiles(activeBrand() || BRAND_PRESETS[0])}</div>
         <div class="stage-bar">
-          <span class="label">One palette, every asset:</span>
-          ${HERO_PALETTES.map((p, i) => `<button class="swatch-chip ${i === 0 ? "on" : ""}" data-i="${i}" title="${p.name}">${p.colors.map((c) => `<span style="background:${c}"></span>`).join("")}</button>`).join("")}
+          <span class="label">One brand, every asset:</span>
+          ${BRAND_PRESETS.map((p, i) => `<button class="swatch-chip ${i === 0 ? "on" : ""}" data-i="${i}" title="${esc(p.name)}">${swatches(p)}</button>`).join("")}
         </div>
       </div>
     </section>
@@ -184,7 +239,7 @@ search_assets → remix_asset → create_order
       b.classList.add("on");
       // Swap each tile only once its new render has loaded, so the stage never flashes empty.
       const next = document.createElement("div");
-      next.innerHTML = heroTiles(HERO_PALETTES[+b.dataset.i]);
+      next.innerHTML = heroTiles(BRAND_PRESETS[+b.dataset.i]);
       const imgs = $("#hero-tiles").querySelectorAll("img");
       next.querySelectorAll("img").forEach((n, i) => {
         const pre = new Image();
@@ -250,6 +305,14 @@ async function pageAsset(id) {
   try { a = await api(`/api/assets/${encodeURIComponent(id)}`); } catch (e) { app.innerHTML = `<div class="wrap"><div class="crumbs"><h1>Not found</h1></div></div>`; return; }
   const defaults = Object.fromEntries(Object.entries(a.knobs).map(([k, v]) => [k, v.default]));
   const values = { ...defaults };
+  const brand = activeBrand();
+  if (brand) {
+    const b = completeBrand(brand);
+    for (const [n, role] of Object.entries(a.roles || {})) if (b[role]) values[n] = b[role].toUpperCase();
+    const [r, g, bl] = hexRgb(b.background);
+    const dark = (r * 299 + g * 587 + bl * 114) / 1000 < 110;
+    for (const [n, k] of Object.entries(a.knobs)) if (k.type === "choice" && k.options.includes("light") && k.options.includes("dark")) values[n] = dark ? "dark" : "light";
+  }
   let preset = null;
   const diff = () => Object.fromEntries(Object.entries(values).filter(([k, v]) => v !== defaults[k]));
   const presetSwatch = (p) => Object.values(a.presetValues[p] || {}).slice(0, 5).map((c) => `<s style="background:${esc(c)}"></s>`).join("");
@@ -259,7 +322,7 @@ async function pageAsset(id) {
     <div class="asset">
       <div>
         <div class="viewer">
-          <div class="canvas"><img id="view" src="${renderUrl(a.id)}" alt="${esc(a.title)}" /><span class="busy" id="busy"></span></div>
+          <div class="canvas"><img id="view" src="${renderUrl(a.id, Object.fromEntries(Object.entries(values).filter(([k, v]) => v !== defaults[k])), null)}" alt="${esc(a.title)}" /><span class="busy" id="busy"></span></div>
           <div class="vbar"><span class="muted">${a.price > 0 ? "Preview is watermarked until licensed" : "Free · download any remix"}</span>
             <button class="btn small ghost" id="reset">Reset</button>
             <button class="btn small ghost" id="random">Surprise me</button>
@@ -279,6 +342,7 @@ async function pageAsset(id) {
       <div>
         <div class="panel">
           <h3>Remix <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:400">${Object.keys(a.knobs).length} knobs</span></h3>
+          ${brand ? `<p class="brand-note"><i class="dots">${swatches(brand)}</i> In your <b>${esc(brand.name)}</b> brand. <button class="linkish" id="own-colours">Use the asset's own colours</button></p>` : ""}
           ${a.presets.length ? `<div class="presets">${a.presets.map((p) => `<button class="preset" data-preset="${esc(p)}"><i>${presetSwatch(p)}</i>${esc(p)}</button>`).join("")}</div>` : ""}
           <div id="knobs">${orderKnobs(a.knobs).map(([n, k]) => knobControl(n, k, values[n])).join("")}</div>
         </div>
@@ -318,7 +382,7 @@ async function pageAsset(id) {
       busy.classList.add("on");
       const next = new Image();
       next.onload = next.onerror = () => { view.src = next.src; busy.classList.remove("on"); };
-      next.src = renderUrl(a.id, diff());
+      next.src = renderUrl(a.id, diff(), null);
       updateSnippet();
       updateDownloads();
     }, 60);
@@ -355,6 +419,7 @@ async function pageAsset(id) {
     syncControls();
     refresh();
   }));
+  $("#own-colours")?.addEventListener("click", (e) => { for (const n of Object.keys(a.roles || {})) values[n] = defaults[n]; e.target.closest(".brand-note").remove(); syncControls(); refresh(); });
   $("#reset").addEventListener("click", () => { Object.assign(values, defaults); syncControls(); refresh(); });
   $("#random").addEventListener("click", () => {
     for (const [n, k] of Object.entries(a.knobs)) {
@@ -396,7 +461,7 @@ async function pageAsset(id) {
   updateSnippet();
   updateDownloads();
 
-  const item = () => ({ assetId: a.id, title: a.title, price: a.price, knobs: { ...values }, previewUrl: renderUrl(a.id, diff()) });
+  const item = () => ({ assetId: a.id, title: a.title, price: a.price, knobs: { ...values }, previewUrl: renderUrl(a.id, diff(), null) });
   $("#addcart")?.addEventListener("click", () => { cart.add(item()); toast("Added to cart"); });
   $("#buynow")?.addEventListener("click", () => {
     const box = $("#buynow-box");
@@ -493,7 +558,7 @@ function pageAgent() {
     let bot = null, botText = "", variants = null;
     const flushBot = () => { if (bot && botText.trim()) remember(esc(botText.trim()), "msg bot"); bot = null; botText = ""; };
     try {
-      const res = await fetch("/api/agent", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chatId: session.chatId, message: text, cart: cart.items }) });
+      const res = await fetch("/api/agent", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chatId: session.chatId, message: activeBrand() && !session.chatId ? `${text}\n\n(My brand in Oasis Brand Mode: ${JSON.stringify(completeBrand((({ on, ...b }) => b)(activeBrand())))})` : text, cart: cart.items }) });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Agent unavailable");
       const reader = res.body.getReader();
       const dec = new TextDecoder();
@@ -667,10 +732,12 @@ async function route() {
   pageHome();
 }
 
+$("#brand-pill").addEventListener("click", openBrandPanel);
 addEventListener("scroll", () => $("#top").classList.toggle("scrolled", scrollY > 8), { passive: true });
 addEventListener("hashchange", route);
 (async () => {
   cart.save();
+  drawBrandPill();
   [CONFIG, CATALOG] = await Promise.all([api("/api/config"), api("/api/assets")]);
   const FEATURED = ["retro-sunset-poster", "pricing-card", "desert-oasis-scene", "phone-mockup", "bauhaus-poster", "line-icons", "spot-illustrations", "bento-grid", "terrazzo-pattern", "geometric-logo-mark"];
   const rank = (a) => { const i = FEATURED.indexOf(a.id); return i < 0 ? FEATURED.length + (a.forkedFrom ? 0 : 1) : i; };

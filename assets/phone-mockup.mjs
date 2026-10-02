@@ -11,10 +11,10 @@ export const meta = {
 
 export const params = {
   knobs: {
-    brand: { type: "color", label: "Brand", default: "#4C4DDC" },
-    accent: { type: "color", label: "Accent", default: "#FF9F6B" },
-    frame: { type: "color", label: "Device frame", default: "#2A2C33" },
-    background: { type: "color", label: "Background", default: "#ECE8E1" },
+    brand: { type: "color", role: "primary", label: "Brand", default: "#4C4DDC" },
+    accent: { type: "color", role: "secondary", label: "Accent", default: "#FF9F6B" },
+    frame: { type: "color", role: "ink", label: "Device frame", default: "#2A2C33" },
+    background: { type: "color", role: "background", label: "Background", default: "#ECE8E1" },
     notch: { type: "choice", label: "Camera cutout", default: "island", options: ["island", "notch", "none"] },
     angle: { type: "choice", label: "Angle", default: "flat", options: ["flat", "angled left", "angled right", "isometric"] },
     theme: { type: "choice", label: "Screen theme", default: "light", options: ["light", "dark"] },

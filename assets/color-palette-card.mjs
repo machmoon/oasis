@@ -11,12 +11,12 @@ export const meta = {
 
 export const params = {
   knobs: {
-    c1: { type: "color", label: "Swatch 1", default: "#1F2A44" },
-    c2: { type: "color", label: "Swatch 2", default: "#3E6B6B" },
-    c3: { type: "color", label: "Swatch 3", default: "#C9A66B" },
-    c4: { type: "color", label: "Swatch 4", default: "#E8DCC8" },
-    c5: { type: "color", label: "Swatch 5", default: "#D9643A" },
-    paper: { type: "color", label: "Card", default: "#FBF8F3" },
+    c1: { type: "color", role: "ink", label: "Swatch 1", default: "#1F2A44" },
+    c2: { type: "color", role: "secondary", label: "Swatch 2", default: "#3E6B6B" },
+    c3: { type: "color", role: "muted", label: "Swatch 3", default: "#C9A66B" },
+    c4: { type: "color", role: "surface", label: "Swatch 4", default: "#E8DCC8" },
+    c5: { type: "color", role: "primary", label: "Swatch 5", default: "#D9643A" },
+    paper: { type: "color", role: "background", label: "Card", default: "#FBF8F3" },
     name: { type: "text", label: "Palette name", default: "Mesa at Dusk" },
     layout: { type: "choice", label: "Layout", default: "stripes", options: ["stripes", "circles", "cards"] },
     radius: { type: "range", label: "Corner radius", default: 18, min: 0, max: 48, step: 1 },

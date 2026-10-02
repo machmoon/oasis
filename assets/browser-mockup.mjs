@@ -11,8 +11,8 @@ export const meta = {
 
 export const params = {
   knobs: {
-    accent: { type: "color", label: "Accent", default: "#5B5BF7" },
-    backdrop: { type: "color", label: "Backdrop", default: "#E8E6F0" },
+    accent: { type: "color", role: "primary", label: "Accent", default: "#5B5BF7" },
+    backdrop: { type: "color", role: "background", label: "Backdrop", default: "#E8E6F0" },
     chrome: { type: "choice", label: "Chrome", default: "light", options: ["light", "dark"] },
     layout: { type: "choice", label: "Hero layout", default: "image right", options: ["image right", "image left"] },
     fidelity: { type: "choice", label: "Fidelity", default: "hi-fi", options: ["hi-fi", "lo-fi"] },

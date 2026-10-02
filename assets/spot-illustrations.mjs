@@ -11,11 +11,11 @@ export const meta = {
 
 export const params = {
   knobs: {
-    skin: { type: "color", label: "Skin", default: "#F1C6A6" },
-    shirt: { type: "color", label: "Shirt", default: "#E2603F" },
-    accent: { type: "color", label: "Backdrop", default: "#CFE3D4" },
-    background: { type: "color", label: "Background", default: "#F7F2EA" },
-    ink: { type: "color", label: "Ink & hair", default: "#2B2735" },
+    skin: { type: "color", role: "secondary", label: "Skin", default: "#F1C6A6" },
+    shirt: { type: "color", role: "primary", label: "Shirt", default: "#E2603F" },
+    accent: { type: "color", role: "surface", label: "Backdrop", default: "#CFE3D4" },
+    background: { type: "color", role: "background", label: "Background", default: "#F7F2EA" },
+    ink: { type: "color", role: "ink", label: "Ink & hair", default: "#2B2735" },
     action: { type: "choice", label: "Action", default: "waving", options: ["waving", "reading", "celebrating", "thinking"] },
     hair: { type: "choice", label: "Hair", default: "short", options: ["short", "bun", "curly", "none"] },
     build: { type: "range", label: "Build", default: 190, min: 150, max: 240, step: 5 },

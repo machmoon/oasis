@@ -11,10 +11,10 @@ export const meta = {
 
 export const params = {
   knobs: {
-    success: { type: "color", label: "Success", default: "#16A34A" },
-    warning: { type: "color", label: "Warning", default: "#F59E0B" },
-    error: { type: "color", label: "Error", default: "#E5484D" },
-    backdrop: { type: "color", label: "Backdrop", default: "#EEF0F3" },
+    success: { type: "color", role: "primary", label: "Success", default: "#16A34A" },
+    warning: { type: "color", role: "highlight", label: "Warning", default: "#F59E0B" },
+    error: { type: "color", role: "secondary", label: "Error", default: "#E5484D" },
+    backdrop: { type: "color", role: "background", label: "Backdrop", default: "#EEF0F3" },
     theme: { type: "choice", label: "Theme", default: "auto", options: ["auto", "light", "dark"] },
     density: { type: "choice", label: "Density", default: "comfortable", options: ["compact", "comfortable"] },
     accent: { type: "choice", label: "Accent style", default: "soft", options: ["soft", "solid", "stripe"] },

@@ -11,9 +11,9 @@ export const meta = {
 
 export const params = {
   knobs: {
-    background: { type: "color", label: "Background", default: "#F3EDE2" },
-    ink: { type: "color", label: "Text", default: "#1E1B18" },
-    accent: { type: "color", label: "Accent", default: "#C8553D" },
+    background: { type: "color", role: "background", label: "Background", default: "#F3EDE2" },
+    ink: { type: "color", role: "ink", label: "Text", default: "#1E1B18" },
+    accent: { type: "color", role: "primary", label: "Accent", default: "#C8553D" },
     quote: { type: "text", label: "Quote (wrap *words* to accent)", default: "Make the thing you wish existed. Then make it *a little kinder.*" },
     author: { type: "text", label: "Author", default: "Studio Notes" },
     style: { type: "choice", label: "Background style", default: "paper", options: ["solid", "gradient", "paper"] },

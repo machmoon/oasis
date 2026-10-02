@@ -11,9 +11,9 @@ export const meta = {
 
 export const params = {
   knobs: {
-    background: { type: "color", label: "Paper", default: "#F1EEE7" },
-    ink: { type: "color", label: "Ink", default: "#141414" },
-    accent: { type: "color", label: "Accent", default: "#E3321F" },
+    background: { type: "color", role: "background", label: "Paper", default: "#F1EEE7" },
+    ink: { type: "color", role: "ink", label: "Ink", default: "#141414" },
+    accent: { type: "color", role: "primary", label: "Accent", default: "#E3321F" },
     headline: { type: "text", label: "Headline", default: "Raster" },
     subline: { type: "text", label: "Subline", default: "International Exhibition of Typography & Grid Systems" },
     date: { type: "text", label: "Date", default: "14.09 — 02.11.2025" },

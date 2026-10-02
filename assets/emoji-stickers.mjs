@@ -11,10 +11,10 @@ export const meta = {
 
 export const params = {
   knobs: {
-    primary: { type: "color", label: "Primary", default: "#FF6B9A" },
-    secondary: { type: "color", label: "Secondary", default: "#FFC83D" },
-    accent: { type: "color", label: "Accent", default: "#6C8CFF" },
-    background: { type: "color", label: "Background", default: "#FBE9DD" },
+    primary: { type: "color", role: "primary", label: "Primary", default: "#FF6B9A" },
+    secondary: { type: "color", role: "secondary", label: "Secondary", default: "#FFC83D" },
+    accent: { type: "color", role: "highlight", label: "Accent", default: "#6C8CFF" },
+    background: { type: "color", role: "background", label: "Background", default: "#FBE9DD" },
     finish: { type: "choice", label: "Finish", default: "glossy", options: ["glossy", "flat", "holo"] },
     layout: { type: "choice", label: "Layout", default: "sheet", options: ["sheet", "loose"] },
     outline: { type: "range", label: "Outline width", default: 11, min: 4, max: 20, step: 1 },

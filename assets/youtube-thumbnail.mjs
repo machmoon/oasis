@@ -11,10 +11,10 @@ export const meta = {
 
 export const params = {
   knobs: {
-    bgFrom: { type: "color", label: "Background from", default: "#1B0B46" },
-    bgTo: { type: "color", label: "Background to", default: "#7A1CFF" },
-    highlight: { type: "color", label: "Highlight", default: "#FFE14D" },
-    accent: { type: "color", label: "Subject disc", default: "#FF3D6E" },
+    bgFrom: { type: "color", role: "background", label: "Background from", default: "#1B0B46" },
+    bgTo: { type: "color", role: "secondary", label: "Background to", default: "#7A1CFF" },
+    highlight: { type: "color", role: "highlight", label: "Highlight", default: "#FFE14D" },
+    accent: { type: "color", role: "primary", label: "Subject disc", default: "#FF3D6E" },
     headline: { type: "text", label: "Headline (2-3 words)", default: "STOP DOING THIS" },
     badge: { type: "text", label: "Badge (empty hides)", default: "NEW!" },
     layout: { type: "choice", label: "Layout", default: "text left", options: ["text left", "text right"] },

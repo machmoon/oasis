@@ -11,11 +11,11 @@ export const meta = {
 
 export const params = {
   knobs: {
-    sky: { type: "color", label: "Sky", default: "#CFE6EE" },
-    facade: { type: "color", label: "Facades", default: "#F1E6D4" },
-    accent: { type: "color", label: "Roofs & awnings", default: "#E0674E" },
-    foliage: { type: "color", label: "Foliage", default: "#5FA36F" },
-    glow: { type: "color", label: "Window light", default: "#FFE7A8" },
+    sky: { type: "color", role: "background", label: "Sky", default: "#CFE6EE" },
+    facade: { type: "color", role: "surface", label: "Facades", default: "#F1E6D4" },
+    accent: { type: "color", role: "primary", label: "Roofs & awnings", default: "#E0674E" },
+    foliage: { type: "color", role: "secondary", label: "Foliage", default: "#5FA36F" },
+    glow: { type: "color", role: "highlight", label: "Window light", default: "#FFE7A8" },
     roofs: { type: "choice", label: "Roofs", default: "mixed", options: ["flat", "mixed", "gabled"] },
     grid: { type: "range", label: "Block size", default: 3, min: 2, max: 5, step: 1 },
     variance: { type: "range", label: "Height variance", default: 55, min: 0, max: 100, step: 5 },

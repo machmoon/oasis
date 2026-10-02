@@ -11,9 +11,9 @@ export const meta = {
 
 export const params = {
   knobs: {
-    ink: { type: "color", label: "Ink", default: "#1B1B1F" },
-    accent: { type: "color", label: "Accent", default: "#FF5A36" },
-    background: { type: "color", label: "Background", default: "#F4EFE6" },
+    ink: { type: "color", role: "ink", label: "Ink", default: "#1B1B1F" },
+    accent: { type: "color", role: "primary", label: "Accent", default: "#FF5A36" },
+    background: { type: "color", role: "background", label: "Background", default: "#F4EFE6" },
     style: { type: "choice", label: "Style", default: "stacked shadow", options: ["outlined", "stacked shadow", "stencil", "gradient fill"] },
     typeface: { type: "choice", label: "Typeface", default: "grotesk", options: ["grotesk", "didone", "slab", "mono"] },
     spacing: { type: "range", label: "Letter spacing", default: 6, min: -6, max: 40, step: 1 },

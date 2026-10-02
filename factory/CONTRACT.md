@@ -20,7 +20,9 @@ export const meta = {
 export const params = {
   knobs: {
     // name: { type, label, default, ...}
-    // type "color":  default "#RRGGBB" (6-digit hex only)
+    // type "color":  default "#RRGGBB" (6-digit hex only), role: one of background | surface | ink |
+    //                muted | primary | secondary | highlight  (Brand Mode maps a brand palette onto roles,
+    //                so the asset must stay legible when every role is swapped, on light AND dark brands)
     // type "range":  default, min, max, step (numbers)
     // type "choice": default, options: [strings]
     // type "toggle": default true/false
@@ -39,6 +41,10 @@ Rules that make an asset sell:
   corner radius, a seed for generative work. Every knob must visibly change the output, and every
   combination must still look intentional — test the extremes in your head.
 - Colour knobs come first, then choices, then ranges, then toggles.
+- If the asset has a light/dark theme, make it a choice knob with options including "light" and "dark":
+  Brand Mode sets it from the brand's background.
+- Every knob must change the output at its defaults (a harness renders each knob's extremes and rejects
+  dead knobs). A knob that only matters in some mode is allowed, but prefer knobs that always matter.
 - Real craft: considered spacing, optical alignment, restrained palettes, typographic hierarchy.
   Default output should look like a Dribbble shot, not a code demo.
 - Text uses font-family stacks of system fonts only, e.g. "Helvetica Neue, Helvetica, Arial, sans-serif"

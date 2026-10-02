@@ -11,8 +11,8 @@ export const meta = {
 
 export const params = {
   knobs: {
-    accent: { type: "color", label: "Accent", default: "#5B5CF0" },
-    backdrop: { type: "color", label: "Backdrop", default: "#ECEEF6" },
+    accent: { type: "color", role: "primary", label: "Accent", default: "#5B5CF0" },
+    backdrop: { type: "color", role: "background", label: "Backdrop", default: "#ECEEF6" },
     theme: { type: "choice", label: "Theme", default: "light", options: ["light", "dark"] },
     period: { type: "choice", label: "Billing period", default: "month", options: ["month", "year", "user / month"] },
     button: { type: "choice", label: "Button style", default: "solid", options: ["solid", "gradient", "outline"] },

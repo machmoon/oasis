@@ -11,10 +11,10 @@ export const meta = {
 
 export const params = {
   knobs: {
-    background: { type: "color", label: "Paper", default: "#F3EEE4" },
-    ink1: { type: "color", label: "Main ink", default: "#1F2A44" },
-    ink2: { type: "color", label: "Second ink", default: "#E2583E" },
-    ink3: { type: "color", label: "Accent ink", default: "#E9B44C" },
+    background: { type: "color", role: "background", label: "Paper", default: "#F3EEE4" },
+    ink1: { type: "color", role: "ink", label: "Main ink", default: "#1F2A44" },
+    ink2: { type: "color", role: "primary", label: "Second ink", default: "#E2583E" },
+    ink3: { type: "color", role: "highlight", label: "Accent ink", default: "#E9B44C" },
     lineStyle: { type: "choice", label: "Line style", default: "straight", options: ["straight", "dashed", "dotted"] },
     lines: { type: "range", label: "Line count", default: 480, min: 40, max: 900, step: 10 },
     length: { type: "range", label: "Line length", default: 170, min: 20, max: 300, step: 10 },

@@ -11,8 +11,8 @@ export const meta = {
 
 export const params = {
   knobs: {
-    ink: { type: "color", label: "Ink", default: "#141414" },
-    paper: { type: "color", label: "Paper", default: "#F2EEE6" },
+    ink: { type: "color", role: "ink", label: "Ink", default: "#141414" },
+    paper: { type: "color", role: "background", label: "Paper", default: "#F2EEE6" },
     composition: { type: "choice", label: "Composition", default: "pair", options: ["pair", "triad", "nested", "scatter"] },
     frame: { type: "choice", label: "Frame", default: "disc", options: ["bleed", "disc", "tile"] },
     rings: { type: "range", label: "Ring count", default: 22, min: 6, max: 60, step: 1 },

@@ -20,9 +20,9 @@ function getServer() {
   }, async (args) => text(tools.getAsset(args)));
   server.registerTool("remix_asset", {
     description: "Render an asset with knob values; returns a PNG preview and a stable preview URL. Paid assets preview with a watermark until licensed.",
-    inputSchema: { asset_id: z.string(), preset: z.string().optional(), knobs: z.record(z.string(), z.any()).default({}) },
+    inputSchema: { asset_id: z.string(), preset: z.string().optional(), brand: z.record(z.string(), z.string()).optional().describe("Brand palette by role: background, surface, ink, muted, primary, secondary, highlight"), knobs: z.record(z.string(), z.any()).default({}) },
   }, async (args) => {
-    const r = tools.remixAsset(args);
+    const r = await tools.remixAsset(args);
     const svg = r.price_usd > 0 ? catalog.watermark(r.svg, catalog.sizeOf(r.svg, r.asset.size)) : r.svg;
     return {
       content: [

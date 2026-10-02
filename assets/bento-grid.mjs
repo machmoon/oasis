@@ -11,10 +11,10 @@ export const meta = {
 
 export const params = {
   knobs: {
-    background: { type: "color", label: "Background", default: "#0C0D12" },
-    tile: { type: "color", label: "Tile", default: "#17181F" },
-    accent: { type: "color", label: "Accent", default: "#7C6CFF" },
-    accent2: { type: "color", label: "Accent 2", default: "#3DD6C4" },
+    background: { type: "color", role: "background", label: "Background", default: "#0C0D12" },
+    tile: { type: "color", role: "surface", label: "Tile", default: "#17181F" },
+    accent: { type: "color", role: "primary", label: "Accent", default: "#7C6CFF" },
+    accent2: { type: "color", role: "secondary", label: "Accent 2", default: "#3DD6C4" },
     finish: { type: "choice", label: "Tile finish", default: "tinted", options: ["flat", "tinted", "outline"] },
     tiles: { type: "range", label: "Tile count", default: 7, min: 5, max: 8, step: 1 },
     gap: { type: "range", label: "Gap", default: 16, min: 4, max: 40, step: 1 },

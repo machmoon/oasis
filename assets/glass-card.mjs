@@ -11,10 +11,10 @@ export const meta = {
 
 export const params = {
   knobs: {
-    background: { type: "color", label: "Background", default: "#0E0B1F" },
-    orbA: { type: "color", label: "Orb one", default: "#FF5FA2" },
-    orbB: { type: "color", label: "Orb two", default: "#5B7CFF" },
-    ink: { type: "color", label: "Card ink", default: "#FFFFFF" },
+    background: { type: "color", role: "background", label: "Background", default: "#0E0B1F" },
+    orbA: { type: "color", role: "primary", label: "Orb one", default: "#FF5FA2" },
+    orbB: { type: "color", role: "secondary", label: "Orb two", default: "#5B7CFF" },
+    ink: { type: "color", role: "ink", label: "Card ink", default: "#FFFFFF" },
     brand: { type: "choice", label: "Brand mark", default: "rings", options: ["rings", "orbit", "spark", "wordmark"] },
     glass: { type: "range", label: "Glass opacity", default: 35, min: 0, max: 100, step: 1 },
     seed: { type: "range", label: "Orb seed", default: 7, min: 1, max: 200, step: 1 },

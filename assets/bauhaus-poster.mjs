@@ -11,11 +11,11 @@ export const meta = {
 
 export const params = {
   knobs: {
-    paper: { type: "color", label: "Paper", default: "#F1EADB" },
-    ink: { type: "color", label: "Ink", default: "#1B1A19" },
-    red: { type: "color", label: "Red", default: "#D63A2B" },
-    yellow: { type: "color", label: "Yellow", default: "#F2B42E" },
-    blue: { type: "color", label: "Blue", default: "#1F4F9E" },
+    paper: { type: "color", role: "background", label: "Paper", default: "#F1EADB" },
+    ink: { type: "color", role: "ink", label: "Ink", default: "#1B1A19" },
+    red: { type: "color", role: "primary", label: "Red", default: "#D63A2B" },
+    yellow: { type: "color", role: "highlight", label: "Yellow", default: "#F2B42E" },
+    blue: { type: "color", role: "secondary", label: "Blue", default: "#1F4F9E" },
     style: { type: "choice", label: "Composition", default: "balanced", options: ["tiles", "balanced", "open"] },
     headline: { type: "text", label: "Headline", default: "BAUHAUS" },
     grid: { type: "range", label: "Grid size", default: 4, min: 3, max: 7, step: 1 },

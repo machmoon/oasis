@@ -11,9 +11,9 @@ export const meta = {
 
 export const params = {
   knobs: {
-    lineColor: { type: "color", label: "Lines", default: "#3A4A3C" },
-    background: { type: "color", label: "Paper", default: "#F1ECE2" },
-    accent: { type: "color", label: "Terrace peak", default: "#A9BC96" },
+    lineColor: { type: "color", role: "ink", label: "Lines", default: "#3A4A3C" },
+    background: { type: "color", role: "background", label: "Paper", default: "#F1ECE2" },
+    accent: { type: "color", role: "primary", label: "Terrace peak", default: "#A9BC96" },
     terrain: { type: "choice", label: "Terrain", default: "warped", options: ["rolling", "ridged", "islands", "warped"] },
     levels: { type: "range", label: "Line count", default: 16, min: 4, max: 36, step: 1 },
     lineWidth: { type: "range", label: "Line width", default: 1.25, min: 0.5, max: 4, step: 0.25 },

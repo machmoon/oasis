@@ -11,10 +11,10 @@ export const meta = {
 
 export const params = {
   knobs: {
-    base: { type: "color", label: "Base", default: "#0E2A3B" },
-    c1: { type: "color", label: "Glow 1", default: "#2BB3A3" },
-    c2: { type: "color", label: "Glow 2", default: "#F2B880" },
-    c3: { type: "color", label: "Glow 3", default: "#6C5CE7" },
+    base: { type: "color", role: "background", label: "Base", default: "#0E2A3B" },
+    c1: { type: "color", role: "primary", label: "Glow 1", default: "#2BB3A3" },
+    c2: { type: "color", role: "highlight", label: "Glow 2", default: "#F2B880" },
+    c3: { type: "color", role: "secondary", label: "Glow 3", default: "#6C5CE7" },
     seed: { type: "range", label: "Arrangement", default: 7, min: 1, max: 99, step: 1 },
     softness: { type: "range", label: "Softness", default: 140, min: 40, max: 260, step: 5 },
     spread: { type: "range", label: "Spread", default: 0.55, min: 0.25, max: 0.9, step: 0.01 },

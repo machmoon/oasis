@@ -4,11 +4,12 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --test --test-force-exit test/*.test.mjs",
     "start": "node server/local.js",
     "dev": "node --watch server/local.js",
     "factory": "node factory/factory.mjs factory/briefs.json 4",
-    "sheet": "node scripts/contact-sheet.mjs"
+    "sheet": "node scripts/contact-sheet.mjs",
+    "build": "node scripts/prerender.mjs"
   },
   "keywords": [],
   "author": "",

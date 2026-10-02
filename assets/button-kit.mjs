@@ -11,9 +11,9 @@ export const meta = {
 
 export const params = {
   knobs: {
-    brand: { type: "color", label: "Brand", default: "#4F46E5" },
-    ink: { type: "color", label: "Ink", default: "#16161D" },
-    canvas: { type: "color", label: "Canvas", default: "#F3F2EE" },
+    brand: { type: "color", role: "primary", label: "Brand", default: "#4F46E5" },
+    ink: { type: "color", role: "ink", label: "Ink", default: "#16161D" },
+    canvas: { type: "color", role: "background", label: "Canvas", default: "#F3F2EE" },
     label: { type: "text", label: "Button label", default: "Get started" },
     icon: { type: "choice", label: "Leading icon", default: "Arrow", options: ["None", "Arrow", "Plus", "Sparkle"] },
     size: { type: "choice", label: "Size", default: "Medium", options: ["Small", "Medium", "Large"] },

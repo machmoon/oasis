@@ -11,8 +11,8 @@ export const meta = {
 
 export const params = {
   knobs: {
-    accent: { type: "color", label: "Accent", default: "#5B5BD6" },
-    eventColor: { type: "color", label: "Event dots", default: "#F2994A" },
+    accent: { type: "color", role: "primary", label: "Accent", default: "#5B5BD6" },
+    eventColor: { type: "color", role: "highlight", label: "Event dots", default: "#F2994A" },
     month: { type: "text", label: "Month title", default: "September 2025" },
     theme: { type: "choice", label: "Theme", default: "light", options: ["light", "dark"] },
     weekStart: { type: "choice", label: "Week starts on", default: "Monday", options: ["Monday", "Sunday"] },

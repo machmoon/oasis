@@ -2,7 +2,8 @@
 // lineage, so every future sale of it pays the original creator (see commerce.royaltySplit).
 import fs from "node:fs";
 import Anthropic from "@anthropic-ai/sdk";
-import { inspect, renderSource } from "./sandbox.js";
+import { inspect } from "./sandbox.js";
+import { renderInPool, inspectInPool } from "./pool.js";
 import { resolveKnobs } from "./knobs.js";
 import * as catalog from "./catalog.js";
 import { config } from "./config.js";
@@ -26,8 +27,8 @@ export async function forkAsset({ assetId, instruction, author = "anonymous", pa
     const text = msg.content.filter((b) => b.type === "text").map((b) => b.text).join("");
     src = (text.match(/```(?:js|javascript)?\n([\s\S]*?)```/)?.[1] || text).trim() + "\n";
     try {
-      const { params } = inspect(src);
-      renderSource(src, resolveKnobs(params, {}));
+      const { params } = await inspectInPool(src);
+      await renderInPool(src, resolveKnobs(params, {}));
       err = null;
       break;
     } catch (e) {

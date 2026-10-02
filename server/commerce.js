@@ -15,7 +15,7 @@ export function priceCart(items = []) {
   for (const it of items.slice(0, 50)) {
     const a = catalog.getAsset(it.assetId);
     if (!a) throw Object.assign(new Error(`Unknown asset ${it.assetId}`), { status: 400 });
-    const { values } = catalog.render(a, it.knobs);
+    const values = catalog.resolveInput(a, it.knobs);
     lines.push({ asset: a, values, price: a.price });
   }
   return lines;
@@ -75,12 +75,28 @@ export function royaltySplit(asset, price) {
   return shares;
 }
 
-export async function capture(orderId) {
+// One capture per order at a time: the browser, the return URL and a webhook can all race to capture.
+const capturing = new Map();
+export function capture(orderId) {
+  if (!capturing.has(orderId)) capturing.set(orderId, doCapture(orderId).finally(() => capturing.delete(orderId)));
+  return capturing.get(orderId);
+}
+
+async function doCapture(orderId) {
   const existing = await store.get("orders", orderId);
   if (!existing) throw Object.assign(new Error("Unknown order"), { status: 404 });
   if (existing.status === "COMPLETED") return existing;
   const result = await paypal.captureOrder(orderId);
   const cap = result.purchase_units?.[0]?.payments?.captures?.[0];
+  // Licences are only issued for exactly the amount and currency this server priced.
+  const paid = Number(cap?.amount?.value), expected = Number(existing.total.toFixed(2));
+  if (cap?.status === "COMPLETED" && (cap.amount?.currency_code !== "USD" || Math.abs(paid - expected) > 0.001)) {
+    existing.status = "AMOUNT_MISMATCH";
+    existing.captureId = cap.id;
+    await store.put("orders", orderId, existing);
+    await paypal.refundCapture(cap.id, { note: "Amount did not match the Oasis price; refunded automatically.", requestId: `oasis-mismatch-${orderId}` }).catch(() => {});
+    throw Object.assign(new Error(`Captured ${cap.amount?.value} ${cap.amount?.currency_code}, expected ${expected} USD; refunded`), { status: 409 });
+  }
   if (result.status !== "COMPLETED" || cap?.status !== "COMPLETED") {
     existing.status = result.status;
     await store.put("orders", orderId, existing);
@@ -120,5 +136,54 @@ export async function capture(orderId) {
 export async function license(token) {
   const lic = await store.get("licenses", token);
   if (!lic) throw Object.assign(new Error("Unknown licence"), { status: 404 });
+  if (lic.revoked) throw Object.assign(new Error("This licence was refunded and is no longer valid"), { status: 410 });
   return lic;
+}
+
+/** Buyer refund within 14 days: refunds the PayPal capture and revokes every licence on the order. */
+export async function refund(orderId, { reason = "Refund requested" } = {}) {
+  const o = await store.get("orders", orderId);
+  if (!o) throw Object.assign(new Error("Unknown order"), { status: 404 });
+  if (o.status !== "COMPLETED") throw Object.assign(new Error(`Order is ${o.status}`), { status: 409 });
+  if (Date.now() - Date.parse(o.createdAt) > 14 * 864e5) throw Object.assign(new Error("Refund window (14 days) has passed"), { status: 409 });
+  const r = await paypal.refundCapture(o.captureId, { note: reason.slice(0, 200), requestId: `oasis-refund-${orderId}` });
+  await markRefunded(o, r.id);
+  return o;
+}
+
+async function markRefunded(o, refundId) {
+  o.status = "REFUNDED";
+  o.refundId = refundId;
+  for (const l of o.licenses || []) {
+    const lic = await store.get("licenses", l.token);
+    if (lic) await store.put("licenses", l.token, { ...lic, revoked: true, revokedAt: new Date().toISOString() });
+  }
+  await store.put("orders", o.id, o);
+}
+
+/** PayPal webhooks: the source of truth when a browser tab closes before capture or a payout settles. */
+export async function handleWebhook(event) {
+  const r = event.resource || {};
+  switch (event.event_type) {
+    case "CHECKOUT.ORDER.APPROVED":
+      if (await store.get("orders", r.id)) await capture(r.id);
+      return "captured";
+    case "PAYMENT.CAPTURE.REFUNDED":
+    case "PAYMENT.CAPTURE.REVERSED": {
+      const orderId = r.supplementary_data?.related_ids?.order_id;
+      const o = orderId && (await store.get("orders", orderId));
+      if (o && o.status !== "REFUNDED") await markRefunded(o, r.id);
+      return "revoked";
+    }
+    case "PAYMENT.PAYOUTS-ITEM.SUCCEEDED":
+    case "PAYMENT.PAYOUTS-ITEM.UNCLAIMED":
+    case "PAYMENT.PAYOUTS-ITEM.FAILED":
+    case "PAYMENT.PAYOUTS-ITEM.RETURNED": {
+      const ref = r.payout_item?.sender_item_id;
+      if (ref) await store.put("payouts", ref, { ref, status: r.transaction_status, itemId: r.payout_item_id, at: new Date().toISOString() });
+      return "payout updated";
+    }
+    default:
+      return "ignored";
+  }
 }

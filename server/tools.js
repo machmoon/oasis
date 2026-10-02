@@ -24,15 +24,15 @@ export function getAsset({ asset_id }) {
   if (!a) throw new Error(`No asset "${asset_id}". Use search_assets first.`);
   return {
     asset_id: a.id, title: a.title, kind: a.kind, price_usd: a.price, description: a.description, author: a.author,
-    knobs: a.params.knobs, colourway_presets: a.params.presets || {}, default_size: a.size,
+    knobs: a.params.knobs, colour_roles: Object.fromEntries(Object.entries(a.params.knobs).filter(([, k]) => k.role).map(([n, k]) => [n, k.role])), colourway_presets: a.params.presets || {}, default_size: a.size,
     forked_from: a.forkedFrom, preview_url: previewUrl(a.id, {}, null),
   };
 }
 
-export function remixAsset({ asset_id, preset, knobs = {} }) {
+export async function remixAsset({ asset_id, preset, brand, knobs = {} }) {
   const a = catalog.getAsset(asset_id);
   if (!a) throw new Error(`No asset "${asset_id}".`);
-  const { svg, values } = catalog.render(a, { ...knobs, ...(preset ? { preset } : {}) });
+  const { svg, values } = await catalog.renderAsync(a, { ...knobs, ...(preset ? { preset } : {}), ...(brand ? { brand } : {}) });
   return { asset: a, svg, values, preview_url: previewUrl(a.id, values, a), price_usd: a.price };
 }
 

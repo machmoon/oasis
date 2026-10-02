@@ -11,8 +11,8 @@ export const meta = {
 
 export const params = {
   knobs: {
-    ink: { type: "color", label: "Ink", default: "#1D3B8C" },
-    paper: { type: "color", label: "Paper", default: "#F3EDE2" },
+    ink: { type: "color", role: "primary", label: "Ink", default: "#1D3B8C" },
+    paper: { type: "color", role: "background", label: "Paper", default: "#F3EDE2" },
     shape: { type: "choice", label: "Dot shape", default: "circle", options: ["circle", "square", "diamond"] },
     gradient: { type: "choice", label: "Gradient", default: "radial", options: ["radial", "linear", "ring"] },
     spacing: { type: "range", label: "Spacing", default: 18, min: 10, max: 60, step: 1 },
