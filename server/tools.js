@@ -36,9 +36,11 @@ export async function remixAsset({ asset_id, preset, brand, knobs = {} }) {
   return { asset: a, svg, values, preview_url: previewUrl(a.id, values, a), price_usd: a.price };
 }
 
-export async function createOrder({ items }) {
+export async function createOrder({ items, max_total_usd, agent_name }) {
   return commerce.createCheckout(items, {
     agent: true,
+    agentName: agent_name ? String(agent_name).slice(0, 40) : "an MCP agent",
+    maxTotal: max_total_usd ?? null,
     returnUrl: `${config.baseUrl}/checkout/return`,
     cancelUrl: `${config.baseUrl}/#/cart`,
   });

@@ -110,3 +110,12 @@ test("a fork-of-a-fork sale pays its creator and ancestors through Payouts", asy
   assert.equal(done.royalties.reduce((s, r) => s + r.cents, 0), Math.round(child.price * 100));
   assert.match(done.payoutBatch.id, /^PB-/);
 });
+
+test("agent orders over the human's spending cap are refused; attribution reaches PayPal", async () => {
+  const pp = fakePaypal();
+  commerce.setPaypalClient(pp);
+  await assert.rejects(commerce.createCheckout([{ assetId: "pricing-card" }, { assetId: "retro-sunset-poster" }], { agent: true, agentName: "Claude Code", maxTotal: 6 }), /cap/);
+  const o = await commerce.createCheckout([{ assetId: "pricing-card" }], { agent: true, agentName: "Claude Code", maxTotal: 6 });
+  assert.match(pp.calls.create.at(-1).opts.description, /Claude Code.*\$6 cap/);
+  assert.equal(o.agentName, "Claude Code");
+});

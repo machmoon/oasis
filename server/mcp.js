@@ -33,9 +33,13 @@ function getServer() {
   });
   server.registerTool("create_order", {
     description: "Create a PayPal order licensing one or more remixes. Returns approve_url: give it to the human, who pays in PayPal. Then poll get_order for download links.",
-    inputSchema: { items: z.array(z.object({ asset_id: z.string(), knobs: z.record(z.string(), z.any()).default({}) })).min(1) },
-  }, async ({ items }) => {
-    const o = await tools.createOrder({ items: items.map((i) => ({ assetId: i.asset_id, knobs: i.knobs })) });
+    inputSchema: {
+      items: z.array(z.object({ asset_id: z.string(), knobs: z.record(z.string(), z.any()).default({}) })).min(1),
+      max_total_usd: z.number().positive().optional().describe("Spending cap the human gave you; the server refuses orders above it"),
+      agent_name: z.string().optional().describe("Your name, shown to the human in PayPal's approval screen"),
+    },
+  }, async ({ items, max_total_usd, agent_name }) => {
+    const o = await tools.createOrder({ items: items.map((i) => ({ assetId: i.asset_id, knobs: i.knobs })), max_total_usd, agent_name });
     return text({ order_id: o.id, status: o.status, total_usd: o.total, approve_url: o.approveUrl, next: "Ask the human to open approve_url and pay with PayPal, then call get_order." });
   });
   server.registerTool("get_order", {

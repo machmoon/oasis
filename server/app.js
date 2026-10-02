@@ -122,6 +122,7 @@ export async function createApp() {
   app.post("/api/agent", wrap(async (req, res) => {
     if (!config.anthropicKey) throw Object.assign(new Error("Agent not configured"), { status: 503 });
     const { message, cart } = req.body || {};
+    const budget = Number(req.body?.budget) > 0 ? Math.min(500, Number(req.body.budget)) : null;
     if (!message || typeof message !== "string") throw Object.assign(new Error("message required"), { status: 400 });
     const chatId = /^[a-f0-9]{16}$/.test(req.body.chatId || "") ? req.body.chatId : crypto.randomBytes(8).toString("hex");
     const chat = (await store.get("chats", chatId)) || { id: chatId, messages: [] };
@@ -130,9 +131,9 @@ export async function createApp() {
     const emit = (event, data) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
     emit("chat", { chatId });
     const ping = setInterval(() => res.write(": ping\n\n"), 15000);
-    const history = [...chat.messages, { role: "user", content: message.slice(0, 4000) }];
+    const history = [...chat.messages, { role: "user", content: message.slice(0, 4000) + (budget && !chat.messages.length ? `\n\n(Spending cap set by me in Oasis: $${budget}.)` : "") }];
     try {
-      await runAgent({ history, cart }, (event, data) => {
+      await runAgent({ history, cart, budget }, (event, data) => {
         if (event === "history") {
           chat.messages = [...history, ...data.messages];
           return;

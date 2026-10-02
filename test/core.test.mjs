@@ -51,7 +51,7 @@ test("sandbox: output must be SVG", () => {
 test("paid previews are watermarked, so paid source never reaches the browser", () => {
   const a = catalog.allAssets().find((x) => x.price > 0);
   const { svg } = catalog.render(a, {});
-  assert.match(catalog.watermark(svg, catalog.sizeOf(svg, a.size)), /oasis · preview/);
+  assert.match(catalog.watermark(svg, catalog.sizeOf(svg, a.size)), /oasis preview/);
   assert.equal(catalog.summary(a, { withKnobs: true }).source, undefined);
 });
 

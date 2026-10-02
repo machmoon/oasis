@@ -197,8 +197,8 @@ function pageHome() {
   <div class="wrap">
     <section class="hero">
       <div>
-        <h1>Design assets you can <em>reshape.</em></h1>
-        <p class="lede">Icons, UI kits, posters and whole towns, sold as tiny programs. Turn the knobs, then license your exact remix.</p>
+        <h1>Assets your agent can <em>brand and buy.</em></h1>
+        <p class="lede">Design assets built as tiny programs: icons, UI kits, whole towns. Your agent remixes them to your brand. You approve in PayPal.</p>
         <div class="cta">
           <a class="btn primary" href="#/browse">Browse assets</a>
           <a class="btn" href="#/agent">Brief the agent</a>
@@ -564,7 +564,9 @@ function pageAgent() {
     <div class="chat">
       <div class="log" id="log"></div>
       <form class="composer" id="composer">
-        <textarea id="input" rows="2" placeholder="Describe your brand and what you need…"></textarea>
+        <label class="sr-only" for="input">Your brief</label>
+        <textarea id="input" rows="2" placeholder="Describe your brand and what you need"></textarea>
+        <label class="cap-field"><span class="fieldlabel">Spending cap</span><span class="cap-input">$<input id="cap" type="number" min="1" max="500" step="1" value="${esc(String(session.cap || 20))}" /></span></label>
         <button class="btn primary" id="send">Send</button>
       </form>
     </div>
@@ -619,7 +621,7 @@ function pageAgent() {
     let bot = null, botText = "", variants = null;
     const flushBot = () => { if (bot && botText.trim()) remember(esc(botText.trim()), "msg bot"); bot = null; botText = ""; };
     try {
-      const res = await fetch("/api/agent", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chatId: session.chatId, message: activeBrand() && !session.chatId ? `${text}\n\n(My brand in Oasis Brand Mode: ${JSON.stringify(completeBrand((({ on, ...b }) => b)(activeBrand())))})` : text, cart: cart.items }) });
+      const res = await fetch("/api/agent", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ budget: (session.cap = Number($("#cap").value) || 20), chatId: session.chatId, message: activeBrand() && !session.chatId ? `${text}\n\n(My brand in Oasis Brand Mode: ${JSON.stringify(completeBrand((({ on, ...b }) => b)(activeBrand())))})` : text, cart: cart.items }) });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Agent unavailable");
       const reader = res.body.getReader();
       const dec = new TextDecoder();
@@ -683,7 +685,14 @@ function pageAgent() {
 
   function showCheckout(order) {
     const box = $("#checkout");
-    box.innerHTML = `<div class="total" style="border-top:0;padding-top:0"><span>${order.items.length} licence${order.items.length === 1 ? "" : "s"}</span><b>${money(order.total)}</b></div><div id="pp"></div><p class="muted" style="font-size:12px;margin:8px 0 0">PayPal order ${esc(order.orderId)} · sandbox</p>`;
+    box.innerHTML = `<div class="approve">
+      <p class="approve-head">The Oasis agent is asking you to approve</p>
+      <ul>${order.items.map((i) => `<li><span><b>${esc(i.title)}</b>${i.reason ? `<em>${esc(i.reason)}</em>` : ""}</span><b>${money(i.price)}</b></li>`).join("")}</ul>
+      <div class="total" style="padding:12px 0 8px"><span>Total</span><b>${money(order.total)}</b></div>
+      ${order.cap ? `<p class="capnote ${order.total <= order.cap ? "ok" : "notice"}">Within your ${money(order.cap)} cap. The server refuses anything over it.</p>` : ""}
+      <div id="pp"></div>
+      <p class="muted" style="font-size:12px;margin:8px 0 0">PayPal sandbox order ${esc(order.orderId)}. Only you can approve it.</p>
+    </div>`;
     mountPayPal($("#pp"), {
       createOrder: async () => order.orderId,
       onDone: (o) => { cart.clear(); location.hash = `#/order/${o.id}`; },

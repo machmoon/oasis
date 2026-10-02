@@ -37,7 +37,7 @@ test("paid assets cannot be downloaded without a licence; free ones can", async 
 
 test("paid previews are watermarked; brand mode re-skins renders", async () => {
   const wm = await (await fetch(`${base}/api/assets/pricing-card/render.svg`)).text();
-  assert.match(wm, /oasis · preview/);
+  assert.match(wm, /oasis preview/);
   const branded = await (await fetch(`${base}/api/assets/pricing-card/render.svg?brand=${encodeURIComponent(JSON.stringify({ primary: "#B4FF39" }))}`)).text();
   assert.match(branded, /b4ff39|B4FF39/i);
 });

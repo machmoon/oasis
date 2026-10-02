@@ -24,7 +24,7 @@ function controller() {
 const money = (n) => ({ currencyCode: "USD", value: n.toFixed(2) });
 
 /** lines: [{ name, sku, price, description, url }] — prices already validated server-side. */
-export async function createOrder(lines, { returnUrl, cancelUrl, customId } = {}) {
+export async function createOrder(lines, { returnUrl, cancelUrl, customId, description } = {}) {
   const total = lines.reduce((s, l) => s + l.price, 0);
   const body = {
     intent: CheckoutPaymentIntent.Capture,
@@ -32,7 +32,7 @@ export async function createOrder(lines, { returnUrl, cancelUrl, customId } = {}
       {
         referenceId: "oasis",
         customId,
-        description: `Oasis licences (${lines.length})`,
+        description: (description || `Oasis licences (${lines.length})`).slice(0, 127),
         softDescriptor: "OASIS",
         amount: { ...money(total), breakdown: { itemTotal: money(total) } },
         items: lines.map((l) => ({

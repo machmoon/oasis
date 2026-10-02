@@ -18,6 +18,7 @@ How you work:
 - Use remix_asset to set knobs. You will see the rendered image: judge it honestly and remix again if it looks off (contrast, clashing colours, clipped text).
 - add_to_cart only finished remixes, each with a one-line reason.
 - Free assets need no payment; paid ones are licensed through PayPal. When the cart is ready, call create_order once. The person approves payment themselves in PayPal; never claim to have paid.
+- The person may have set a spending cap; it is given at the start of the conversation when present. Keep the paid total within it. The server refuses orders over the cap.
 - If nothing in the catalogue fits a deliverable, fork_asset can create a new asset from the closest one (slow, about a minute: only when it matters).
 
 Write like a calm, sharp designer: short sentences, no hype, no lists of every knob. When you finish, give a two-line summary of the kit, the palette, and the total.`;
@@ -95,7 +96,7 @@ function imageBlock(svg) {
  * Runs one agent turn. `history` is the full Anthropic message list the browser kept (appended to,
  * never edited, so thinking blocks stay valid). `cart` is the browser's cart. `emit(event, data)` streams to the UI.
  */
-export async function runAgent({ history, cart }, emit) {
+export async function runAgent({ history, cart, budget }, emit) {
   client ||= new Anthropic({ apiKey: config.anthropicKey });
   const messages = [...history];
   const workingCart = [...(cart || [])];
@@ -120,7 +121,7 @@ export async function runAgent({ history, cart }, emit) {
     for (const call of msg.content.filter((b) => b.type === "tool_use")) {
       emit("tool", { name: call.name, input: call.input });
       try {
-        results.push({ type: "tool_result", tool_use_id: call.id, content: await execute(call, workingCart, emit) });
+        results.push({ type: "tool_result", tool_use_id: call.id, content: await execute(call, workingCart, emit, budget) });
       } catch (e) {
         emit("tool_error", { name: call.name, message: e.message });
         results.push({ type: "tool_result", tool_use_id: call.id, content: e.message, is_error: true });
@@ -132,7 +133,7 @@ export async function runAgent({ history, cart }, emit) {
   emit("history", { messages: messages.slice(history.length) });
 }
 
-async function execute(call, cart, emit) {
+async function execute(call, cart, emit, budget) {
   const input = call.input || {};
   switch (call.name) {
     case "search_assets":
@@ -152,8 +153,8 @@ async function execute(call, cart, emit) {
       return `Added. Cart now has ${cart.length} item(s), total $${cart.reduce((s, i) => s + i.price, 0).toFixed(2)}.`;
     }
     case "create_order": {
-      const order = await tools.createOrder({ items: cart.map((c) => ({ assetId: c.assetId, knobs: c.knobs })) });
-      emit("checkout", { orderId: order.id, total: order.total, items: order.items, approveUrl: order.approveUrl });
+      const order = await tools.createOrder({ items: cart.map((c) => ({ assetId: c.assetId, knobs: c.knobs })), max_total_usd: budget || null, agent_name: "the Oasis agent" });
+      emit("checkout", { orderId: order.id, total: order.total, items: order.items.map((i) => ({ ...i, reason: cart.find((c) => c.assetId === i.assetId)?.reason || "" })), approveUrl: order.approveUrl, cap: budget || null });
       return `PayPal order ${order.id} created for $${order.total.toFixed(2)} (${order.items.length} paid licence(s); free items need no payment). The person now approves it with the PayPal button shown in the chat.`;
     }
     case "fork_asset": {
