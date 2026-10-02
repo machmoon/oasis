@@ -165,89 +165,114 @@ function setNav(name) {
 }
 
 // ---------- pages ----------
-const HERO_SET = [
-  { id: "desert-oasis-scene", extra: {} },
-  { id: "line-icons", extra: { layout: "sheet", container: "squircle" } },
-  { id: "isometric-city", extra: {} },
-  { id: "spot-illustrations", extra: {} },
-];
+// ---------- home ----------
+const SEASONS = ["spring", "summer", "autumn", "winter"];
+const TIMES = ["day", "dusk", "night"];
+const BENTO = ["oasis-town", "pricing-card", "phone-mockup", "line-icons", "bauhaus-poster", "spot-illustrations", "app-icon"];
 
-function heroTiles(brand) {
-  return HERO_SET.map((h) => `<div class="tile"><img src="${thumbUrl(h.id, {}, brand)}" alt="" /></div>`).join("");
+function reveal(root) {
+  const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { threshold: 0.12 });
+  root.querySelectorAll(".reveal").forEach((el, i) => { el.style.transitionDelay = `${(i % 4) * 70}ms`; io.observe(el); });
+}
+
+function swapImg(img, src) {
+  const pre = new Image();
+  pre.onload = () => { img.src = src; };
+  pre.src = src;
 }
 
 function pageHome() {
   setNav("");
+  const town = { season: "spring", time: "day", brand: activeBrand() || BRAND_PRESETS[0] };
+  const townUrl = () => {
+    const knobs = {};
+    if (town.season !== "spring") knobs.season = town.season;
+    if (town.time !== "day") knobs.time = town.time;
+    return renderUrl("oasis-town", knobs, town.brand);
+  };
+  const fresh = CATALOG.filter((a) => !BENTO.includes(a.id)).slice(0, 8);
   app.innerHTML = `
   <div class="wrap">
     <section class="hero">
       <div>
-        <h1>Design assets<br/>you can <em>reshape.</em></h1>
-        <p class="lede">Every icon set, illustration, UI kit, mockup and poster on Oasis is a small program with knobs. Turn them here, or let the Oasis agent build your whole kit. Then license the exact remix with PayPal.</p>
+        <h1>Design assets you can <em>reshape.</em></h1>
+        <p class="lede">Icons, UI kits, posters and whole towns, sold as tiny programs. Turn the knobs, then license your exact remix.</p>
         <div class="cta">
-          <a class="btn primary" href="#/browse">Browse the oasis</a>
-          <a class="btn" href="#/agent">Brief the agent →</a>
+          <a class="btn primary" href="#/browse">Browse assets</a>
+          <a class="btn" href="#/agent">Brief the agent</a>
         </div>
-        <div class="works">Exports to <b>SVG</b><b>PNG</b><b>React</b><b>CSS</b><b>Figma</b> and the <b>source program</b></div>
       </div>
       <div class="stage">
-        <div class="stage-grid" id="hero-tiles">${heroTiles(activeBrand() || BRAND_PRESETS[0])}</div>
-        <div class="stage-bar">
-          <span class="label">One brand, every asset:</span>
-          ${BRAND_PRESETS.map((p, i) => `<button class="swatch-chip ${i === 0 ? "on" : ""}" data-i="${i}" title="${esc(p.name)}">${swatches(p)}</button>`).join("")}
+        <img class="town" id="town" src="${townUrl()}" alt="Oasis Town, an isometric street diorama rendered live from its program" />
+        <div class="dock" role="toolbar" aria-label="Oasis Town knobs">
+          <div class="grp">${SEASONS.map((s) => `<button class="knobbtn ${s === town.season ? "on" : ""}" data-season="${s}">${s}</button>`).join("")}</div>
+          <div class="grp">${TIMES.map((t) => `<button class="knobbtn ${t === town.time ? "on" : ""}" data-time="${t}">${t}</button>`).join("")}</div>
+          <div class="grp">${BRAND_PRESETS.map((p, i) => `<button class="swatch-chip ${p.slug === (town.brand.slug || "") ? "on" : ""}" data-brand="${i}" title="${esc(p.name)} brand">${swatches(p)}</button>`).join("")}</div>
         </div>
       </div>
     </section>
 
-    <section class="block">
-      <p class="eyebrow">How it works</p>
-      <h2 class="title">From brief to brand kit<br/>in three moves.</h2>
-      <div class="steps">
-        <div class="step"><div class="n">1</div><h3>Find a program, not a file</h3><p>Assets ship as code with typed knobs (colours, counts, proportions, words), so one asset fits a thousand brands.</p></div>
-        <div class="step"><div class="n">2</div><h3>Remix it live</h3><p>Drag a knob and the asset rebuilds instantly. Or brief the agent and it remixes a coherent kit for you, checking every render.</p></div>
-        <div class="step"><div class="n">3</div><h3>License with PayPal</h3><p>Pay once for the exact remix and download it as SVG, PNG, React, CSS, or the program itself. Forks pay royalties upstream.</p></div>
+    <section class="block reveal">
+      <h2 class="title">One brand. Every asset.</h2>
+      <p class="sub">Every colour knob in Oasis knows its job: background, ink, primary, highlight. Pick a brand and the whole catalogue re-renders in it.</p>
+      <div class="brandbar">${BRAND_PRESETS.map((p, i) => `<button class="swatch-chip ${i === 0 ? "on" : ""}" data-bento="${i}" title="${esc(p.name)}">${swatches(p)}</button>`).join("")}<span class="muted" id="bento-name">${esc(BRAND_PRESETS[0].name)}</span></div>
+      <div class="bento" id="bento">${BENTO.map((id, i) => `<a class="cell c${i + 1} ${["bauhaus-poster", "oasis-town"].includes(id) ? "cover" : ""}" href="#/a/${id}"><img src="${thumbUrl(id, {}, BRAND_PRESETS[0])}" alt="${esc(CATALOG.find((a) => a.id === id)?.title || id)}" /></a>`).join("")}</div>
+    </section>
+
+    <section class="block reveal">
+      <p class="eyebrow">Agentic commerce</p>
+      <h2 class="title">Your agent shops. You approve.</h2>
+      <p class="sub">Brief the Oasis agent, or any agent over MCP. It builds a branded kit, checks every render, and opens a PayPal order only you can pay.</p>
+      <div class="flowtrack">
+        <div class="flowstep"><h3>Brief</h3><p>“A calm meditation app in deep teal and coral. App icon, hero, pricing card. Under $20.”</p></div>
+        <div class="flowstep"><h3>Search and remix</h3><p>One brand across every piece. Muddy render? It remixes again.</p><div class="thumbs"><img src="${thumbUrl("app-icon", {}, BRAND_PRESETS[1])}" alt=""/><img src="${thumbUrl("mesh-gradient", {}, BRAND_PRESETS[1])}" alt=""/></div></div>
+        <div class="flowstep"><h3>Kit in the cart</h3><p>Exact remixes, priced by the server, with a reason for each.</p><div class="thumbs"><img src="${thumbUrl("pricing-card", {}, BRAND_PRESETS[1])}" alt=""/><img src="${thumbUrl("beam-avatar", {}, BRAND_PRESETS[1])}" alt=""/></div></div>
+        <div class="flowstep paypal"><h3>You pay in PayPal</h3><p>The agent creates the order. Approval happens in PayPal's own window. Licences and files unlock on capture.</p><div class="paychips"><span>Orders v2</span><span>Smart Buttons</span><span>Webhooks</span><span>Payouts</span></div></div>
       </div>
     </section>
 
-    <section class="block" style="padding-top:0">
+    <section class="block reveal">
+      <h2 class="title">Forks pay upstream.</h2>
+      <p class="sub">Fork any asset with AI and sell it. Every licence pays the creators it came from through PayPal Payouts: 60% to you, 30% upstream.</p>
+      <div class="grid" style="grid-template-columns:repeat(3,1fr)">${["pricing-card", "gilded-deco-tier-0f823929", "lantern-fortune-tier-5b119cb5"].map((id) => { const a = CATALOG.find((x) => x.id === id); return a ? card(a) : ""; }).join("")}</div>
+    </section>
+
+    <section class="block reveal">
       <div style="display:flex;align-items:end;justify-content:space-between;gap:16px;flex-wrap:wrap">
-        <div><p class="eyebrow">The catalogue</p><h2 class="title" style="margin:0">Fresh from the oasis</h2></div>
-        <a class="btn" href="#/browse">See all ${CATALOG.length} assets</a>
+        <h2 class="title" style="margin:0">Fresh from the factory.</h2>
+        <a class="btn" href="#/browse">All ${CATALOG.length} assets</a>
       </div>
-      <div class="grid" style="margin-top:22px">${CATALOG.slice(0, 8).map(card).join("")}</div>
+      <div class="grid" style="margin-top:24px">${fresh.map(card).join("")}</div>
     </section>
 
-    <section class="block split">
+    <section class="block split reveal">
       <div>
-        <p class="eyebrow">Agentic commerce</p>
-        <h2 class="title">Your agent can shop here too.</h2>
-        <p class="muted" style="font-size:16px;max-width:32em">Oasis speaks MCP. Claude, Cursor or any agent can search, remix and open a PayPal order. A human always approves the payment, then the agent gets the download links.</p>
+        <h2 class="title">Plug in any agent.</h2>
+        <p class="sub">One MCP endpoint, no key to browse. Claude Code, Cursor or your own agent can search, remix and ask a human to pay.</p>
         <a class="btn" href="#/agents">Connect an agent</a>
       </div>
       <pre class="code">claude mcp add --transport http oasis ${esc(location.origin)}/mcp
 
-&gt; "Find me a free hero background and a pricing
-   card in our brand green, then buy the card."
+&gt; Make me a hero and a pricing card in our
+  brand green, then buy the card.
 
-search_assets → remix_asset → create_order
-  → you approve in PayPal → get_order → files</pre>
+search_assets  remix_asset  create_order
+you approve in PayPal  get_order  files</pre>
     </section>
   </div>`;
-  app.querySelectorAll(".swatch-chip").forEach((b) =>
-    b.addEventListener("click", () => {
-      app.querySelectorAll(".swatch-chip").forEach((x) => x.classList.remove("on"));
-      b.classList.add("on");
-      // Swap each tile only once its new render has loaded, so the stage never flashes empty.
-      const next = document.createElement("div");
-      next.innerHTML = heroTiles(BRAND_PRESETS[+b.dataset.i]);
-      const imgs = $("#hero-tiles").querySelectorAll("img");
-      next.querySelectorAll("img").forEach((n, i) => {
-        const pre = new Image();
-        pre.onload = () => { if (imgs[i]) imgs[i].src = pre.src; };
-        pre.src = n.src;
-      });
-    }),
-  );
+
+  const townImg = $("#town");
+  const redrawTown = () => swapImg(townImg, townUrl());
+  app.querySelectorAll("[data-season]").forEach((b) => b.addEventListener("click", () => { town.season = b.dataset.season; app.querySelectorAll("[data-season]").forEach((x) => x.classList.toggle("on", x === b)); redrawTown(); }));
+  app.querySelectorAll("[data-time]").forEach((b) => b.addEventListener("click", () => { town.time = b.dataset.time; app.querySelectorAll("[data-time]").forEach((x) => x.classList.toggle("on", x === b)); redrawTown(); }));
+  app.querySelectorAll("[data-brand]").forEach((b) => b.addEventListener("click", () => { town.brand = BRAND_PRESETS[+b.dataset.brand]; app.querySelectorAll("[data-brand]").forEach((x) => x.classList.toggle("on", x === b)); redrawTown(); }));
+  app.querySelectorAll("[data-bento]").forEach((b) => b.addEventListener("click", () => {
+    const brand = BRAND_PRESETS[+b.dataset.bento];
+    app.querySelectorAll("[data-bento]").forEach((x) => x.classList.toggle("on", x === b));
+    $("#bento-name").textContent = brand.name;
+    $("#bento").querySelectorAll("img").forEach((img, i) => swapImg(img, thumbUrl(BENTO[i], {}, brand)));
+  }));
+  reveal(app);
 }
 
 function pageBrowse(params) {

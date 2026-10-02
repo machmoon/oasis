@@ -6,7 +6,7 @@ export const meta = {
   kind: "illustration",
   description: "A toy-like isometric street diorama: shops with striped awnings, a tram, cherry trees and lit windows. Every block is generated, so it grows, changes season and wears your brand.",
   tags: ["isometric", "diorama", "city", "street", "town", "3d", "hero", "low poly", "block"],
-  price: 12,
+  price: 0,
   author: "oasis",
   credit: "Isometric projection and lighting after jdan/isomer (MIT)",
   size: [1600, 1100],
