@@ -81,6 +81,9 @@ re-checked by the harness). Every build since tonight's v2 goes through the full
    up, a login screen whose focus ring turned the error colour on one brand.
 4. Each verdict writes one general lesson into every later build's prompt ({{lessons}} so far).
 
+Every verdict, with the grader's main finding, and every test name are in
+[docs/PROOF.md](https://github.com/machmoon/oasis/blob/main/docs/PROOF.md), generated from the factory log and the test run.
+
 **Safety.** Asset programs, including AI-written forks, run in QuickJS compiled to WebAssembly: no `require`, no file
 system, no network, a 48 MB heap. An allocation storm can outrun QuickJS's own interrupt (it took 8.3 s to die in
 testing), so every server render runs in a worker thread that is **terminated at 3 s**. Output must be SVG and is only

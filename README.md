@@ -6,7 +6,7 @@ Oasis agent (or any agent over MCP) and it builds a branded kit, then opens a Pa
 approve. Forks pay royalties upstream through PayPal Payouts.
 
 Built for the [PayPal AI Hackathon](https://paypalaihackathon.devpost.com/).
-Live: **https://oasis-design.onrender.com** · PayPal walkthrough for developers: **[PAYPAL.md](PAYPAL.md)**
+Live: **https://oasis-design.onrender.com** · PayPal walkthrough for developers: **[PAYPAL.md](PAYPAL.md)** · Tests and every factory verdict: **[docs/PROOF.md](docs/PROOF.md)**
 
 ![Oasis Town, an isometric diorama rendered from its program](docs/figures/02-one-brand-every-asset.png)
 
