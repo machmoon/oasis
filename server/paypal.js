@@ -88,7 +88,13 @@ function describe(e) {
       const b = JSON.parse(e.body);
       detail = b.details?.[0] ? `${b.details[0].issue}: ${b.details[0].description} (${b.debug_id})` : b.message || detail;
     } catch {}
-    const err = new Error(detail);
+    // A 401 means this server's own PayPal credentials were refused: tell the operator in the log, and tell the
+    // buyer or agent plainly instead of passing PayPal's empty auth error through.
+    if (e.statusCode === 401) {
+      console.error("PayPal rejected this server's credentials (401): check PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET");
+      return Object.assign(new Error("Checkout couldn't sign in to PayPal on this server, so no order was opened. Nothing was charged."), { status: 503 });
+    }
+    const err = new Error(detail || `PayPal error ${e.statusCode}`);
     err.status = e.statusCode;
     return err;
   }
@@ -139,7 +145,7 @@ export async function refundCapture(captureId, { amount, note, requestId } = {})
   }
 }
 
-async function rest(method, pathname, body) {
+export async function rest(method, pathname, body) {
   const r = await fetch(`${config.paypal.apiBase}${pathname}`, {
     method,
     headers: { Authorization: `Bearer ${await accessToken()}`, "Content-Type": "application/json" },
