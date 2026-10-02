@@ -327,7 +327,7 @@ async function pageAsset(id) {
   setNav("browse");
   app.innerHTML = `<div class="wrap"><div class="crumbs"><span class="spinner"></span></div></div>`;
   let a;
-  try { a = await api(`/api/assets/${encodeURIComponent(id)}`); } catch (e) { app.innerHTML = `<div class="wrap"><div class="crumbs"><h1>Not found</h1></div></div>`; return; }
+  try { a = await api(`/api/assets/${encodeURIComponent(id)}`); } catch (e) { app.innerHTML = notFound("That asset isn't in the oasis."); return; }
   const defaults = Object.fromEntries(Object.entries(a.knobs).map(([k, v]) => [k, v.default]));
   const values = { ...defaults };
   const brand = activeBrand();
@@ -528,13 +528,16 @@ const SUGGESTIONS = [
   "Our fintech dashboard needs stat cards, progress rings and toast notifications in a dark theme with lime accents. Keep it under $15.",
 ];
 
+function notFound(msg) {
+  return `<div class="wrap"><div class="empty-state" style="margin-top:40px"><img src="/api/assets/oasis-town/render.svg?p=${encodeURIComponent(JSON.stringify({ time: "night" }))}" alt="Oasis Town at night" /><div><h2>${esc(msg)}</h2><p>It may have been renamed, or the link has a typo.</p><div class="cta"><a class="btn primary" href="#/browse">Browse assets</a><a class="btn" href="#/">Home</a></div></div></div></div>`;
+}
+
 function pageAgent() {
   setNav("agent");
   const session = store.get("oasis.agent", { chatId: null, log: [] });
   app.innerHTML = `<div class="wrap"><div class="agent">
     <div class="chat">
       <div class="log" id="log"></div>
-      <div class="suggest" id="suggest">${session.log.length ? "" : SUGGESTIONS.map((s) => `<button>${esc(s)}</button>`).join("")}</div>
       <form class="composer" id="composer">
         <textarea id="input" rows="2" placeholder="Describe your brand and what you need…"></textarea>
         <button class="btn primary" id="send">Send</button>
@@ -546,6 +549,14 @@ function pageAgent() {
     </aside>
   </div></div>`;
   const log = $("#log");
+  if (!session.log.length) {
+    log.innerHTML = `<div class="agent-intro" id="suggest">
+      <img src="${thumbUrl("oasis-town", {}, BRAND_PRESETS[1])}" alt="" />
+      <h2>Tell me about your brand.</h2>
+      <p>I'll find the assets you need, put them all in your colours, check every render, and open a PayPal order for you to approve.</p>
+      <div class="briefs">${SUGGESTIONS.map((t, i) => `<button class="brief" data-s="${i}"><i class="dots">${swatches(BRAND_PRESETS[[1, 2, 3][i]])}</i><span>${esc(t)}</span></button>`).join("")}</div>
+    </div>`;
+  }
   if (!CONFIG.agentReady) log.innerHTML = `<p class="notice">The agent isn't configured on this server.</p>`;
   const drawKit = () => {
     $("#kit").innerHTML = cart.items.length
@@ -565,7 +576,7 @@ function pageAgent() {
   const remember = (html, cls) => { session.log.push({ html, cls }); store.set("oasis.agent", session); };
 
   $("#newchat").addEventListener("click", () => { store.set("oasis.agent", { chatId: null, log: [] }); cart.clear(); pageAgent(); });
-  $("#suggest").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { $("#input").value = b.textContent; $("#input").focus(); }));
+  $("#suggest")?.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { $("#input").value = SUGGESTIONS[+b.dataset.s]; $("#input").focus(); }));
   $("#input").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("#composer").requestSubmit(); } });
 
   const TOOL_LABEL = { search_assets: (i) => `Searching “${i.query}”`, get_asset: (i) => `Reading ${i.asset_id}`, remix_asset: (i) => `Remixing ${i.asset_id}`, add_to_cart: (i) => `Adding ${i.asset_id} to the kit`, create_order: () => "Opening a PayPal order", fork_asset: (i) => `Forking ${i.asset_id} into something new` };
@@ -575,7 +586,7 @@ function pageAgent() {
     const text = $("#input").value.trim();
     if (!text) return;
     $("#input").value = "";
-    $("#suggest").innerHTML = "";
+    $("#suggest")?.remove();
     const userHtml = esc(text);
     add(userHtml, "msg user");
     remember(userHtml, "msg user");
@@ -661,7 +672,7 @@ function pageCart() {
     const paid = cart.items.filter((i) => i.price > 0);
     app.innerHTML = `<div class="wrap" style="max-width:820px">
       <div class="crumbs"><h1>Cart</h1></div>
-      ${cart.items.length ? cart.items.map((i, n) => `<div class="cart-line"><img src="${esc(i.previewUrl)}" alt=""/><div><b>${esc(i.title)}</b><div class="muted" style="font-size:13px">${esc(i.reason || "Your remix")}</div></div><b>${money(i.price)}</b><button class="btn small ghost rm" data-i="${n}">Remove</button></div>`).join("") : `<div class="empty">Your cart is empty. <a href="#/browse">Browse</a> or <a href="#/agent">brief the agent</a>.</div>`}
+      ${cart.items.length ? cart.items.map((i, n) => `<div class="cart-line"><img src="${esc(i.previewUrl)}" alt=""/><div><b>${esc(i.title)}</b><div class="muted" style="font-size:13px">${esc(i.reason || "Your remix")}</div></div><b>${money(i.price)}</b><button class="btn small ghost rm" data-i="${n}">Remove</button></div>`).join("") : `<div class="empty-state"><img src="${thumbUrl("oasis-town", {}, activeBrand() || BRAND_PRESETS[0])}" alt="" /><div><h2>Your cart is empty.</h2><p>Remix something you like, or let the agent build a whole kit in your brand.</p><div class="cta"><a class="btn primary" href="#/browse">Browse assets</a><a class="btn" href="#/agent">Brief the agent</a></div></div></div>`}
       ${cart.items.length ? `<div class="total"><span>Total</span><b>${money(cart.total())}</b></div>` : ""}
       ${paid.length ? `<div id="pp" style="max-width:420px;margin-left:auto"></div>` : cart.items.length ? `<p class="ok">Everything here is free: download from each asset page.</p>` : ""}
     </div>`;
@@ -679,7 +690,7 @@ async function pageOrder(id) {
   setNav("");
   app.innerHTML = `<div class="wrap" style="max-width:860px"><div class="crumbs"><span class="spinner"></span></div></div>`;
   let o;
-  try { o = await api(`/api/orders/${encodeURIComponent(id)}`); } catch (e) { app.innerHTML = `<div class="wrap"><p class="notice">${esc(e.message)}</p></div>`; return; }
+  try { o = await api(`/api/orders/${encodeURIComponent(id)}`); } catch (e) { app.innerHTML = notFound("We couldn't find that order."); return; }
   const done = o.status === "COMPLETED";
   app.innerHTML = `<div class="wrap" style="max-width:860px">
     <div class="crumbs"><h1>${done ? "Licensed." : "Order " + esc(o.status.toLowerCase())}</h1></div>
