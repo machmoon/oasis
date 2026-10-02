@@ -17,7 +17,7 @@ finish**. That second piece is what PayPal's order approval already is.
 ## What it does
 
 **Oasis is a store of design assets where nothing is finished.** Every asset is an ES module: typed knobs in, SVG out.
-{{assets}} assets and {{knobs}} knobs so far, from pricing cards and phone mockups to Bauhaus posters and Oasis Town,
+{{assets}} assets ({{builtIn}} built-in programs and {{forks}} AI forks) with {{knobs}} knobs, from pricing cards and phone mockups to Bauhaus posters and Oasis Town,
 an isometric street diorama that rebuilds as you turn its knobs.
 
 ![Change it after you find it](https://raw.githubusercontent.com/machmoon/oasis/main/docs/figures/01-rebuilt-not-stretched.png)
@@ -71,7 +71,7 @@ window closes, so nobody is paid on a refunded sale.
 **The asset factory.** {{factoryAuthored}} of the {{assets}} assets were written by an agent pipeline ({{handAuthored}} are
 hand-written programs, {{forks}} are AI forks). The first {{factoryV1}} came from factory v1 (builder self-review only, all since
 re-checked by the harness). Every build since tonight's v2 goes through the full gate below: {{factoryBuilds}} builds,
-{{factoryPublished}} published, {{factoryRejected}} rejected so far. Nothing ships on the builder's word:
+{{factoryPublished}} published, {{factoryRejected}} rejected (the factory is stopped for judging, so these match `factory/stats.jsonl` line for line). Nothing ships on the builder's word:
 1. Claude writes a program from a one-line brief and critiques its own renders.
 2. **A harness measures it.** Every asset is rendered across its knob space: defaults, presets, every range at min and
    max, random combinations, and a light and a dark brand. Blank output, slow renders, oversize SVG, missing brand

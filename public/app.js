@@ -221,10 +221,12 @@ function pageHome() {
       <h2 class="title">Your agent shops. You approve.</h2>
       <p class="sub">Brief the Oasis agent, or any agent over MCP. It builds a branded kit, checks every render, and opens a PayPal order only you can pay.</p>
       <div class="flowtrack">
-        <div class="flowstep"><h3>Brief</h3><p>“A calm meditation app in deep teal and coral. App icon, hero, pricing card. Under $20.”</p></div>
+        <div class="flowstep"><h3>Brief</h3><p>“A calm meditation app in deep teal and coral. App icon, hero, pricing card. Under $20.”</p><div class="capchip"><span>Spending cap</span><b>$20</b><small>The server refuses any order above it.</small></div></div>
         <div class="flowstep"><h3>Search and remix</h3><p>One brand across every piece. Muddy render? It remixes again.</p><div class="thumbs"><img src="${thumbUrl("app-icon", {}, BRAND_PRESETS[1])}" alt=""/><img src="${thumbUrl("mesh-gradient", {}, BRAND_PRESETS[1])}" alt=""/></div></div>
         <div class="flowstep"><h3>Kit in the cart</h3><p>Exact remixes, priced by the server, with a reason for each.</p><div class="thumbs"><img src="${thumbUrl("pricing-card", {}, BRAND_PRESETS[1])}" alt=""/><img src="${thumbUrl("beam-avatar", {}, BRAND_PRESETS[1])}" alt=""/></div></div>
-        <div class="flowstep paypal"><h3>You pay in PayPal</h3><p>The agent creates the order. Approval happens in PayPal's own window. Licences and files unlock on capture.</p><div class="paychips"><span>Orders v2</span><span>Smart Buttons</span><span>Webhooks</span><span>Payouts</span></div></div>
+        <div class="flowstep paypal"><h3>You pay in PayPal</h3><p>The agent creates the order. Only you can approve it, in PayPal's own window.</p>
+          <div class="ordermock"><small>The order note in PayPal</small><p>Requested by the Oasis agent on Oasis, within your $20 cap. You approve; the agent cannot pay.</p><div><span>2 paid licences (2 free items need none)</span><b>$10.00</b></div></div>
+          <p class="fine">Capture is verified on the server. Creator royalties go out through Payouts after the 14-day refund window.</p></div>
       </div>
     </section>
 
@@ -367,6 +369,7 @@ async function pageAsset(id) {
             <button class="btn small ghost" id="reset">Reset</button>
             <button class="btn small ghost" id="random">Surprise me</button>
             <button class="btn small" id="copylink">Copy remix link</button>
+            <button class="btn small primary" id="quickbuy">${a.price > 0 ? `License · ${money(a.price)}` : "Download"}</button>
           </div>
         </div>
       </div>
@@ -523,6 +526,10 @@ async function pageAsset(id) {
 
   const item = () => ({ assetId: a.id, title: a.title, price: a.price, knobs: { ...values }, previewUrl: renderUrl(a.id, diff(), null) });
   $("#addcart")?.addEventListener("click", () => { cart.add(item()); toast("Added to cart"); });
+  $("#quickbuy").addEventListener("click", () => {
+    $(".panel.buy").scrollIntoView({ behavior: "smooth", block: "center" });
+    if (a.price > 0 && !$("#buynow-box").childElementCount) $("#buynow").click();
+  });
   $("#buynow")?.addEventListener("click", () => {
     const box = $("#buynow-box");
     mountPayPal(box, {
@@ -591,14 +598,17 @@ function pageAgent() {
       <img src="${thumbUrl("oasis-town", {}, BRAND_PRESETS[1])}" alt="" />
       <h2>Tell me about your brand.</h2>
       <p>I'll find the assets you need, put them all in your colours, check every render, and open a PayPal order for you to approve.</p>
-      ${CONFIG.agentReady ? "" : `<p class="offline">The live agent is resting on this server. <button class="btn small" id="watch-replay">Watch a real recorded run</button></p>`}
+      ${CONFIG.agentReady ? "" : `<p class="offline">Playing a real recorded run. <button class="btn small" id="watch-replay">Play it again</button></p>`}
       <div class="briefs">${SUGGESTIONS.map((t, i) => `<button class="brief" data-s="${i}"><i class="dots">${swatches(BRAND_PRESETS[[1, 2, 3][i]])}</i><span>${esc(t)}</span></button>`).join("")}</div>
     </div>`;
   }
 
+  let replayKit = null, replayRun = 0;
   const drawKit = () => {
-    $("#kit").innerHTML = cart.items.length
-      ? `<div class="kit">${cart.items.map((i) => `<div class="item"><img src="${esc(i.previewUrl)}" alt=""/><div><span>${esc(i.title)}</span><b>${money(i.price)}</b></div></div>`).join("")}</div><div class="total"><span>Total</span><b>${money(cart.total())}</b></div>`
+    const items = replayKit || cart.items;
+    const total = items.reduce((s, i) => s + i.price, 0);
+    $("#kit").innerHTML = items.length
+      ? `<div class="kit">${items.map((i) => `<div class="item"><img src="${esc(i.previewUrl)}" alt=""/><div><span>${esc(i.title)}</span><b>${money(i.price)}</b></div></div>`).join("")}</div><div class="total"><span>Total</span><b>${money(total)}</b></div>${replayKit ? `<p class="muted" style="margin:10px 0 0;font-size:12.5px">From the recorded run. Your own cart is untouched.</p>` : ""}`
       : `<div class="empty">Remixes the agent picks land here.</div>`;
   };
   drawKit();
@@ -611,11 +621,12 @@ function pageAgent() {
     return d;
   };
   for (const entry of session.log) add(entry.html, entry.cls);
-  const remember = (html, cls) => { session.log.push({ html, cls }); store.set("oasis.agent", session); };
+  const remember = (html, cls) => { if (replayKit) return; session.log.push({ html, cls }); store.set("oasis.agent", session); };
 
   $("#newchat").addEventListener("click", () => { store.set("oasis.agent", { chatId: null, log: [] }); cart.clear(); pageAgent(); });
   $("#suggest")?.querySelectorAll("button[data-s]").forEach((b) => b.addEventListener("click", () => { $("#input").value = SUGGESTIONS[+b.dataset.s]; $("#input").focus(); }));
-  $("#watch-replay")?.addEventListener("click", replay);
+  $("#watch-replay")?.addEventListener("click", () => replay());
+  if (!CONFIG.agentReady && !session.log.length) setTimeout(() => replay(), 400);
   $("#input").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("#composer").requestSubmit(); } });
 
   const TOOL_LABEL = { search_assets: (i) => `Searching “${i.query}”`, get_asset: (i) => `Reading ${i.asset_id}`, remix_asset: (i) => `Remixing ${i.asset_id}`, add_to_cart: (i) => `Adding ${i.asset_id} to the kit`, create_order: () => "Opening a PayPal order", fork_asset: (i) => `Forking ${i.asset_id} into something new` };
@@ -642,13 +653,14 @@ function pageAgent() {
             if (!variants) {
               variants = add("", "variant-row");
               variants.entry = { html: "", cls: "variant-row" };
-              session.log.push(variants.entry);
+              if (!replayKit) session.log.push(variants.entry);
             }
             variants.insertAdjacentHTML("beforeend", `<a href="#/a/${esc(data.assetId)}?p=${encodeURIComponent(JSON.stringify(data.knobs))}" title="${esc(data.title)}"><img src="${esc(data.previewUrl.replace(/^https?:\/\/[^/]+/, ""))}" alt="${esc(data.title)}"/></a>`);
             variants.entry.html = variants.innerHTML;
-            store.set("oasis.agent", session);
+            if (!replayKit) store.set("oasis.agent", session);
           } else if (ev === "cart_add") {
-            cart.add({ ...data, previewUrl: data.previewUrl.replace(/^https?:\/\/[^/]+/, "") });
+            const item = { ...data, previewUrl: data.previewUrl.replace(/^https?:\/\/[^/]+/, "") };
+            if (replayKit) replayKit.push(item); else cart.add(item);
             drawKit();
           } else if (ev === "checkout") {
             showCheckout(data);
@@ -662,16 +674,22 @@ function pageAgent() {
   }
 
   async function replay() {
-    const rec = await api("/replays/lumen.json");
-    $("#suggest")?.remove();
+    const run = ++replayRun;
+    const rec = await api("/replays/tidepool.json");
+    if (!document.body.contains(log) || run !== replayRun) return;
+    log.innerHTML = "";
+    replayKit = [];
+    drawKit();
     add(`<i></i>Replay of a real run recorded ${esc(new Date(rec.recorded).toLocaleString())}. Nothing here is staged.`, "toolrow");
     add(esc(rec.brief), "msg user");
     for (const [ev, data] of rec.events) {
-      await new Promise((r) => setTimeout(r, ev === "text" ? 250 : 650));
-      if (ev === "text") { handle("text", { delta: data.delta }); flushBot(); }
-      else handle(ev, data);
+      await new Promise((r) => setTimeout(r, ev === "text" ? 400 : 550));
+      if (!document.body.contains(log) || run !== replayRun) return;
+      handle(ev, data);
     }
     flushBot();
+    add(`<i></i>End of the recording. <button class="btn small" id="replay-again">Play it again</button>`, "toolrow");
+    $("#replay-again")?.addEventListener("click", () => replay());
   }
 
   $("#composer").addEventListener("submit", async (e) => {
@@ -680,6 +698,7 @@ function pageAgent() {
     if (!text) return;
     $("#input").value = "";
     $("#suggest")?.remove();
+    if (replayKit) { replayRun++; replayKit = null; log.innerHTML = ""; drawKit(); }
     const userHtml = esc(text);
     add(userHtml, "msg user");
     remember(userHtml, "msg user");

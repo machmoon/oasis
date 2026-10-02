@@ -25,6 +25,7 @@ const n = {
   colourKnobs: colour.length,
   roleKnobs: colour.filter((k) => k.role).length,
   forks: all.filter((a) => a.forkedFrom).length,
+  builtIn: all.filter((a) => !a.forkedFrom).length,
   factoryAuthored: all.filter((a) => a.author === "oasis-factory").length,
   handAuthored: all.filter((a) => a.author === "oasis").length,
   factoryV1: all.filter((a) => a.author === "oasis-factory").length - stats.filter((s) => s.verdict === "published").length,
