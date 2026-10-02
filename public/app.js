@@ -382,7 +382,7 @@ async function pageAsset(id) {
           <div class="row">
             ${a.price > 0
               ? `<button class="btn primary" id="addcart">Add remix to cart</button><button class="btn" id="buynow">Buy now</button>`
-              : `<a class="btn primary" id="dl-svg">Download SVG</a><a class="btn" id="dl-png">PNG</a><a class="btn" id="dl-jsx">React</a>`}
+              : `<a class="btn primary" id="dl-svg">Download SVG</a><a class="btn" id="dl-png">PNG</a><a class="btn" id="dl-jsx">React</a><button class="btn" id="copy-figma" title="Paste straight into a Figma frame">Copy for Figma</button>`}
           </div>
           <div id="buynow-box" style="margin-top:12px"></div>
           <ul>
@@ -510,6 +510,14 @@ async function pageAsset(id) {
   };
   updateSnippet();
   updateDownloads();
+  $("#copy-figma")?.addEventListener("click", async () => {
+    // Figma turns pasted SVG markup into editable vector layers.
+    try {
+      const svg = await (await fetch(`/api/assets/${a.id}/download.svg?p=${encodeURIComponent(JSON.stringify(diff()))}`)).text();
+      await navigator.clipboard.writeText(svg);
+      toast("Copied. Paste into Figma to get editable layers");
+    } catch { toast("Copy failed. Use Download SVG instead"); }
+  });
 
   const item = () => ({ assetId: a.id, title: a.title, price: a.price, knobs: { ...values }, previewUrl: renderUrl(a.id, diff(), null) });
   $("#addcart")?.addEventListener("click", () => { cart.add(item()); toast("Added to cart"); });
@@ -730,11 +738,17 @@ async function pageOrder(id) {
     <div class="crumbs"><h1>${done ? "Licensed." : "Order " + esc(o.status.toLowerCase())}</h1></div>
     ${done ? `<p class="ok">Paid ${money(o.total)} with PayPal${o.payer?.name ? ` by ${esc(o.payer.name)}` : ""} · capture ${esc(o.captureId)}</p>` : `<p class="notice">This order hasn't been paid yet.</p>`}
     ${(o.licenses || []).map((l) => `<div class="cart-line" style="grid-template-columns:84px 1fr auto"><img src="/api/licenses/${esc(l.token)}/download.svg" alt=""/><div><b>${esc(l.title)}</b><div class="muted mono" style="font-size:11px">licence ${esc(l.token.slice(0, 12))}…</div></div>
-      <div class="dl">${["svg", "png", "jsx", "css", "mjs"].map((f) => `<a class="btn small" href="/api/licenses/${esc(l.token)}/download.${f}">${{ svg: "SVG", png: "PNG", jsx: "React", css: "CSS", mjs: "Program" }[f]}</a>`).join("")}</div></div>`).join("")}
+      <div class="dl">${["svg", "png", "jsx", "css", "mjs"].map((f) => `<a class="btn small" href="/api/licenses/${esc(l.token)}/download.${f}">${{ svg: "SVG", png: "PNG", jsx: "React", css: "CSS", mjs: "Program" }[f]}</a>`).join("")}<button class="btn small" data-figma="${esc(l.token)}">Copy for Figma</button></div></div>`).join("")}
     ${o.royalties?.length ? `<h3 style="margin:28px 0 8px">Where your money went</h3><table class="table"><tr><th>Asset</th><th>To</th><th>Role</th><th>Amount</th></tr>${o.royalties.map((r) => `<tr><td>${esc(r.title)}</td><td>${esc(r.author)}</td><td>${esc(r.role)}${r.held ? " (held)" : ""}</td><td>${money(r.cents / 100)}</td></tr>`).join("")}</table>
       ${o.payoutBatch ? `<p class="muted" style="font-size:13px">${o.payoutBatch.error ? `Royalty payouts queued: ${esc(o.payoutBatch.error)}` : `PayPal Payouts batch ${esc(o.payoutBatch.id)} sent ${o.payoutBatch.count} royalt${o.payoutBatch.count === 1 ? "y" : "ies"} (${esc(o.payoutBatch.status)}).`}</p>` : ""}` : ""}
   </div>`;
 }
+
+document.addEventListener("click", async (e) => {
+  const t = e.target.closest("[data-figma]");
+  if (!t) return;
+  try { await navigator.clipboard.writeText(await (await fetch(`/api/licenses/${t.dataset.figma}/download.svg`)).text()); toast("Copied. Paste into Figma to get editable layers"); } catch { toast("Copy failed. Use the SVG download"); }
+});
 
 async function pageCreators() {
   setNav("creators");

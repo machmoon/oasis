@@ -124,12 +124,12 @@ export async function makeAsset(brief, slug, { outDir = path.join(ROOT, "assets"
   // Brand roles, then the independent grader in a fresh session.
   if (!stat.verdict) {
     try { const roles = await rolesFor(src); src = applyRoles(src, roles); } catch (e) { log(`  [${slug}] roles: ${e.message}`); }
-    for (let round = 0; round < 2 && !stat.verdict; round++) {
+    for (let round = 0; round < 3 && !stat.verdict; round++) {
       const g = await grade({ brief, title: inspect(src).meta.title, ...gradeRenders(src) });
       stat.grades.push(g);
       if (g.lesson) fs.appendFileSync(LESSONS_FILE, `- ${g.lesson.replace(/\s+/g, " ").trim()}\n`);
       if (g.verdict === "publish") { stat.verdict = "published"; break; }
-      if (round === 1) { stat.verdict = "rejected:grader"; break; }
+      if (round === 2) { stat.verdict = "rejected:grader"; break; }
       log(`  [${slug}] grader rejected: ${(g.flaws || []).join(" | ")}`);
       messages.push({ role: "assistant", content: "```js\n" + src + "```" }, { role: "user", content: `An independent reviewer rejected it: ${(g.flaws || []).join("; ")}. Scores: ${JSON.stringify(g.scores)}. Address every flaw and return the full module, keeping each colour knob's role.` });
       try { const next = extractCode(await ask(messages)); if (!measure(next).errors.length) src = next; } catch (e) { log(`  [${slug}] regrade fix failed: ${e.message}`); }
@@ -150,6 +150,11 @@ function gradeRenders(src) {
   const hi = {};
   for (const [k, v] of Object.entries(params.knobs || {})) if (v.type === "range") hi[k] = v.max;
   shots.push(["Every range knob at its maximum", hi]);
+  // Show the grader what each choice knob does (season, time, style...), so working knobs aren't marked unverified.
+  for (const [k, v] of Object.entries(params.knobs || {}).filter(([, v]) => v.type === "choice").slice(0, 3)) {
+    const alt = v.options.filter((o) => o !== v.default).slice(-1)[0];
+    if (alt) shots.push([`Choice knob "${k}" set to "${alt}"`, { [k]: alt }]);
+  }
   shots.push(["Light brand probe", brandKnobs(params, BRAND_PROBES.light)]);
   shots.push(["Dark brand probe", brandKnobs(params, BRAND_PROBES.dark)]);
   const pngs = shots.map(([, input]) => new Resvg(renderSource(src, resolveKnobs(params, input)), { fitTo: { mode: "width", value: 512 }, font: { loadSystemFonts: true } }).render().asPng());
