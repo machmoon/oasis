@@ -54,6 +54,7 @@ export async function pageWorld(app, h) {
     });
     for (const gs of old.values()) for (const g of gs) v.content.remove(g);
     groups = nextGroups;
+    animateLife();
     if (!show.framed) {
       const { THREE } = await import("/world3d.js");
       const [w, d] = plan.size, wide = innerWidth > 860;
@@ -62,6 +63,23 @@ export async function pageWorld(app, h) {
     }
     drawPanel();
   }
+
+  // Life: trams run along their rails and wrap around; the camera drifts until the visitor takes over.
+  let lifeTick = null;
+  function animateLife() {
+    if (lifeTick) v.tickers.delete(lifeTick);
+    const trams = groups.filter((g, i) => g && plan.placements[i]?.asset === "town-tram");
+    const W = plan.size[0];
+    let last = performance.now();
+    lifeTick = (t) => {
+      const dt = Math.min(0.05, (t - last) / 1000); last = t;
+      for (const g of trams) { if (!g.visible) continue; g.position.x += dt * 2.2; if (g.position.x > W + 1) g.position.x = -9; }
+    };
+    v.tickers.add(lifeTick);
+  }
+  v.controls.autoRotate = true;
+  v.controls.autoRotateSpeed = 0.35;
+  v.renderer.domElement.addEventListener("pointerdown", () => { v.controls.autoRotate = false; }, { once: true });
 
   async function build(prompt, { agent = false } = {}) {
     const run = ++building;
