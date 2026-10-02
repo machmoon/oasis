@@ -1,7 +1,3 @@
-# Oasis
-
-**Tagline:** Design assets built as tiny programs. Your AI agent remixes them into your brand and opens a PayPal order that only you can approve.
-
 ## Inspiration
 
 Agents build interfaces now. Describe a product to Claude, v0 or Lovable and a working UI comes back in a minute. The
@@ -21,7 +17,7 @@ finish**. That second piece is what PayPal's order approval already is.
 ## What it does
 
 **Oasis is a store of design assets where nothing is finished.** Every asset is an ES module: typed knobs in, SVG out.
-48 assets and 479 knobs so far, from pricing cards and phone mockups to Bauhaus posters and Oasis Town,
+{{assets}} assets and {{knobs}} knobs so far, from pricing cards and phone mockups to Bauhaus posters and Oasis Town,
 an isometric street diorama that rebuilds as you turn its knobs.
 
 ![Change it after you find it](https://raw.githubusercontent.com/machmoon/oasis/main/docs/figures/01-rebuilt-not-stretched.png)
@@ -29,7 +25,7 @@ an isometric street diorama that rebuilds as you turn its knobs.
 The pricing card above is one program at two settings. It isn't stretched: it grows three feature rows and a badge.
 The city grows from 4 blocks to 25. A file can't do either.
 
-**Brand Mode.** 167 of 179 colour knobs in the catalogue declare a role: background, surface,
+**Brand Mode.** {{roleKnobs}} of {{colourKnobs}} colour knobs in the catalogue declare a role: background, surface,
 ink, muted, primary, secondary, highlight. Set your brand once and *every asset* re-renders in it, and components with
 a light/dark theme follow the brand's darkness on their own.
 
@@ -67,7 +63,7 @@ parent $2, the grandparent $1 and Oasis $1, through **PayPal Payouts** the momen
 - **Webhooks**, verified with `verify-webhook-signature`: `CHECKOUT.ORDER.APPROVED` captures orders whose tab closed,
   `PAYMENT.CAPTURE.REFUNDED` revokes licences, `PAYMENT.PAYOUTS-ITEM.*` tracks each royalty.
 - **Payouts** for royalties; **refunds** within 14 days through the Payments API.
-
+{{sandboxLine}}
 
 **The asset factory.** Most of the catalogue was written by an agent pipeline, and nothing ships on the builder's word:
 1. Claude writes a program from a one-line brief and critiques its own renders.
@@ -77,14 +73,14 @@ parent $2, the grandparent $1 and Oasis $1, through **PayPal Payouts** the momen
 3. **An independent grader in a fresh session**, which never saw the builder's reasoning, looks at those renders and
    publishes or rejects. It has caught real bugs a self-review missed: a checkout screen whose order total didn't add
    up, a login screen whose focus ring turned the error colour on one brand.
-4. Each verdict writes one general lesson into every later build's prompt (6 so far).
+4. Each verdict writes one general lesson into every later build's prompt ({{lessons}} so far).
 
 **Safety.** Asset programs, including AI-written forks, run in QuickJS compiled to WebAssembly: no `require`, no file
 system, no network, a 48 MB heap. An allocation storm can outrun QuickJS's own interrupt (it took 8.3 s to die in
 testing), so every server render runs in a worker thread that is **terminated at 3 s**. Output must be SVG and is only
 shown through `<img>`. Paid source never leaves the server; catalogue previews are low-res raster comps.
 
-**Tested.** 22/22 tests pass: price tampering, the capture race, amount-mismatch refunds, refund revocation,
+**Tested.** {{tests}} tests pass: price tampering, the capture race, amount-mismatch refunds, refund revocation,
 webhook handling, the spending cap, royalty cents along a fork chain, sandbox escapes and the deadline kill.
 
 **Stack.** Node + Express, a no-build vanilla JS store, Claude Opus 5.5 (agent, forks, factory, grader), MCP Streamable
@@ -105,7 +101,7 @@ HTTP, resvg, Playwright, Render.
 - An agent that goes from a one-paragraph brief to a coherent, branded kit and a PayPal order you approve, and throws
   away its own muddy first renders without being asked.
 - A fork of a fork that pays three parties automatically.
-- Brand Mode: one palette re-skins 48 assets.
+- Brand Mode: one palette re-skins {{assets}} assets.
 
 ## What we learned
 
