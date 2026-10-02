@@ -34,7 +34,7 @@ things Polyfork doesn't do: an **agent that shops for you** and **royalty-paying
 | **Download any format** | SVG, 2048px PNG, React component, CSS class, and the **source program itself**, so you can keep remixing forever. |
 | **Brief the agent** | Describe your brand and deliverables. Claude searches, remixes every piece into one palette, *looks at each render* and fixes what's off, fills the cart, and opens a PayPal order. You approve the payment; the agent never can. |
 | **Fork with AI** | Describe a new direction ("make it art deco"). Claude rewrites the program, the sandbox proves it renders, and it's published as a new asset with lineage. |
-| **Royalties** | Each licence splits revenue: 60% fork creator, 30% upstream ancestors, 10% platform. Creators with a PayPal email are paid via **PayPal Payouts** the moment the order is captured. |
+| **Royalties** | Each licence splits revenue: 60% fork creator, 30% upstream ancestors, 10% platform. Creators with a PayPal email are paid via **PayPal Payouts** once the 14-day refund window closes; a refund cancels the hold. |
 | **Agent commerce over MCP** | `POST /mcp` exposes `search_assets`, `get_asset`, `remix_asset`, `create_order`, `get_order`. Any agent (Claude Code, Cursor…) can shop; the human approves in PayPal; the agent gets download links. |
 
 ## How PayPal is used

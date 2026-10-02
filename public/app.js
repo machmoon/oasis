@@ -3,6 +3,8 @@ import { BRAND_PRESETS } from "./brands.js";
 const $ = (s, el = document) => el.querySelector(s);
 const app = $("#app");
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+// Minimal, safe Markdown for agent messages: escape first, then bold and inline code only.
+const md = (t) => esc(t).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/`([^`]+)`/g, "<code>$1</code>");
 const money = (n) => (n === 0 ? "Free" : `$${Number(n).toFixed(2).replace(/\.00$/, "")}`);
 const api = async (path, opts = {}) => {
   const r = await fetch(path, { headers: { "Content-Type": "application/json" }, ...opts, body: opts.body ? JSON.stringify(opts.body) : undefined });
@@ -589,10 +591,11 @@ function pageAgent() {
       <img src="${thumbUrl("oasis-town", {}, BRAND_PRESETS[1])}" alt="" />
       <h2>Tell me about your brand.</h2>
       <p>I'll find the assets you need, put them all in your colours, check every render, and open a PayPal order for you to approve.</p>
+      ${CONFIG.agentReady ? "" : `<p class="offline">The live agent is resting on this server. <button class="btn small" id="watch-replay">Watch a real recorded run</button></p>`}
       <div class="briefs">${SUGGESTIONS.map((t, i) => `<button class="brief" data-s="${i}"><i class="dots">${swatches(BRAND_PRESETS[[1, 2, 3][i]])}</i><span>${esc(t)}</span></button>`).join("")}</div>
     </div>`;
   }
-  if (!CONFIG.agentReady) log.innerHTML = `<p class="notice">The agent isn't configured on this server.</p>`;
+
   const drawKit = () => {
     $("#kit").innerHTML = cart.items.length
       ? `<div class="kit">${cart.items.map((i) => `<div class="item"><img src="${esc(i.previewUrl)}" alt=""/><div><span>${esc(i.title)}</span><b>${money(i.price)}</b></div></div>`).join("")}</div><div class="total"><span>Total</span><b>${money(cart.total())}</b></div>`
@@ -611,46 +614,21 @@ function pageAgent() {
   const remember = (html, cls) => { session.log.push({ html, cls }); store.set("oasis.agent", session); };
 
   $("#newchat").addEventListener("click", () => { store.set("oasis.agent", { chatId: null, log: [] }); cart.clear(); pageAgent(); });
-  $("#suggest")?.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { $("#input").value = SUGGESTIONS[+b.dataset.s]; $("#input").focus(); }));
+  $("#suggest")?.querySelectorAll("button[data-s]").forEach((b) => b.addEventListener("click", () => { $("#input").value = SUGGESTIONS[+b.dataset.s]; $("#input").focus(); }));
+  $("#watch-replay")?.addEventListener("click", replay);
   $("#input").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("#composer").requestSubmit(); } });
 
   const TOOL_LABEL = { search_assets: (i) => `Searching “${i.query}”`, get_asset: (i) => `Reading ${i.asset_id}`, remix_asset: (i) => `Remixing ${i.asset_id}`, add_to_cart: (i) => `Adding ${i.asset_id} to the kit`, create_order: () => "Opening a PayPal order", fork_asset: (i) => `Forking ${i.asset_id} into something new` };
 
-  $("#composer").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const text = $("#input").value.trim();
-    if (!text) return;
-    $("#input").value = "";
-    $("#suggest")?.remove();
-    const userHtml = esc(text);
-    add(userHtml, "msg user");
-    remember(userHtml, "msg user");
-    $("#send").disabled = true;
-    let bot = null, botText = "", variants = null;
-    const flushBot = () => { if (bot && botText.trim()) remember(esc(botText.trim()), "msg bot"); bot = null; botText = ""; };
-    try {
-      const res = await fetch("/api/agent", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ budget: (session.cap = Number($("#cap").value) || 20), chatId: session.chatId, message: activeBrand() && !session.chatId ? `${text}\n\n(My brand in Oasis Brand Mode: ${JSON.stringify(completeBrand((({ on, ...b }) => b)(activeBrand())))})` : text, cart: cart.items }) });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Agent unavailable");
-      const reader = res.body.getReader();
-      const dec = new TextDecoder();
-      let buf = "";
-      for (;;) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buf += dec.decode(value, { stream: true });
-        let idx;
-        while ((idx = buf.indexOf("\n\n")) >= 0) {
-          const chunk = buf.slice(0, idx);
-          buf = buf.slice(idx + 2);
-          const ev = chunk.match(/^event: (.+)$/m)?.[1];
-          const dataLine = chunk.match(/^data: (.+)$/m)?.[1];
-          if (!ev || !dataLine) continue;
-          const data = JSON.parse(dataLine);
+  // One handler for live streams and recorded replays.
+  let bot = null, botText = "", variants = null;
+  const flushBot = () => { if (bot && botText.trim()) remember(md(botText.trim()), "msg bot"); bot = null; botText = ""; };
+  function handle(ev, data) {
           if (ev === "chat") { session.chatId = data.chatId; store.set("oasis.agent", session); }
           else if (ev === "text") {
-            if (!bot) { if (!data.delta.trim()) continue; bot = add("", "msg bot"); variants = null; }
+            if (!bot) { if (!data.delta.trim()) return; bot = add("", "msg bot"); variants = null; }
             botText += data.delta;
-            bot.textContent = botText.replace(/^\s+/, "");
+            bot.innerHTML = md(botText.replace(/^\s+/, ""));
             log.scrollTop = log.scrollHeight;
           } else if (ev === "tool") {
             flushBot();
@@ -681,6 +659,50 @@ function pageAgent() {
           } else if (ev === "error") {
             add(esc(data.message), "notice");
           }
+  }
+
+  async function replay() {
+    const rec = await api("/replays/lumen.json");
+    $("#suggest")?.remove();
+    add(`<i></i>Replay of a real run recorded ${esc(new Date(rec.recorded).toLocaleString())}. Nothing here is staged.`, "toolrow");
+    add(esc(rec.brief), "msg user");
+    for (const [ev, data] of rec.events) {
+      await new Promise((r) => setTimeout(r, ev === "text" ? 250 : 650));
+      if (ev === "text") { handle("text", { delta: data.delta }); flushBot(); }
+      else handle(ev, data);
+    }
+    flushBot();
+  }
+
+  $("#composer").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const text = $("#input").value.trim();
+    if (!text) return;
+    $("#input").value = "";
+    $("#suggest")?.remove();
+    const userHtml = esc(text);
+    add(userHtml, "msg user");
+    remember(userHtml, "msg user");
+    $("#send").disabled = true;
+    bot = null; botText = ""; variants = null;
+    try {
+      const res = await fetch("/api/agent", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ budget: (session.cap = Number($("#cap").value) || 20), chatId: session.chatId, message: activeBrand() && !session.chatId ? `${text}\n\n(My brand in Oasis Brand Mode: ${JSON.stringify(completeBrand((({ on, ...b }) => b)(activeBrand())))})` : text, cart: cart.items }) });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Agent unavailable");
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buf = "";
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        let idx;
+        while ((idx = buf.indexOf("\n\n")) >= 0) {
+          const chunk = buf.slice(0, idx);
+          buf = buf.slice(idx + 2);
+          const ev = chunk.match(/^event: (.+)$/m)?.[1];
+          const dataLine = chunk.match(/^data: (.+)$/m)?.[1];
+          if (!ev || !dataLine) continue;
+          handle(ev, JSON.parse(dataLine));
         }
       }
     } catch (err) {
@@ -760,7 +782,7 @@ async function pageCreators() {
     <div class="split">
       <div class="panel">
         <h3>How forks pay</h3>
-        <p style="margin-top:0">Fork any asset with AI and sell it. Every licence pays you and the creators you forked from, through PayPal Payouts, the moment payment is captured.</p>
+        <p style="margin-top:0">Fork any asset with AI and sell it. Every licence pays you and the creators you forked from, through PayPal Payouts once the 14-day refund window closes.</p>
         <div class="chain">${["pricing-card", "gilded-deco-tier-0f823929", "lantern-fortune-tier-5b119cb5"].map((id, i) => { const a = CATALOG.find((x) => x.id === id); return a ? `${i ? '<span class="chain-arrow">fork</span>' : ""}<a class="chain-node" href="#/a/${id}"><img src="${thumbUrl(id)}" alt=""/><b>${esc(a.title)}</b><span>${i === 0 ? "original" : i === 1 ? "fork" : "fork of a fork"}</span></a>` : ""; }).join("")}</div>
         <div class="flow" style="margin-top:12px"><span class="node">$10 licence</span><span class="arrow">=</span><span class="node">$6 fork creator</span><span class="node">$2 parent</span><span class="node">$1 grandparent</span><span class="node">$1 Oasis</span></div>
         <p class="muted" style="font-size:13px;margin-bottom:0">Deeper lineages split the upstream 30%: the parent takes two thirds, older ancestors share the rest.</p>

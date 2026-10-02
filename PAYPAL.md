@@ -63,14 +63,23 @@ The agent never holds a payment method. It can create an order; only a human can
   server priced. A mismatch marks the order `AMOUNT_MISMATCH` and is refunded automatically (tested)
 - each item gets a licence token; downloads are `GET /api/licenses/<token>/download.{svg|png|jsx|css|mjs}`
 
-## 5. Royalties through Payouts
+## 5. Royalties through Payouts, held through the refund window
 
-`server/commerce.js` → `royaltySplit()`; `server/paypal.js` → `sendPayouts()`
+`server/commerce.js` → `royaltySplit()`, `releaseDuePayouts()`; `server/paypal.js` → `sendPayouts()`
 
 Each licence of a fork pays its creator 60%, its ancestors 30% (the parent takes two thirds of that, older
 ancestors share the rest) and Oasis 10%, computed in integer cents so the parts always sum to the price (tested
-across prices like $7.99). Creators with a PayPal email are paid in one Payouts batch, idempotent on
-`sender_batch_id = oasis-<orderId>`; creators without one are recorded as held.
+across prices like $7.99).
+
+Payouts can't be pulled back, and buyers can refund for 14 days. So royalties are **held** on the order at capture
+and released by `releaseDuePayouts()` (run hourly) only once the order is past the refund window and still
+`COMPLETED`. A refund inside the window cancels the hold, so a creator is never paid on a refunded sale (tested:
+*a refund inside the window cancels held royalties*). The batch is idempotent on `sender_batch_id = oasis-<orderId>`.
+
+**Production path.** Payouts suits a hackathon marketplace with a few creators. At scale the right tool is **PayPal
+Commerce Platform**: onboard each creator as a seller, and split at capture with `payee` per purchase unit plus a
+`platform_fees` entry, so refunds unwind the split automatically. The split function already produces the
+per-party amounts that call needs.
 
 ## 6. Webhooks are the source of truth
 

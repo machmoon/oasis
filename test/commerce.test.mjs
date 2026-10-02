@@ -95,7 +95,7 @@ test("webhooks: approval captures, refund events revoke, payout events are recor
   assert.equal((await store.get("payouts", "X-0-creator")).status, "UNCLAIMED");
 });
 
-test("a fork-of-a-fork sale pays its creator and ancestors through Payouts", async () => {
+test("royalties are held through the refund window, then paid up the fork chain", async () => {
   const pp = fakePaypal();
   commerce.setPaypalClient(pp);
   const child = catalog.getAsset("lantern-fortune-tier-5b119cb5");
@@ -104,11 +104,29 @@ test("a fork-of-a-fork sale pays its creator and ancestors through Payouts", asy
   parent.payoutEmail = "parent-creator@example.com";
   const o = await commerce.createCheckout([{ assetId: child.id }]);
   const done = await commerce.capture(o.id);
-  const items = pp.calls.payouts[0].items;
+  assert.equal(pp.calls.payouts.length, 0, "nothing is paid while a refund is still possible");
+  assert.equal(done.payoutHold.status, "HELD");
+  assert.equal(done.royalties.reduce((s, r) => s + r.cents, 0), Math.round(child.price * 100));
+  await commerce.releaseDuePayouts(Date.now() - 1000);
+  assert.equal(pp.calls.payouts.length, 0, "not released before the window closes");
+  await commerce.releaseDuePayouts(Date.now() + commerce.REFUND_WINDOW_MS + 1000);
+  const items = pp.calls.payouts.find((b) => b.batchId === `oasis-${o.id}`).items;
   assert.equal(items.find((i) => i.email === "fork-creator@example.com").amount, +(child.price * 0.6).toFixed(2));
   assert.equal(items.find((i) => i.email === "parent-creator@example.com").amount, +(child.price * 0.2).toFixed(2));
-  assert.equal(done.royalties.reduce((s, r) => s + r.cents, 0), Math.round(child.price * 100));
-  assert.match(done.payoutBatch.id, /^PB-/);
+});
+
+test("a refund inside the window cancels held royalties, so creators are never paid on refunded sales", async () => {
+  const pp = fakePaypal();
+  commerce.setPaypalClient(pp);
+  const child = catalog.getAsset("lantern-fortune-tier-5b119cb5");
+  child.payoutEmail = "fork-creator@example.com";
+  const o = await commerce.createCheckout([{ assetId: child.id }]);
+  await commerce.capture(o.id);
+  await commerce.refund(o.id, { reason: "test" });
+  const before = pp.calls.payouts.length;
+  await commerce.releaseDuePayouts(Date.now() + commerce.REFUND_WINDOW_MS + 1000);
+  assert.equal(pp.calls.payouts.filter((b) => b.batchId === `oasis-${o.id}`).length, 0);
+  assert.equal(pp.calls.payouts.length, before);
 });
 
 test("agent orders over the human's spending cap are refused; attribution reaches PayPal", async () => {

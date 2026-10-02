@@ -44,7 +44,8 @@ the approval screen. `get_order` captures after approval and returns licensed do
 
 **Forks pay upstream.** Fork any asset with AI ("make it art deco"). Claude rewrites the program, the sandbox and harness
 prove it renders, and it's published with its lineage. A $10 licence of a fork of a fork pays its creator $6, the
-parent $2, the grandparent $1 and Oasis $1, through **PayPal Payouts** the moment payment is captured.
+parent $2, the grandparent $1 and Oasis $1, through **PayPal Payouts**. Royalties are held until the 14-day refund
+window closes, so nobody is paid on a refunded sale.
 
 ![Forks pay upstream](https://raw.githubusercontent.com/machmoon/oasis/main/docs/figures/03-forks-pay-upstream.png)
 
@@ -62,7 +63,9 @@ parent $2, the grandparent $1 and Oasis $1, through **PayPal Payouts** the momen
 - **`PayPal-Request-Id` idempotency** on create, capture and refund.
 - **Webhooks**, verified with `verify-webhook-signature`: `CHECKOUT.ORDER.APPROVED` captures orders whose tab closed,
   `PAYMENT.CAPTURE.REFUNDED` revokes licences, `PAYMENT.PAYOUTS-ITEM.*` tracks each royalty.
-- **Payouts** for royalties; **refunds** within 14 days through the Payments API.
+- **Payouts** for royalties, held until the refund window closes and cancelled by a refund; **refunds** within 14 days
+  through the Payments API. In production the creator split moves to **PayPal Commerce Platform** (per-unit `payee` +
+  `platform_fees`) so refunds unwind it automatically.
 {{sandboxLine}}
 
 **The asset factory.** Most of the catalogue was written by an agent pipeline, and nothing ships on the builder's word:

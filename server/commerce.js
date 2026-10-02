@@ -131,13 +131,11 @@ async function doCapture(orderId) {
     }
   }
   existing.royalties = ledger;
+  // Royalties are held until the refund window closes: Payouts can't be pulled back, refunds can arrive
+  // for 14 days. releaseDuePayouts() pays held royalties once an order is past the window and not refunded.
+  // (In production, PayPal Commerce Platform splits at capture with platform fees; see PAYPAL.md.)
   if (payouts.length) {
-    try {
-      const batch = await paypal.sendPayouts(`oasis-${orderId}`, payouts);
-      existing.payoutBatch = { id: batch.batch_header?.payout_batch_id, status: batch.batch_header?.batch_status, count: payouts.length };
-    } catch (e) {
-      existing.payoutBatch = { error: e.message, count: payouts.length };
-    }
+    existing.payoutHold = { items: payouts, releaseAfter: new Date(Date.now() + REFUND_WINDOW_MS).toISOString(), status: "HELD" };
   }
   await store.put("orders", orderId, existing);
   for (const [i, l] of ledger.entries()) await store.put("ledger", `${orderId}-${i}`, l);
@@ -151,12 +149,34 @@ export async function license(token) {
   return lic;
 }
 
+export const REFUND_WINDOW_MS = Number(process.env.OASIS_REFUND_WINDOW_MS) || 14 * 864e5;
+
+/** Pays every held royalty whose order is past the refund window and wasn't refunded. Idempotent per order. */
+export async function releaseDuePayouts(now = Date.now()) {
+  const released = [];
+  for (const o of await store.list("orders")) {
+    const h = o.payoutHold;
+    if (!h || h.status !== "HELD" || Date.parse(h.releaseAfter) > now) continue;
+    if (o.status !== "COMPLETED") { h.status = "CANCELLED"; await store.put("orders", o.id, o); continue; }
+    try {
+      const batch = await paypal.sendPayouts(`oasis-${o.id}`, h.items);
+      h.status = "SENT";
+      o.payoutBatch = { id: batch.batch_header?.payout_batch_id, status: batch.batch_header?.batch_status, count: h.items.length };
+      released.push(o.id);
+    } catch (e) {
+      o.payoutBatch = { error: e.message, count: h.items.length };
+    }
+    await store.put("orders", o.id, o);
+  }
+  return released;
+}
+
 /** Buyer refund within 14 days: refunds the PayPal capture and revokes every licence on the order. */
 export async function refund(orderId, { reason = "Refund requested" } = {}) {
   const o = await store.get("orders", orderId);
   if (!o) throw Object.assign(new Error("Unknown order"), { status: 404 });
   if (o.status !== "COMPLETED") throw Object.assign(new Error(`Order is ${o.status}`), { status: 409 });
-  if (Date.now() - Date.parse(o.createdAt) > 14 * 864e5) throw Object.assign(new Error("Refund window (14 days) has passed"), { status: 409 });
+  if (Date.now() - Date.parse(o.createdAt) > REFUND_WINDOW_MS) throw Object.assign(new Error("Refund window (14 days) has passed"), { status: 409 });
   const r = await paypal.refundCapture(o.captureId, { note: reason.slice(0, 200), requestId: `oasis-refund-${orderId}` });
   await markRefunded(o, r.id);
   return o;
@@ -165,6 +185,7 @@ export async function refund(orderId, { reason = "Refund requested" } = {}) {
 async function markRefunded(o, refundId) {
   o.status = "REFUNDED";
   o.refundId = refundId;
+  if (o.payoutHold?.status === "HELD") o.payoutHold.status = "CANCELLED";
   for (const l of o.licenses || []) {
     const lic = await store.get("licenses", l.token);
     if (lic) await store.put("licenses", l.token, { ...lic, revoked: true, revokedAt: new Date().toISOString() });
