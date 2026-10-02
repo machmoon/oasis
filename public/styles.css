@@ -391,3 +391,13 @@ footer .wrap { display: flex; gap: 18px; flex-wrap: wrap; justify-content: space
 .stats3 b { display: block; font-family: var(--display); font-size: 28px; line-height: 1.05; }
 .stats3 span { font-size: 12.5px; color: var(--ink-2); }
 ul.plain { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+.stats4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+.stats4 > div { border: var(--edge); border-radius: 18px; background: var(--surface); padding: 14px 16px; display: grid; gap: 6px; align-content: start; box-shadow: var(--lift); }
+.stats4 span:first-child { font-size: 13px; color: var(--ink-2); font-weight: 600; }
+.stats4 b { font-family: var(--display); font-size: 30px; line-height: 1; }
+.stats4 a { font-size: 12.5px; }
+.state { display: inline-block; justify-self: start; font-size: 12.5px; font-weight: 700; padding: 3px 10px; border-radius: 99px; border: 2px solid var(--ink); }
+.state.on { background: #c9f2d6; }
+.state.off { background: #ffe1d6; }
+.tablewrap { overflow-x: auto; }
+@media (max-width: 760px) { .stats4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

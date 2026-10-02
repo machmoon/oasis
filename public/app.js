@@ -608,7 +608,7 @@ function pageAgent() {
     const items = replayKit || cart.items;
     const total = items.reduce((s, i) => s + i.price, 0);
     $("#kit").innerHTML = items.length
-      ? `<div class="kit${items.length >= 4 ? " compact" : ""}">${items.map((i) => `<div class="item"><img src="${esc(i.previewUrl)}" alt=""/><div><span>${esc(i.title)}</span><b>${money(i.price)}</b></div></div>`).join("")}</div><div class="total"><span>Total</span><b>${money(total)}</b></div>${replayKit ? `<p class="muted" style="margin:10px 0 0;font-size:12.5px">From the recorded run. Your own cart is untouched.</p>` : ""}`
+      ? `<div class="kit${items.length >= 4 ? " compact" : ""}">${items.map((i) => `<div class="item"><img src="${esc(i.previewUrl)}" alt=""/><div><span>${esc(i.title)}</span><b>${money(i.price)}</b></div></div>`).join("")}</div><div class="total"><span>Total</span><b>${money(total)}</b></div>${replayKit ? `<p class="muted" style="margin:10px 0 0;font-size:12.5px">A recorded run. Nothing was added to your cart.</p>` : ""}`
       : `<div class="empty">Remixes the agent picks land here.</div>`;
   };
   drawKit();
@@ -867,6 +867,39 @@ GET ${esc(o)}/api/assets/pricing-card/render.svg?preset=Indigo</pre></div>
   }).catch(() => {});
 }
 
+async function pageStatus() {
+  setNav("status");
+  app.innerHTML = `<div class="wrap" style="max-width:1000px"><div class="crumbs"><h1>Proof</h1></div><p class="muted">Loading…</p></div>`;
+  const s = await api("/api/status");
+  const GH = "https://github.com/machmoon/oasis/blob/main";
+  const pill = (on, yes, no) => `<span class="state ${on ? "on" : "off"}">${on ? yes : no}</span>`;
+  const when = (t) => (t ? esc(new Date(t).toLocaleString()) : "");
+  const table = (rows, cols, empty) => rows.length
+    ? `<div class="tablewrap"><table class="table"><tr>${cols.map(([h]) => `<th>${h}</th>`).join("")}</tr>${rows.map((r) => `<tr>${cols.map(([, f]) => `<td>${f(r)}</td>`).join("")}</tr>`).join("")}</table></div>`
+    : `<p class="muted" style="margin:0">${empty}</p>`;
+  const nokeys = s.paypalReady ? "" : " This deploy has no PayPal sandbox keys yet, so there is nothing to list.";
+  app.innerHTML = `<div class="wrap" style="max-width:1000px">
+    <div class="crumbs"><h1>Proof</h1></div>
+    <p class="muted" style="font-size:17px;margin-top:0">Read live from this server, not typed by hand. Every PayPal object Oasis creates shows up here with its real sandbox ID.</p>
+    <div class="stats4">
+      <div><span>PayPal sandbox</span>${pill(s.paypalReady, "Connected", "No keys yet")}</div>
+      <div><span>Live agent</span>${pill(s.agentReady, "On", "Off (replay)")}</div>
+      <div><span>Tests</span><b>${esc(s.tests || "?")}</b><a href="${GH}/docs/PROOF.md">names and output</a></div>
+      <div><span>Factory</span><b>${s.factory.published}/${s.factory.builds}</b><a href="${GH}/docs/PROOF.md#factory-v2-verdicts-${s.factory.published}-published-${s.factory.rejected}-rejected-of-${s.factory.builds}">published, every verdict</a></div>
+    </div>
+    <div class="panel"><h3>PayPal orders <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:400">${s.orders.total} total${Object.keys(s.orders.byStatus).length ? " · " + Object.entries(s.orders.byStatus).map(([k, v]) => `${v} ${esc(k.toLowerCase())}`).join(", ") : ""}</span></h3>
+      ${table(s.orders.recent, [["Order", (o) => `<span class="mono">${esc(o.id)}</span>`], ["Status", (o) => esc(o.status)], ["Total", (o) => money(o.total)], ["Requested by", (o) => esc(o.agentName || "a person") + (o.cap ? ` · cap ${money(o.cap)}` : "")], ["Capture", (o) => `<span class="mono">${esc(o.captureId || "")}</span>`], ["Royalties", (o) => esc(o.payoutBatch || o.payoutHold || "")], ["Created", (o) => when(o.createdAt)]], "No orders yet." + nokeys)}</div>
+    <div class="panel"><h3>Webhook events</h3><p class="muted" style="margin:-4px 0 10px;font-size:13px">Each is checked with PayPal's verify-webhook-signature API before anything is trusted. Rejected ones are logged too.</p>
+      ${table(s.webhooks, [["Received", (w) => when(w.at)], ["Event", (w) => `<span class="mono">${esc(w.type)}</span>`], ["Resource", (w) => `<span class="mono">${esc(w.resourceId)}</span>`], ["Signature", (w) => pill(w.verified, "verified", "rejected")], ["Effect", (w) => esc(w.result)]], "No webhook deliveries yet." + nokeys)}</div>
+    <div class="panel"><h3>Royalty payouts</h3><p class="muted" style="margin:-4px 0 10px;font-size:13px">Held for the 14-day refund window, then sent as one Payouts batch per order. A refund in the window cancels them.</p>
+      ${table(s.payouts, [["Item", (p) => `<span class="mono">${esc(p.ref)}</span>`], ["Status", (p) => esc(p.status)], ["PayPal item", (p) => `<span class="mono">${esc(p.itemId || "")}</span>`], ["Updated", (p) => when(p.at)]], "No payouts yet. The first ones release 14 days after the first captured sale of a fork.")}</div>
+    <div class="panel"><h3>Agents over MCP <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:400">since ${when(s.mcp.since)}</span></h3>
+      <div class="stats3"><div><b>${s.mcp.requests}</b><span>requests</span></div><div><b>${Object.values(s.mcp.tools).reduce((a, b) => a + b, 0)}</b><span>tool calls</span></div><div><b>${Object.keys(s.mcp.clients).length}</b><span>distinct clients</span></div></div>
+      <p class="muted" style="margin:10px 0 0;font-size:13px">${Object.entries(s.mcp.tools).map(([t, n]) => `<span class="mono">${esc(t)}</span> ${n}`).join(" · ") || "No tool calls yet."} <a href="${GH}/docs/mcp-session.md">Read a recorded outside-agent session</a>.</p></div>
+    <p class="muted" style="font-size:13px">How the payment path works, with code references: <a href="${GH}/PAYPAL.md">PAYPAL.md</a>.</p>
+  </div>`;
+}
+
 // ---------- router ----------
 async function route() {
   const [path, query] = location.hash.slice(1).split("?");
@@ -881,6 +914,7 @@ async function route() {
   if (parts[0] === "order" && parts[1]) return pageOrder(decodeURIComponent(parts[1]));
   if (parts[0] === "creators") return pageCreators();
   if (parts[0] === "agents") return pageAgents();
+  if (parts[0] === "status") return pageStatus();
   pageHome();
 }
 

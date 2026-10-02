@@ -102,6 +102,12 @@ get a 400; tested). Then:
 `PayPal-Request-Id: oasis-refund-<id>`, within 14 days. Licences are revoked immediately, and downloads return
 `410 Gone` (tested).
 
+## What has actually run
+
+The live deploy lists every order, verified webhook and payout it has produced, with real sandbox IDs, at
+[`/#/status`](https://oasis-design.onrender.com/#/status). Until the sandbox keys are set there, those lists are empty
+and everything above is proven only by `test/commerce.test.mjs` against a fake client.
+
 ## Running it in the sandbox
 
 1. developer.paypal.com → Apps & Credentials → Sandbox → your app: copy the client id and secret into `.env`

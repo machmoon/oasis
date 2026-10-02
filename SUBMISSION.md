@@ -70,7 +70,7 @@ window closes, so nobody is paid on a refunded sale.
 - **Payouts** for royalties, held until the refund window closes and cancelled by a refund; **refunds** within 14 days
   through the Payments API. In production the creator split moves to **PayPal Commerce Platform** (per-unit `payee` +
   `platform_fees`) so refunds unwind it automatically.
-
+- **Where this stands, plainly:** the live deploy has no PayPal sandbox keys yet, so no order has been captured and no Payouts batch has been sent. Every path above is exercised by the tests against a fake PayPal client. Live counts of orders, verified webhooks and payouts: [oasis-design.onrender.com/#/status](https://oasis-design.onrender.com/#/status).
 
 **The asset factory.** 59 of the 67 assets were written by an agent pipeline (5 are
 hand-written programs, 3 are AI forks). The first 36 came from factory v1 (builder self-review only, all since
@@ -93,7 +93,7 @@ system, no network, a 48 MB heap. An allocation storm can outrun QuickJS's own i
 testing), so every server render runs in a worker thread that is **terminated at 3 s**. Output must be SVG and is only
 shown through `<img>`. Paid source never leaves the server; catalogue previews are low-res raster comps.
 
-**Tested.** 25/25 tests pass: price tampering, the capture race, amount-mismatch refunds, refund revocation,
+**Tested.** 26/26 tests pass: price tampering, the capture race, amount-mismatch refunds, refund revocation,
 webhook handling, the spending cap, royalty cents along a fork chain, sandbox escapes and the deadline kill.
 
 **Stack.** Node + Express, a no-build vanilla JS store, Claude Opus 5.5 (agent, forks, factory, grader), MCP Streamable

@@ -95,10 +95,21 @@ export async function createApp() {
   app.post("/api/orders/:id/refund", wrap(async (req, res) => res.json(await commerce.refund(req.params.id, req.body || {}))));
 
   // PayPal webhooks, verified with verify-webhook-signature before anything is trusted.
-  app.post("/api/paypal/webhook", wrap(async (req, res) => {
+  const webhookLimit = rateLimit({ windowMs: 60_000, limit: 60, standardHeaders: "draft-8", legacyHeaders: false });
+  app.post("/api/paypal/webhook", webhookLimit, wrap(async (req, res) => {
     const { verifyWebhook } = await import("./paypal.js");
-    if (!(await verifyWebhook(req.headers, req.body))) return res.status(400).json({ error: "signature verification failed" });
-    res.json({ ok: true, result: await commerce.handleWebhook(req.body) });
+    const ev = req.body || {};
+    const logEvent = (verified, result) => store.put("webhooks", `${Date.now()}-${crypto.randomBytes(3).toString("hex")}`, {
+      at: new Date().toISOString(), eventId: String(ev.id || "").slice(0, 60), type: String(ev.event_type || "").slice(0, 60),
+      resourceId: String(ev.resource?.id || ev.resource?.payout_item_id || "").slice(0, 60), verified, result,
+    }).catch(() => {});
+    if (!(await verifyWebhook(req.headers, req.body))) {
+      await logEvent(false, "rejected: signature verification failed");
+      return res.status(400).json({ error: "signature verification failed" });
+    }
+    const result = await commerce.handleWebhook(req.body);
+    await logEvent(true, result);
+    res.json({ ok: true, result });
   }));
 
   app.get("/api/licenses/:token", wrap(async (req, res) => res.json(await commerce.license(req.params.token))));
@@ -181,6 +192,22 @@ export async function createApp() {
     next();
   };
   const isCreate = (req) => req.body?.method === "tools/call" && req.body?.params?.name === "create_order";
+  // Public evidence page: what the deploy can do and the PayPal objects it has actually produced.
+  const numbers = fs.existsSync("judging/numbers.json") ? JSON.parse(fs.readFileSync("judging/numbers.json", "utf8")) : {};
+  app.get("/api/status", wrap(async (req, res) => {
+    const recent = (rows, n = 12) => rows.sort((a, b) => String(b.createdAt || b.at).localeCompare(String(a.createdAt || a.at))).slice(0, n);
+    const orders = await store.list("orders");
+    const byStatus = orders.reduce((m, o) => ((m[o.status] = (m[o.status] || 0) + 1), m), {});
+    res.set("Cache-Control", "no-cache").json({
+      paypalReady: paypalConfigured(), agentReady: !!config.anthropicKey, paypalEnv: "sandbox",
+      tests: numbers.tests, factory: { builds: numbers.factoryBuilds, published: numbers.factoryPublished, rejected: numbers.factoryRejected },
+      assets: catalog.allAssets().length,
+      orders: { total: orders.length, byStatus, recent: recent(orders).map((o) => ({ id: o.id, status: o.status, total: o.total, items: o.items.length, agentName: o.agentName, cap: o.maxTotal, captureId: o.captureId || null, refundId: o.refundId || null, payoutHold: o.payoutHold?.status || null, payoutBatch: o.payoutBatch?.id || null, createdAt: o.createdAt })) },
+      webhooks: recent(await store.list("webhooks"), 15),
+      payouts: recent(await store.list("payouts"), 15),
+      mcp: mcpStats,
+    });
+  }));
   app.get("/api/stats/mcp", (req, res) => res.set("Cache-Control", "no-cache").json(mcpStats));
   app.post("/mcp", mcpLimit, (req, res, next) => (isCreate(req) ? mcpOrderLimit(req, res, next) : next()), countMcp, handleMcp);
   app.get("/mcp", (req, res) => res.status(405).json({ jsonrpc: "2.0", error: { code: -32000, message: "Method not allowed. POST JSON-RPC to /mcp." }, id: null }));

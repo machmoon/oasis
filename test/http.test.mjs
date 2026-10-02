@@ -57,3 +57,12 @@ test("MCP create_order is rate limited per client, and MCP traffic is counted pu
   const stats = await (await fetch(`${base}/api/stats/mcp`)).json();
   assert.ok(stats.tools.create_order >= 10);
 });
+
+test("the public proof page logs a forged webhook as rejected and reports readiness honestly", async () => {
+  await fetch(`${base}/api/paypal/webhook`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: "WH-FORGED", event_type: "PAYMENT.CAPTURE.REFUNDED", resource: { id: "CAP1" } }) });
+  const s = await (await fetch(`${base}/api/status`)).json();
+  const w = s.webhooks.find((x) => x.eventId === "WH-FORGED");
+  assert.equal(w.verified, false);
+  assert.match(w.result, /rejected/);
+  assert.equal(typeof s.paypalReady, "boolean");
+});
