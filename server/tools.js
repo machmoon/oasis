@@ -152,11 +152,12 @@ export async function buyAssets({ items, mandate, agent_name }) {
 }
 
 // ---------- films: an agent asks for a short film, licenses it inside the budget, and gets an MP4 ----------
-export async function makeFilm({ brief, mandate, agent_name, direct = true }) {
+export async function makeFilm({ brief, mandate, agent_name, format, direct = true }) {
   const film = await import("./film.js");
   const render = await import("./film-render.js");
   let f = await film.planFilm(String(brief || "").slice(0, 400));
   if (direct) { try { f = (await film.direct(f, f.brief)) || f; } catch {} }
+  if (format) f = film.cleanFilm({ ...f, format });
   f = await film.save(f);
   let licence = null;
   if (mandate) {
@@ -180,7 +181,7 @@ async function filmStatus(f, { canRender }) {
   const bill = film.billOf(f);
   return {
     film_id: f.id, title: f.title, link: `${config.baseUrl}/#/film/${f.id}`, seconds: f.seconds, shots: f.shots.map((s) => `${s.kind} ${s.seconds}s ${s.time}${s.card ? " + card" : ""}`),
-    signs: f.signs.map((s) => `${s.title} (${s.where}) by ${s.author}`), brand: f.brand,
+    signs: f.signs.map((s) => `${s.title} (${s.where}) by ${s.author}`), brand: f.brand, weather: f.weather, music: f.music?.mood || null, format: f.format,
     bill: bill.lines.map((l) => ({ asset_id: l.asset, title: l.title, kind: l.kind, use: l.use, price_usd: l.price, author: l.author })), total_usd: bill.total, creators: bill.creators,
     licensed: !!f.licence, order_id: f.licence?.orderId || null, creators_paid: f.licence?.creators || [],
     render: f.render?.status || "idle", progress: f.render?.progress ?? 0, mp4: f.render?.status === "done" ? `${config.baseUrl}/api/films/${f.id}/film.mp4` : null,

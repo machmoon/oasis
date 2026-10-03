@@ -126,3 +126,48 @@ test("llms.txt and MCP list the film tools", async () => {
   const names = j.result.tools.map((t) => t.name);
   assert.ok(names.includes("make_film") && names.includes("get_film"));
 });
+
+test("the soundtrack is a program: same seed, same bytes, a real WAV", async () => {
+  const music = await import("../server/film-music.js");
+  const a = music.toWav(music.compose({ seed: "momiji", mood: "warm", seconds: 3 }));
+  const b = music.toWav(music.compose({ seed: "momiji", mood: "warm", seconds: 3 }));
+  assert.ok(a.equals(b));
+  assert.equal(a.toString("ascii", 0, 4), "RIFF");
+  assert.equal(a.readUInt32LE(24), 44100);
+  assert.equal(a.readUInt16LE(22), 2, "stereo");
+  assert.ok(a.length > 44100 * 4 * 3, "longer than the film, for the tail");
+  assert.ok(!music.toWav(music.compose({ seed: "tidepool", mood: "cool", seconds: 3 })).equals(a));
+  let peak = 0;
+  for (let i = 44; i < a.length; i += 2) peak = Math.max(peak, Math.abs(a.readInt16LE(i)));
+  assert.ok(peak > 3000 && peak <= 32767, `audible and unclipped (peak ${peak})`);
+});
+
+test("weather, music, light ramps, lower-thirds and formats survive cleanFilm; junk does not", async () => {
+  const f = await film.planFilm(BRIEF);
+  assert.equal(f.weather, "blossom");
+  assert.equal(f.music.mood, "warm");
+  assert.equal(f.format, "16:9");
+  const crane = f.shots.find((s) => s.kind === "crane");
+  assert.equal(crane.time, "dusk"); assert.equal(crane.timeTo, "night");
+  assert.equal(f.shots.find((s) => s.kind === "dolly").card.layout, "lower");
+  const c = film.cleanFilm({ ...f, weather: "lava", music: { mood: "angry" }, format: "4:3", shots: [{ kind: "static", seconds: 2, time: "day", timeTo: "day", target: [0, 1, 0], azimuth: 0, radius: 10, height: 5, card: { asset: "wordmark-type", layout: "sideways" } }] });
+  assert.equal(c.weather, "none");
+  assert.equal(c.music.mood, "warm");
+  assert.equal(c.format, "16:9");
+  assert.equal(c.shots[0].timeTo, undefined, "a ramp to the same time is no ramp");
+  assert.equal(c.shots[0].card.layout, "full");
+  const tall = film.cleanFilm({ ...f, format: "9:16" });
+  assert.deepEqual(tall.size, [720, 1280]);
+  assert.equal(film.cleanFilm({ ...f, music: null }).music, null);
+});
+
+test("HTTP: music.wav streams and a format change keeps the cut and resets the render", async () => {
+  const f = await (await fetch(`${base}/api/films`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ brief: BRIEF, direct: false }) })).json();
+  const wav = await fetch(`${base}/api/films/${f.id}/music.wav`);
+  assert.equal(wav.headers.get("content-type"), "audio/wav");
+  assert.ok((await wav.arrayBuffer()).byteLength > 44100 * 4 * f.seconds);
+  const sq = await (await fetch(`${base}/api/films/${f.id}/format`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ format: "1:1" }) })).json();
+  assert.deepEqual(sq.size, [1080, 1080]);
+  assert.deepEqual(sq.shots.map((s) => s.id), f.shots.map((s) => s.id));
+  assert.equal(sq.render.status, "idle");
+});

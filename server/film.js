@@ -12,9 +12,14 @@ import * as store from "./store.js";
 import { bounds } from "./blocks.js";
 import { resolveKnobs, completeBrand } from "./knobs.js";
 import { config } from "./config.js";
+import { moodOf, MOODS } from "./film-music.js";
 
 export const FPS = 30;
 export const SIZE = [1280, 720];
+// Formats, as Remotion compositions carry a width and height: the same film renders landscape, vertical or square.
+export const FORMATS = { "16:9": [1280, 720], "9:16": [720, 1280], "1:1": [1080, 1080] };
+export const WEATHER = ["none", "blossom", "snow", "rain", "leaves"];
+const weatherOf = (theme) => ({ kyoto: "blossom", candy: "blossom", winter: "snow", autumn: "leaves" }[theme] || "none");
 const CELL = world.CELL;
 export const SHOT_KINDS = ["orbit", "dolly", "push", "crane", "static"];
 const TIMES = ["day", "dusk", "night"];
@@ -112,13 +117,13 @@ export async function planFilm(brief, { seed } = {}) {
   const R = Math.max(W, D);
   const shots = [
     { id: "k0", kind: "orbit", seconds: 4, time, fov: 34, target: centre, radius: R * 1.15, height: R * 0.42, from: az - 40, to: az - 12 },
-    { id: "k1", kind: "dolly", seconds: 3.5, time, fov: 50, from: [1.5, 1.9, roadZ], to: [W - 7, 1.9, roadZ], look: [W + 10, 1.5, roadZ + 1.5] },
+    { id: "k1", kind: "dolly", seconds: 3.5, time, fov: 50, from: [1.5, 1.9, roadZ], to: [W - 7, 1.9, roadZ], look: [W + 10, 1.5, roadZ + 1.5], card: { asset: "wordmark-type", layout: "lower", knobs: { text: name.toUpperCase().slice(0, 14) }, scrim: 0, fade: 0.5 } },
     { id: "k2", kind: "push", seconds: 3, time, fov: 50, target: [hc[0], 2.6, hc[2]], azimuth: az + 18, radius: [9, 6.5], height: [3.6, 2.8] },
-    { id: "k3", kind: "crane", seconds: 3, time: "night", fov: 40, target: [hc[0], 2, hc[2]], azimuth: az - 24, radius: [15, 24], height: [9, 18] },
+    { id: "k3", kind: "crane", seconds: 3.5, time: time === "night" ? "night" : "dusk", timeTo: "night", fov: 40, target: [hc[0], 2, hc[2]], azimuth: az - 24, radius: [15, 24], height: [9, 18] },
     { id: "k4", kind: "static", seconds: 2.8, time: "night", fov: 40, target: [hc[0], 3, hc[2]], azimuth: az + 8, radius: 11, height: 4.5, card: { asset: "wordmark-type", knobs: { text: name.toUpperCase().slice(0, 14) }, scrim: 0.55, fade: 0.6 } },
   ];
   const place = { kyoto: "a Kyoto street", seaside: "a seaside street", winter: "a winter street", autumn: "an autumn street", candy: "a candy street", town: "a street" }[plan.theme] || "a street";
-  return cleanFilm({ title: `${name}: ${place}`, brief, brand, world: plan, signs, shots });
+  return cleanFilm({ title: `${name}: ${place}`, brief, brand, world: plan, signs, shots, weather: weatherOf(plan.theme), music: { seed: brief, mood: moodOf(plan.theme, time) } });
 }
 
 /** Validates a film: real assets, resolved knobs, finite numbers, shots inside limits. Never trusts the model. */
@@ -147,6 +152,7 @@ export function cleanFilm(f) {
     const v3 = (v, d) => (Array.isArray(v) && v.length === 3 && v.every((n) => Number.isFinite(Number(n))) ? v.map((n) => clamp(n, -200, 400)) : d);
     const pair = (v, lo, hi, d) => (Array.isArray(v) ? [clamp(v[0], lo, hi), clamp(v[1], lo, hi)] : v !== undefined ? [clamp(v, lo, hi), clamp(v, lo, hi)] : d);
     const out = { id: s.id || `k${shots.length}`, kind: s.kind, seconds, time: TIMES.includes(s.time) ? s.time : plan.time, fov: clamp(s.fov ?? 40, 20, 75) };
+    if (TIMES.includes(s.timeTo) && s.timeTo !== out.time) out.timeTo = s.timeTo; // the light changes inside the shot
     if (s.kind === "dolly") { out.from = v3(s.from, [0, 2, 15]); out.to = v3(s.to, [30, 2, 15]); out.look = v3(s.look, [40, 1.5, 14]); }
     else {
       out.target = v3(s.target, [plan.size[0] / 2, 1.5, plan.size[1] / 2]);
@@ -157,12 +163,15 @@ export function cleanFilm(f) {
     }
     if (s.card) {
       const a = catalog.getAsset(s.card.asset);
-      if (a && a.format === "svg" && SIGN_ASSETS[a.id]?.card) out.card = { asset: a.id, title: a.title, author: a.author, price: a.price, knobs: resolveKnobs(a.params, s.card.knobs || {}), scrim: clamp(s.card.scrim ?? 0.5, 0, 0.9), fade: clamp(s.card.fade ?? 0.5, 0, 2) };
+      if (a && a.format === "svg" && SIGN_ASSETS[a.id]?.card) out.card = { asset: a.id, title: a.title, author: a.author, price: a.price, knobs: resolveKnobs(a.params, s.card.knobs || {}), layout: s.card.layout === "lower" ? "lower" : "full", scrim: clamp(s.card.scrim ?? (s.card.layout === "lower" ? 0 : 0.5), 0, 0.9), fade: clamp(s.card.fade ?? 0.5, 0, 2) };
     }
     shots.push(out);
   }
   if (!shots.length) shots.push({ id: "k0", kind: "orbit", seconds: 4, time: plan.time, target: [plan.size[0] / 2, 1.5, plan.size[1] / 2], radius: [40, 40], height: [20, 20], from: 140, to: 170 });
-  return { title: String(f.title || plan.title || plan.prompt || "Untitled film").slice(0, 80), brief: String(f.brief || "").slice(0, 400), brand, world: plan, signs, shots, fps: FPS, size: SIZE, seconds: Math.round(total * 100) / 100 };
+  const format = FORMATS[f.format] ? f.format : "16:9";
+  const weather = WEATHER.includes(f.weather) ? f.weather : "none";
+  const music = f.music === null ? null : { seed: String(f.music?.seed || f.brief || "oasis").slice(0, 400), mood: MOODS[f.music?.mood] ? f.music.mood : "warm" };
+  return { title: String(f.title || plan.title || plan.prompt || "Untitled film").slice(0, 80), brief: String(f.brief || "").slice(0, 400), brand, world: plan, signs, shots, fps: FPS, format, size: FORMATS[format], weather, music, seconds: Math.round(total * 100) / 100 };
 }
 
 /** One line per licence the film needs: each kit piece once, each 2D asset once. Free pieces are listed, not charged. */
@@ -196,12 +205,14 @@ const DIRECT_TOOL = {
         type: "array",
         description: "In order. orbit: target, radius, height, from/to azimuth degrees. push and crane: target, azimuth, radius [start,end], height [start,end]. dolly: from, to, look (metres). static: target, azimuth, radius, height, optional card.",
         items: { type: "object", properties: {
-          kind: { type: "string", enum: SHOT_KINDS }, seconds: { type: "number" }, time: { type: "string", enum: TIMES }, fov: { type: "number", description: "vertical field of view in degrees, 20-75; 50 feels like a wide lens" },
+          kind: { type: "string", enum: SHOT_KINDS }, seconds: { type: "number" }, time: { type: "string", enum: TIMES }, timeTo: { type: "string", enum: TIMES, description: "if set, the light fades from time to timeTo across the shot (dusk to night makes the windows and signs come on)" }, fov: { type: "number", description: "vertical field of view in degrees, 20-75; 50 feels like a wide lens" },
           target: { type: "array", items: { type: "number" } }, azimuth: { type: "number" }, from: {}, to: {}, look: { type: "array", items: { type: "number" } },
           radius: {}, height: {},
-          card: { type: "object", properties: { asset: { type: "string" }, knobs: { type: "object", additionalProperties: true }, scrim: { type: "number" }, fade: { type: "number" } } },
+          card: { type: "object", properties: { asset: { type: "string" }, layout: { type: "string", enum: ["full", "lower"], description: "full: centred over a scrim (end card). lower: a lower-third title at the bottom left while the shot plays" }, knobs: { type: "object", additionalProperties: true }, scrim: { type: "number" }, fade: { type: "number" } } },
         }, required: ["kind", "seconds"] },
       },
+      weather: { type: "string", enum: WEATHER, description: "what falls through the air: blossom petals, snow, rain, autumn leaves, or nothing" },
+      music: { type: "object", properties: { mood: { type: "string", enum: Object.keys(MOODS) } }, description: "the generated soundtrack's mood: warm (major pentatonic plucks), bright (quicker, major), cool (slower, minor)" },
       say: { type: "string", description: "One sentence to the person about the film you cut" },
     },
     required: ["shots"],
@@ -219,7 +230,7 @@ export async function direct(film, request) {
   const msg = await client.messages.create({
     model: config.agentModel,
     max_tokens: 3000,
-    system: `You direct short films shot inside toy-block streets built from parametric 3D pieces, dressed with 2D design assets as signs. The world is ${W} x ${D} m (x across, z deep, y up); the road runs along x at z ${2 * CELL}..${3 * CELL}; buildings face it from rows z ${CELL}..${2 * CELL} and ${3 * CELL}..${4 * CELL}. Cameras: azimuth 0 looks toward -z from +z, 180 looks toward +z. A piece's front is seen from its front_seen_from_azimuth. Keep cameras above y 1.2. A camera at street level must stay inside the road (z between 12.5 and 17.5), so a radius from a building on the far row is at most 9 m; wider views go above the roofs (height 9+). Window lights glow at night; one night shot near the end always lands. End on a static shot with a card that carries the brand name. Total under 18 seconds, 4-6 shots. Write sign copy in the brand's voice: short, specific, no slogans with "elevate" or "seamless". Always answer by calling write_film.`,
+    system: `You direct short films shot inside toy-block streets built from parametric 3D pieces, dressed with 2D design assets as signs. The street is alive: the tram runs its rails and parked cars drive by, and weather can fall through the air. The world is ${W} x ${D} m (x across, z deep, y up); the road runs along x at z ${2 * CELL}..${3 * CELL}; buildings face it from rows z ${CELL}..${2 * CELL} and ${3 * CELL}..${4 * CELL}. Cameras: azimuth 0 looks toward -z from +z, 180 looks toward +z. A piece's front is seen from its front_seen_from_azimuth. Keep cameras above y 1.2. A camera at street level must stay inside the road (z between 12.5 and 17.5), so a radius from a building on the far row is at most 9 m; wider views go above the roofs (height 9+). Window lights glow at night; one night shot near the end always lands. End on a static shot with a card that carries the brand name. Total under 18 seconds, 4-6 shots. Write sign copy in the brand's voice: short, specific, no slogans with "elevate" or "seamless". Always answer by calling write_film.`,
     tools: [DIRECT_TOOL],
     messages: [{ role: "user", content: `Brief: ${request}\n\nHero piece: ${hero.id} (${hero.asset}) at ${JSON.stringify(hero.at)} rot ${hero.rot}.\nPieces: ${JSON.stringify(pieces)}\nSign assets: ${JSON.stringify(signAssets)}\nCurrent film: ${JSON.stringify({ title: film.title, brand: film.brand, signs: film.signs.map((s) => ({ asset: s.asset, placement: s.placement, where: s.where, knobs: s.knobs })), shots: film.shots })}` }],
   });
@@ -227,7 +238,7 @@ export async function direct(film, request) {
   if (!call) return null;
   const e = call.input;
   const brand = e.brand ? completeBrand({ ...film.brand, ...Object.fromEntries(Object.entries(e.brand).filter(([k, v]) => k !== "name" && /^#[0-9a-fA-F]{6}$/.test(String(v)))) }) : film.brand;
-  const next = cleanFilm({ ...film, title: e.title || film.title, brand, signs: e.signs || film.signs, shots: e.shots || film.shots });
+  const next = cleanFilm({ ...film, title: e.title || film.title, brand, signs: e.signs || film.signs, shots: e.shots || film.shots, weather: e.weather || film.weather, music: e.music?.mood ? { ...film.music, mood: e.music.mood } : film.music });
   return { ...next, say: String(e.say || "").slice(0, 200), by: "director" };
 }
 
@@ -246,5 +257,5 @@ export async function hydrate(film) {
   const parts = await Promise.all(keys.map(async (k) => (await catalog.buildAsync(catalog.getAsset(k.slice(0, k.indexOf("|"))), JSON.parse(k.slice(k.indexOf("|") + 1)))).parts));
   const byKey = Object.fromEntries(keys.map((k, i) => [k, i]));
   const signs = await Promise.all(film.signs.map(async (s) => ({ ...s, mount: await mountSign(s, film.world) })));
-  return { ...film, parts, placements: film.world.placements.map((p) => ({ id: p.id, asset: p.asset, at: p.at, rot: p.rot, part: byKey[p.asset + "|" + JSON.stringify(p.knobs)] })), signs, bill: billOf(film) };
+  return { ...film, parts, musicUrl: film.music ? `/api/films/${film.id}/music.wav` : null, placements: film.world.placements.map((p) => ({ id: p.id, asset: p.asset, at: p.at, rot: p.rot, part: byKey[p.asset + "|" + JSON.stringify(p.knobs)] })), signs, bill: billOf(film) };
 }

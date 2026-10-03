@@ -45,7 +45,9 @@ after a separate grader looked at renders from several angles and at night (`fac
 
 A film is a program too: `server/film.js` plans it (the street, the signs, the shots), Claude can redirect it through one
 typed `write_film` call that the server validates, and `public/film-player.js` draws frame N from the film alone. The
-server renders the way Remotion does (`remotion-dev/remotion`, `packages/renderer/src/render-frames.ts`): headless
+The set is alive (the tram runs, cars drive, dusk fades into night inside a shot), weather falls by theme, and the
+soundtrack is synthesised from the film's seed (`server/film-music.js`: Karplus-Strong plucks over a pad) and muxed in.
+Formats: 16:9, 9:16 and 1:1 from the same cut. The server renders the way Remotion does (`remotion-dev/remotion`, `packages/renderer/src/render-frames.ts`): headless
 Chromium seeks every frame on `/film.html`, ffmpeg stitches them (`server/film-render.js`). Without Playwright or
 ffmpeg the studio still plays the film live and exports a WebM from the browser.
 

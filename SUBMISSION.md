@@ -42,7 +42,10 @@ every one in your palette.
 **Make a film of it.** The studio (`/#/studio`) turns a brief into a short film: the street is built from the kit, 2D
 design assets (a wordmark, a poster) are hung on it as roof and kerb signs in the brand's colours, Claude directs the
 cut (orbit, a dolly down the road, a push-in on the shop, a night crane past the glowing sign, an end card), and the
-server renders a 1280x720 MP4 frame by frame, so the same brief always gives the same film. Every piece, sign and card
+server renders the MP4 frame by frame, so the same brief always gives the same film. The street is alive: the tram
+runs, cars drive, cherry blossom or snow falls by theme, and the light fades from dusk to night inside a shot as the
+windows and the sign come on. Even the soundtrack is a program, synthesised from the film's seed and muxed in. The same
+cut renders landscape, vertical or square. Every piece, sign and card
 in it is one line on one bill, licensed in one order inside the human's budget. Until it is licensed, paid pieces
 render grey and signs carry a watermark. Agents get the same thing over MCP with `make_film` and `get_film`.
 

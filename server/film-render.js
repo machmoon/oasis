@@ -10,6 +10,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { config } from "./config.js";
 import * as film from "./film.js";
+import { musicFor } from "./film-music.js";
 
 const queue = [];
 let running = false;
@@ -51,7 +52,11 @@ async function render(id) {
   await film.save(f, { render: { status: "rendering", progress: 0, frames, at: new Date().toISOString() } });
   fs.mkdirSync(path.dirname(mp4Path(id)), { recursive: true });
   const out = mp4Path(id) + ".part.mp4";
+  // the soundtrack is generated from the film and muxed in; -shortest trims it to the picture
+  const wav = mp4Path(id).replace(/\.mp4$/, ".wav");
+  if (f.music) fs.writeFileSync(wav, musicFor(f));
   const ff = spawn("ffmpeg", ["-y", "-loglevel", "error", "-f", "image2pipe", "-framerate", String(f.fps), "-c:v", "mjpeg", "-i", "-",
+    ...(f.music ? ["-i", wav, "-c:a", "aac", "-b:a", "160k", "-shortest"] : []),
     "-c:v", "libx264", "-preset", "medium", "-crf", "18", "-pix_fmt", "yuv420p", "-movflags", "+faststart", out]);
   let ffErr = "";
   ff.stderr.on("data", (d) => (ffErr += d));

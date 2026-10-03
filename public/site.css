@@ -249,12 +249,17 @@ footer a { color: var(--ink-2); margin-left: 16px; }
 
 .s-main { padding: 22px 24px 32px; display: grid; grid-template-rows: auto auto auto; gap: 14px; align-content: start; min-width: 0; }
 .studio [hidden] { display: none !important; }
-.screen { position: relative; aspect-ratio: 16 / 9; background: #07080B; border-radius: 18px; overflow: hidden; box-shadow: var(--shadow); }
+.screen { position: relative; aspect-ratio: 16 / 9; max-width: 100%; background: #07080B; border-radius: 18px; overflow: hidden; box-shadow: var(--shadow); }
 .stage-film { position: absolute; inset: 0; }
 .screen-empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 14px; }
 .screen-empty .skel { position: absolute; inset: 0; border-radius: 0; opacity: .5; }
 .screen-empty span { position: relative; }
-.transport { display: grid; grid-template-columns: auto auto 1fr; gap: 14px; align-items: center; }
+.transport { display: grid; grid-template-columns: auto auto 1fr auto; gap: 14px; align-items: center; }
+.formats { display: flex; gap: 4px; }
+.fbtn { height: 32px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); font: 500 12.5px var(--mono); cursor: pointer; }
+.fbtn:hover { color: var(--ink); }
+.fbtn.on { color: var(--ink); border-color: var(--ink-2); background: var(--sunk); }
+.screen.tall { height: 70vh; width: auto; margin: 0 auto; }
 .tbtn { width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); display: grid; place-items: center; cursor: pointer; font-size: 18px; }
 .tbtn:hover { border-color: var(--ink-2); }
 .tclock { font: 13px var(--mono); color: var(--muted); white-space: nowrap; min-width: 110px; }

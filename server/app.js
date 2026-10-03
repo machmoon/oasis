@@ -19,6 +19,7 @@ import * as registry from "./registry.js";
 import * as paypal from "./paypal.js";
 import * as film from "./film.js";
 import * as filmRender from "./film-render.js";
+import { musicFor } from "./film-music.js";
 
 export async function createApp() {
   await catalog.load();
@@ -274,6 +275,17 @@ export async function createApp() {
     const o = items.length ? await commerce.buyWithMandate(mandate, items, { agentName: String(req.body?.agent_name || "Oasis Studio").slice(0, 40) }) : null;
     const licence = { orderId: o?.id || "free", total: o?.total || 0, creators: o ? commerce.saleEvent(o).creators : [], tokens: Object.fromEntries((o?.licenses || []).map((l) => [l.assetId, l.token])), at: new Date().toISOString() };
     res.json(await filmView(await film.save(f, { licence, render: null })));
+  }));
+  app.get("/api/films/:id/music.wav", wrap(async (req, res) => {
+    const f = await mustFilm(req.params.id);
+    if (!f.music) throw Object.assign(new Error("This film has no music"), { status: 404 });
+    res.set("Content-Type", "audio/wav").set("Cache-Control", "public, max-age=3600").send(musicFor(f));
+  }));
+  // The same film in another format (landscape, vertical, square): the cut is kept, the render starts over.
+  app.post("/api/films/:id/format", filmLimit, wrap(async (req, res) => {
+    const f = await mustFilm(req.params.id);
+    const next = film.cleanFilm({ ...f, format: String(req.body?.format || "16:9") });
+    res.json(await filmView(await film.save({ ...f, ...next, render: null })));
   }));
   app.post("/api/films/:id/render", filmLimit, wrap(async (req, res) => {
     const f = await mustFilm(req.params.id);

@@ -63,6 +63,7 @@ export async function pageStudio(app, id) {
         <button class="tbtn" id="play" aria-label="Play">${icon("play")}</button>
         <span class="tclock" id="tclock">0:00.0 / 0:00.0</span>
         <div class="scrub" id="scrub" role="slider" aria-label="Time" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0"><div class="segs" id="segs"></div><div class="head" id="head"></div></div>
+        <div class="formats" id="formats" role="group" aria-label="Format">${["16:9", "9:16", "1:1"].map((k) => `<button class="fbtn" data-f="${k}" title="${k === "16:9" ? "Landscape" : k === "9:16" ? "Vertical, for Reels and Shorts" : "Square"}">${k}</button>`).join("")}</div>
       </div>
       <div class="strip" id="strip"></div>
     </section>
@@ -135,12 +136,15 @@ async function mountFilm(f, { example = false } = {}) {
   document.title = `${f.title}: Oasis Studio`;
   drawBill(f);
 
+  screen.style.aspectRatio = `${f.size[0]} / ${f.size[1]}`;
+  screen.classList.toggle("tall", f.size[1] > f.size[0]);
   const stage = document.createElement("div");
   stage.className = "stage-film";
   screen.appendChild(stage);
   try {
     await document.fonts.ready;
-    player = await createFilmPlayer(stage, f);
+    player = await createFilmPlayer(stage, f, { audio: true });
+    window.__player = player; // for smoke tests
   } catch (e) {
     $("#screen-note").textContent = `The set could not build: ${e.message}`;
     return;
@@ -153,6 +157,13 @@ async function mountFilm(f, { example = false } = {}) {
 function drawTransport(f) {
   const tr = $("#transport"), play = $("#play"), head = $("#head"), scrub = $("#scrub"), clk = $("#tclock");
   tr.hidden = false;
+  $("#formats").querySelectorAll(".fbtn").forEach((b) => b.classList.toggle("on", b.dataset.f === f.format));
+  $("#formats").onclick = async (e) => {
+    const b = e.target.closest(".fbtn");
+    if (!b || b.dataset.f === film.format) return;
+    b.disabled = true;
+    try { await mountFilm(await api(`/api/films/${film.id}/format`, { method: "POST", body: { format: b.dataset.f } })); } catch (err) { toast(err.message); b.disabled = false; }
+  };
   const tint = { day: "var(--seg-day)", dusk: "var(--seg-dusk)", night: "var(--seg-night)" };
   $("#segs").innerHTML = f.shots.map((s) => `<span style="flex:${s.seconds};background:${tint[s.time]}" title="${esc(SHOT_NAMES[s.kind])}, ${s.seconds}s, ${s.time}"></span>`).join("");
   const paint = (info, playing) => {
@@ -173,7 +184,7 @@ function drawTransport(f) {
   scrub.onkeydown = (e) => { if (e.key === "ArrowRight") player.goto(Math.min(player.duration, player.time + 0.5)); if (e.key === "ArrowLeft") player.goto(Math.max(0, player.time - 0.5)); if (e.key === " ") { e.preventDefault(); play.click(); } };
   // when paused, the player only draws on goto(); keep the clock honest after a pause
   player.onTime((info, playing) => { if (!playing) paint(info, false); });
-  if (!matchMedia("(prefers-reduced-motion: reduce)").matches) player.play(0);
+  if (!matchMedia("(prefers-reduced-motion: reduce)").matches) player.buildIn().then(() => { if (player && !player.playing) player.play(0); });
 }
 
 function drawStrip(f) {
@@ -195,7 +206,10 @@ function drawBill(f) {
     <div class="bom">
       <h3>The set <span>${set.length} programs</span></h3>${lines(set.slice(0, 5))}${set.length > 5 ? `<details><summary>${set.length - 5} more pieces</summary>${lines(set.slice(5))}</details>` : ""}
       ${signs.length ? `<h3>Signs <span>2D, in your brand</span></h3>${lines(signs)}` : ""}
-      ${cards.length ? `<h3>End card</h3>${lines(cards)}` : ""}
+      ${cards.length ? `<h3>Cards</h3>${lines(cards)}` : ""}
+      <h3>Air and sound</h3>
+      <div class="line"><span>${f.weather === "none" ? "Clear air" : { blossom: "Cherry blossom", snow: "Snow", rain: "Rain", leaves: "Autumn leaves" }[f.weather]}<small>weather, a function of time and seed</small></span><em>Free</em></div>
+      ${f.music ? `<div class="line"><span>Soundtrack, ${esc(f.music.mood)}<small>plucked strings and a pad, synthesised from this film's seed</small></span><em>Free</em></div>` : ""}
       <div class="total"><span>Licenses everything, once</span><em>${usd(bill.total)}</em></div>
     </div>
     <div class="palette" aria-label="Brand palette">${["primary", "secondary", "highlight", "background", "ink"].map((k) => `<i style="background:${esc(f.brand[k])}" title="${k}"></i>`).join("")}</div>
@@ -206,7 +220,7 @@ function drawBill(f) {
            ${budget?.token ? `<button class="btn primary" id="license">${icon("hand-coins")} License with my budget</button>` : `<a class="btn primary" href="#/budget">${icon("hand-coins")} Give your agent a budget</a>`}`}
     </div>
     <div class="export" id="export">
-      ${r.status === "done" ? `<a class="btn primary" href="/api/films/${f.id}/film.mp4" download="${esc(f.title)}.mp4">${icon("download-simple")} Download MP4</a><p class="muted">${f.size.join("×")}, ${f.fps} fps, ${(r.bytes / 1e6).toFixed(1)} MB.</p>`
+      ${r.status === "done" ? `<a class="btn primary" href="/api/films/${f.id}/film.mp4" download="${esc(f.title)}.mp4">${icon("download-simple")} Download MP4</a><p class="muted">${f.size.join("×")}, ${f.fps} fps${f.music ? ", with soundtrack" : ""}, ${(r.bytes / 1e6).toFixed(1)} MB.</p>`
         : r.status === "rendering" || r.status === "queued" ? `<div class="progress" role="progressbar" aria-valuenow="${Math.round((r.progress || 0) * 100)}"><i style="width:${Math.round((r.progress || 0) * 100)}%"></i></div><p class="muted">Rendering frame by frame on the server, ${Math.round((r.progress || 0) * 100)}%.</p>`
         : r.status === "failed" ? `<p class="err">Render failed: ${esc(r.error)}</p><button class="btn" id="render">${icon("film-reel")} Try again</button>`
         : f.renderer ? `<button class="btn" id="render">${icon("film-reel")} Render MP4</button>` : ""}
