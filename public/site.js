@@ -1,6 +1,7 @@
 // Oasis: a registry of 3D assets as code. A human approves one PayPal budget; agents license every piece they
 // import and each creator is paid. Pages: home, budget, ledger, kit, asset.
 import { createViewer, THREE } from "/world3d.js";
+import { pageStudio, leaveStudio } from "/studio.js";
 
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -74,7 +75,7 @@ async function pageHome() {
         <p class="lede">Oasis is a registry of 3D assets written as code. Approve one PayPal budget, and agents license every piece they import.</p>
         <div class="cta">
           <a class="btn primary" href="#/budget">Give your agent a budget</a>
-          <a class="link" href="#/kit">See the kit</a>
+          <a class="link" href="#/studio">Make a film in the studio</a>
         </div>
       </div>
       <div class="stage" id="hero-stage" role="img" aria-label="A Kyoto street built from Oasis registry pieces, rotating slowly"><div class="tag" id="hero-tag">Loading the street</div></div>
@@ -96,6 +97,11 @@ async function pageHome() {
       <div class="knobbox"><div class="stage" id="knob-stage" role="img" aria-label="Apartment Flats, rebuilt live as you move the knobs"></div>
         <div class="knobs" id="knobs"><div class="skel" style="height:20px"></div></div></div>
     </div>
+  </div></section>
+
+  <section class="band"><div class="wrap">
+    <div class="head rise"><h2>Describe a film. Every creator in it gets paid.</h2><p>The studio builds a street from the kit, hangs 2D design assets on it as signs in your brand, cuts the camera moves and renders the MP4. Every frame is a program, so the same brief gives the same film.</p></div>
+    <div class="reel rise" id="reel"></div>
   </div></section>
 
   <section class="band"><div class="wrap">
@@ -156,6 +162,17 @@ buy_assets      get_budget`;
   mountKnobDemo();
   drawKit($("#kit"));
   drawSales();
+  drawReel();
+}
+
+async function drawReel() {
+  const el = $("#reel");
+  const films = await api("/api/films").catch(() => []);
+  const f = films[0];
+  el.innerHTML = f
+    ? `<video src="${esc(f.mp4)}" autoplay muted loop playsinline aria-label="${esc(f.title)}, a film rendered by the Oasis studio"></video>
+       <div class="reel-side"><h3>${esc(f.title)}</h3><p class="muted">"${esc(f.brief)}"</p><p>${f.seconds}s, ${f.creators} creators${f.licensed ? ", licensed in one PayPal order" : ""}.</p><a class="btn primary" href="#/studio">Make yours</a></div>`
+    : `<div class="reel-side"><h3>No film has been rendered here yet.</h3><p class="muted">Open the studio, describe one, and it builds in front of you.</p><a class="btn primary" href="#/studio">Make a film</a></div>`;
 }
 
 async function mountKnobDemo() {
@@ -400,10 +417,11 @@ function notFound(msg) {
 // ---------- router ----------
 async function route() {
   disposeViewers();
+  leaveStudio();
   source?.close();
   const [path] = location.hash.slice(1).split("?");
   const seg = (path || "/").split("/").filter(Boolean);
-  document.querySelectorAll("[data-nav]").forEach((a) => a.classList.toggle("on", a.dataset.nav === (seg[0] || "home")));
+  document.querySelectorAll("[data-nav]").forEach((a) => a.classList.toggle("on", a.dataset.nav === (seg[0] === "film" ? "studio" : seg[0] || "home")));
   window.scrollTo(0, 0);
   try {
     if (!seg.length) await pageHome();
@@ -411,6 +429,8 @@ async function route() {
     else if (seg[0] === "ledger") await pageLedger();
     else if (seg[0] === "kit") await pageKit();
     else if (seg[0] === "a" && seg[1]) await pageAsset(seg[1]);
+    else if (seg[0] === "studio") await pageStudio(app, null);
+    else if (seg[0] === "film" && seg[1]) await pageStudio(app, seg[1]);
     else notFound("That page doesn't exist.");
   } catch (e) {
     console.error(e);

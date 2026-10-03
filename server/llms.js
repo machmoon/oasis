@@ -31,6 +31,14 @@ get_asset {asset_id}                        knob schema, presets, footprint, how
 preview_asset {asset_id, knobs}             PNG of the rebuilt model
 buy_assets {items:[{asset_id,knobs}], mandate, agent_name}   one PayPal order, module URLs back
 get_budget {mandate}                        spent, left, expiry, every order
+make_film {brief, mandate?, agent_name?}    a 10-20 s MP4 shot in a street of kit pieces, dressed with 2D signs; one order licenses it all
+get_film {film_id}                          bill, licence, render progress, MP4 URL
+
+## Studio (films)
+
+${b}/#/studio   describe a film; Oasis builds the set, dresses it with 2D signs, cuts the shots, renders the MP4.
+POST ${b}/api/films {brief}   ->  film JSON (shots, signs, bill)      POST ${b}/api/films/{id}/license {mandate}
+POST ${b}/api/films/{id}/render   then GET ${b}/api/films/{id}  until render.status = done  ->  ${b}/api/films/{id}/film.mp4
 
 ## HTTP
 

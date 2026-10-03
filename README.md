@@ -20,6 +20,7 @@ scene.add(createAsset({ floors: 3, awning: "#2F7A55" }));   // a program: knobs 
 | **The agent shops** | It searches, reads knobs, previews, then buys the whole scene in one `buy_assets` call. Over budget is refused before PayPal is called. | Orders v2 with `payment_source.paypal.vault_id`, `stored_credential.payment_initiator: MERCHANT`: completed in one call, no redirect |
 | **Licensed imports** | One module URL per piece. Without a licence, browsers get a grey placeholder of the real size; other clients get **HTTP 402**. | coinbase/x402 v2 HTTP transport (`PAYMENT-REQUIRED`, `PAYMENT-SIGNATURE`, `PAYMENT-RESPONSE`), scheme `exact`, network `paypal:sandbox`, asset `USD` |
 | **Creators paid** | Each creator's share lands on the live ledger (`/#/ledger`) when PayPal completes; paid out after the 14-day refund window. | PayPal Payouts, verified webhooks, refunds revoke licences (410) |
+| **The studio** | Describe a film at `/#/studio`. Oasis builds a street from the kit, hangs 2D design assets on it as signs in your brand, cuts the camera moves and renders a 1280x720 MP4. One order licenses every piece, sign and card. | Same funded budget, one `POST /api/films/{id}/license`; unlicensed films render paid pieces grey and signs watermarked |
 | **Guardrails** | The budget is server-held: cap, expiry, holds for in-flight orders, revoke = instant stop. | Shaped after AP2's open payment mandate (`payment.budget`, `payment.execution_date`) |
 
 ## For agents (MCP)
@@ -28,7 +29,7 @@ scene.add(createAsset({ floors: 3, awning: "#2F7A55" }));   // a program: knobs 
 claude mcp add --transport http oasis https://oasis-design.onrender.com/mcp
 ```
 
-`search_assets` · `get_asset` · `preview_asset` (PNG of the rebuilt model) · `buy_assets` · `get_budget`
+`search_assets` · `get_asset` · `preview_asset` (PNG of the rebuilt model) · `buy_assets` · `get_budget` · `make_film` (a short film from a brief, licensed inside the budget) · `get_film`
 
 Plain HTTP works too: `POST /api/buy` with `Authorization: Bearer mdt_…`, or answer the 402 on `/cdn/{id}.mjs`.
 
@@ -40,12 +41,21 @@ previews; the buyer's page runs the same program through a shared three.js runti
 the import is exactly the model that was previewed. Many pieces were written by an agent factory and accepted only
 after a separate grader looked at renders from several angles and at night (`factory/`).
 
+## The studio
+
+A film is a program too: `server/film.js` plans it (the street, the signs, the shots), Claude can redirect it through one
+typed `write_film` call that the server validates, and `public/film-player.js` draws frame N from the film alone. The
+server renders the way Remotion does (`remotion-dev/remotion`, `packages/renderer/src/render-frames.ts`): headless
+Chromium seeks every frame on `/film.html`, ffmpeg stitches them (`server/film-render.js`). Without Playwright or
+ffmpeg the studio still plays the film live and exports a WebM from the browser.
+
 ## Run it
 
 ```bash
 npm ci
 cp .env.example .env   # PayPal sandbox client id/secret, Anthropic key (factory only)
 npm start              # http://localhost:8787
+npx playwright install chromium   # optional: server-side MP4 rendering (ffmpeg on PATH)
 npm test
 ```
 

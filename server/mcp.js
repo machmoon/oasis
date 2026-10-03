@@ -36,6 +36,14 @@ function getServer() {
       agent_name: z.string().optional().describe("Your name, shown on the human's PayPal receipt and the Oasis ledger"),
     },
   }, async ({ items, mandate, agent_name }) => text(await tools.buyAssets({ items, mandate, agent_name })));
+  server.registerTool("make_film", {
+    description: "Make a short film (10-20 s, 1280x720 MP4) from a brief: Oasis builds a street of kit pieces, dresses it with 2D design assets as signs in the brand's colours, and cuts camera moves (orbit, dolly, push-in, night crane, end card). Every piece, sign and card is a program, so the render is deterministic and every creator is paid once. With a mandate the whole film is licensed in one order; without one, paid pieces render grey and signs are watermarked.",
+    inputSchema: { brief: z.string().describe("What the film is about, e.g. 'a 15-second teaser for \"Momiji Ramen\" on a Kyoto street at dusk'"), mandate: z.string().optional().describe("The human's funded budget token (mdt_...) to license everything"), agent_name: z.string().optional() },
+  }, async (args) => text(await tools.makeFilm(args)));
+  server.registerTool("get_film", {
+    description: "Status of a film: its bill, whether it is licensed, render progress, and the MP4 URL when done.",
+    inputSchema: { film_id: z.string() },
+  }, async (args) => text(await tools.getFilm(args)));
   server.registerTool("get_budget", {
     description: "What the human allowed: budget, spent, what is left, expiry, and every order charged against it.",
     inputSchema: { mandate: z.string() },

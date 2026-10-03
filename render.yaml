@@ -5,7 +5,7 @@ services:
     runtime: node
     plan: free
     region: oregon
-    buildCommand: npm ci && node scripts/prerender.mjs
+    buildCommand: npm ci && node scripts/prerender.mjs && (npx playwright install chromium || true)
     startCommand: node server/local.js
     healthCheckPath: /api/config
     envVars:

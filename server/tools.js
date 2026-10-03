@@ -150,3 +150,40 @@ export async function buyAssets({ items, mandate, agent_name }) {
     ledger: `${config.baseUrl}/#/ledger`,
   };
 }
+
+// ---------- films: an agent asks for a short film, licenses it inside the budget, and gets an MP4 ----------
+export async function makeFilm({ brief, mandate, agent_name, direct = true }) {
+  const film = await import("./film.js");
+  const render = await import("./film-render.js");
+  let f = await film.planFilm(String(brief || "").slice(0, 400));
+  if (direct) { try { f = (await film.direct(f, f.brief)) || f; } catch {} }
+  f = await film.save(f);
+  let licence = null;
+  if (mandate) {
+    const items = film.billItems(f);
+    const o = items.length ? await commerce.buyWithMandate(String(mandate), items, { agentName: agent_name ? String(agent_name).slice(0, 40) : "an MCP agent" }) : null;
+    licence = { orderId: o?.id || "free", total: o?.total || 0, creators: o ? commerce.saleEvent(o).creators : [], tokens: Object.fromEntries((o?.licenses || []).map((l) => [l.assetId, l.token])), at: new Date().toISOString() };
+    f = await film.save(f, { licence });
+  }
+  const canRender = await render.available();
+  if (canRender) { await film.save(f, { render: { status: "queued", progress: 0 } }); render.enqueue(f.id); }
+  return filmStatus(await film.get(f.id), { canRender });
+}
+export async function getFilm({ film_id }) {
+  const film = await import("./film.js");
+  const f = await film.get(String(film_id));
+  if (!f) throw new Error("Unknown film_id");
+  return filmStatus(f, { canRender: await (await import("./film-render.js")).available() });
+}
+async function filmStatus(f, { canRender }) {
+  const film = await import("./film.js");
+  const bill = film.billOf(f);
+  return {
+    film_id: f.id, title: f.title, link: `${config.baseUrl}/#/film/${f.id}`, seconds: f.seconds, shots: f.shots.map((s) => `${s.kind} ${s.seconds}s ${s.time}${s.card ? " + card" : ""}`),
+    signs: f.signs.map((s) => `${s.title} (${s.where}) by ${s.author}`), brand: f.brand,
+    bill: bill.lines.map((l) => ({ asset_id: l.asset, title: l.title, kind: l.kind, use: l.use, price_usd: l.price, author: l.author })), total_usd: bill.total, creators: bill.creators,
+    licensed: !!f.licence, order_id: f.licence?.orderId || null, creators_paid: f.licence?.creators || [],
+    render: f.render?.status || "idle", progress: f.render?.progress ?? 0, mp4: f.render?.status === "done" ? `${config.baseUrl}/api/films/${f.id}/film.mp4` : null,
+    next: !f.licence ? "Unlicensed: paid pieces render grey and signs carry a watermark. Pass the human's mandate to license everything in one order." : f.render?.status === "done" ? "Download the MP4." : canRender ? "Poll get_film until render is done (about a minute)." : "This server can't render MP4; open the link to export in the browser.",
+  };
+}

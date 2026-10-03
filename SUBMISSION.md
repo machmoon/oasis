@@ -39,6 +39,13 @@ holds and enforces (shaped after the IntentMandate in Google's AP2). The agent c
 The same store also sells 83 2D design assets (icons, UI, posters) built the same way, with Brand Mode re-skinning
 every one in your palette.
 
+**Make a film of it.** The studio (`/#/studio`) turns a brief into a short film: the street is built from the kit, 2D
+design assets (a wordmark, a poster) are hung on it as roof and kerb signs in the brand's colours, Claude directs the
+cut (orbit, a dolly down the road, a push-in on the shop, a night crane past the glowing sign, an end card), and the
+server renders a 1280x720 MP4 frame by frame, so the same brief always gives the same film. Every piece, sign and card
+in it is one line on one bill, licensed in one order inside the human's budget. Until it is licensed, paid pieces
+render grey and signs carry a watermark. Agents get the same thing over MCP with `make_film` and `get_film`.
+
 ## How we built it
 
 **A 3D engine where every model is a program.** A kit piece is an ES module whose `build(p)` returns plain parts (boxes,

@@ -25,6 +25,7 @@
     "dotenv": "^18.0.5",
     "express": "^5.2.1",
     "express-rate-limit": "^8.7.0",
+    "playwright": "^1.63.0",
     "quickjs-emscripten": "^0.32.0",
     "zod": "^4.6.5"
   },

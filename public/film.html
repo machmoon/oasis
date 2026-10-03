@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Oasis film render</title>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@500&display=swap" rel="stylesheet" />
+  <style>html, body { margin: 0; background: #000; } #stage { width: 1280px; height: 720px; }</style>
+</head>
+<body>
+  <div id="stage"></div>
+  <script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/" } }</script>
+  <script type="module">
+    // The render page: the server's headless browser opens this, waits for window.__film.ready, then asks for
+    // frames in batches (server/film-render.js). Nothing here runs on a clock.
+    import { createFilmPlayer } from "/film-player.js";
+    const id = new URLSearchParams(location.search).get("id");
+    window.__film = { ready: false };
+    try {
+      const film = await (await fetch(`/api/films/${encodeURIComponent(id)}`)).json();
+      if (film.error) throw new Error(film.error);
+      const stage = document.getElementById("stage");
+      stage.style.width = film.size[0] + "px"; stage.style.height = film.size[1] + "px";
+      await document.fonts.ready;
+      const player = await createFilmPlayer(stage, film);
+      window.__film = { ready: true, frames: (from, n) => player.frames(from, n), seconds: player.duration, fps: film.fps };
+    } catch (e) {
+      window.__film = { ready: false, error: e.message };
+      console.error(e);
+    }
+  </script>
+</body>
+</html>

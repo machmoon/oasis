@@ -17,6 +17,8 @@ import * as mandates from "./mandates.js";
 import { llmsTxt } from "./llms.js";
 import * as registry from "./registry.js";
 import * as paypal from "./paypal.js";
+import * as film from "./film.js";
+import * as filmRender from "./film-render.js";
 
 export async function createApp() {
   await catalog.load();
@@ -235,6 +237,66 @@ export async function createApp() {
   app.get("/api/sales", wrap(async (req, res) => {
     const orders = (await store.list("orders")).filter((o) => o.status === "COMPLETED" && o.royalties && o.funded).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
     res.json(orders.slice(0, 40).map(commerce.saleEvent).map((e, i) => ({ ...e, at: orders[i].createdAt })));
+  }));
+
+  // Films: a brief becomes a short film shot in a world of kit pieces, dressed with 2D assets (server/film.js).
+  const filmLimit = rateLimit({ windowMs: 60_000, limit: 12, standardHeaders: "draft-8", legacyHeaders: false });
+  const mustFilm = async (id) => {
+    const f = await film.get(id);
+    if (!f) throw Object.assign(new Error("No such film"), { status: 404 });
+    return f;
+  };
+  const filmView = async (f) => ({ ...(await film.hydrate(f)), render: f.render || { status: "idle" }, licensed: !!f.licence, licence: f.licence ? { orderId: f.licence.orderId, total: f.licence.total, creators: f.licence.creators } : null, renderer: await filmRender.available(), link: `${config.baseUrl}/#/film/${f.id}` });
+  app.post("/api/films", filmLimit, wrap(async (req, res) => {
+    const brief = String(req.body?.brief || "").slice(0, 400);
+    if (!brief.trim()) throw Object.assign(new Error("Say what the film is about"), { status: 400 });
+    let f = await film.planFilm(brief);
+    if (req.body?.direct !== false) { try { f = (await film.direct(f, brief)) || f; } catch (e) { console.error("director", e.message); } }
+    res.json(await filmView(await film.save(f)));
+  }));
+  app.get("/api/films", wrap(async (req, res) => {
+    const all = (await store.list("films")).filter((f) => f.render?.status === "done").sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 12);
+    res.json(all.map((f) => ({ id: f.id, title: f.title, brief: f.brief, seconds: f.seconds, mp4: `/api/films/${f.id}/film.mp4`, licensed: !!f.licence, creators: film.billOf(f).creators.length })));
+  }));
+  app.get("/api/films/:id", wrap(async (req, res) => res.set("Cache-Control", "no-cache").json(await filmView(await mustFilm(req.params.id)))));
+  app.post("/api/films/:id/direct", filmLimit, wrap(async (req, res) => {
+    const f = await mustFilm(req.params.id);
+    const next = await film.direct(f, `${f.brief}\n\nChange: ${String(req.body?.request || "").slice(0, 400)}`);
+    if (!next) throw Object.assign(new Error("The director isn't available on this server"), { status: 503 });
+    res.json(await filmView(await film.save({ ...next, id: f.id, createdAt: f.createdAt, licence: f.licence || null, render: null })));
+  }));
+  // Licensing a film is one agent purchase on a funded budget: every paid piece, sign and card, once.
+  app.post("/api/films/:id/license", buyLimit, wrap(async (req, res) => {
+    const f = await mustFilm(req.params.id);
+    if (f.licence) return res.json(await filmView(f));
+    const items = film.billItems(f);
+    const mandate = String(req.body?.mandate || (req.get("authorization") || "").replace(/^Bearer\s+/i, ""));
+    const o = items.length ? await commerce.buyWithMandate(mandate, items, { agentName: String(req.body?.agent_name || "Oasis Studio").slice(0, 40) }) : null;
+    const licence = { orderId: o?.id || "free", total: o?.total || 0, creators: o ? commerce.saleEvent(o).creators : [], tokens: Object.fromEntries((o?.licenses || []).map((l) => [l.assetId, l.token])), at: new Date().toISOString() };
+    res.json(await filmView(await film.save(f, { licence, render: null })));
+  }));
+  app.post("/api/films/:id/render", filmLimit, wrap(async (req, res) => {
+    const f = await mustFilm(req.params.id);
+    if (!(await filmRender.available())) throw Object.assign(new Error("This server can't render MP4s (needs Playwright and ffmpeg). Use the in-browser export."), { status: 503 });
+    if (f.render?.status !== "rendering") await film.save(f, { render: { status: "queued", progress: 0, at: new Date().toISOString() } });
+    filmRender.enqueue(f.id);
+    res.json({ id: f.id, render: (await film.get(f.id)).render });
+  }));
+  app.get("/api/films/:id/film.mp4", wrap(async (req, res) => {
+    const f = await mustFilm(req.params.id);
+    if (f.render?.status !== "done" || !fs.existsSync(filmRender.mp4Path(f.id))) throw Object.assign(new Error("Not rendered yet"), { status: 404 });
+    res.set("Content-Disposition", `inline; filename="${f.id}.mp4"`).sendFile(filmRender.mp4Path(f.id));
+  }));
+  // A sign or card as a texture: the 2D asset in the film's brand. Paid assets carry the watermark until licensed.
+  app.get("/api/films/:id/art/:ref.png", wrap(async (req, res) => {
+    const f = await mustFilm(req.params.id);
+    const ref = req.params.ref;
+    const s = ref.startsWith("card-") ? f.shots.find((k) => k.id === ref.slice(5))?.card : f.signs.find((k) => k.id === ref);
+    if (!s) throw Object.assign(new Error("No such sign"), { status: 404 });
+    const a = mustAsset(s.asset);
+    const { svg } = await catalog.renderAsync(a, { ...s.knobs, brand: f.brand });
+    const out = a.price > 0 && !f.licence ? catalog.watermark(svg, catalog.sizeOf(svg, a.size)) : svg;
+    res.set("Content-Type", "image/png").set("Cache-Control", "no-cache").send(catalog.toPng(out, Math.min(1600, Number(req.query.w) || 1024)));
   }));
 
   // The registry: import any 3D asset from a URL; a licence makes it real (see server/registry.js).
