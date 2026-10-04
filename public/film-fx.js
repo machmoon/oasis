@@ -50,7 +50,7 @@ export const curve = (name) => CURVES[name] || CURVES.smooth;
 // ---------- edit styles: the film-wide finish ----------
 export const STYLES = {
   clean: { bloom: 0.12, bloomNight: 0.55, dof: 0.6, grain: 0.03, vignette: 0.3, shutter: 0.5, rgb: 0, glitch: 0, contrast: 1.05, sat: 1.04, lift: 0.006 },
-  hype: { bloom: 0.18, bloomNight: 0.75, dof: 0.35, grain: 0.03, vignette: 0.4, shutter: 0.75, rgb: 0, glitch: 1, contrast: 1.13, sat: 1.12, lift: -0.004 },
+  hype: { bloom: 0.18, bloomNight: 0.75, dof: 0.35, grain: 0.03, vignette: 0.4, shutter: 0.75, rgb: 0, glitch: 1, contrast: 1.1, sat: 1.07, lift: -0.004 },
   dream: { bloom: 0.35, bloomNight: 0.9, dof: 1.0, grain: 0.025, vignette: 0.36, shutter: 0.75, rgb: 0, glitch: 0, contrast: 0.97, sat: 0.96, lift: 0.03 },
 };
 
