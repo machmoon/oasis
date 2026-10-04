@@ -26,7 +26,30 @@ Polyfork sells the parts. Oasis shows the parts becoming a finished brand film, 
 made each part, live, inside PayPal. The climax is the one thing no asset store can show: **PayPal approves and the
 colour sweeps through the street**, then each creator's payout lands.
 
-## Structure (problem 30 s, demo 90 s, business 30 s)
+## The cut (v3, 95 s, no narration)
+
+Pat's note on v2: it read as a feature list ("ten films, ten sentences, every creator paid"), which is the one thing
+Polyfork's video never does. v3 is cut the way theirs is: one hero object (one brief, one street), the real product
+on screen the whole time, one idea told in rising steps, one big word at a time, music instead of a voice. Every
+frame is the real app or a server-rendered film; every number is from a real sandbox order.
+
+| Time | On screen | The word | Why |
+| --- | --- | --- | --- |
+| 0:00-0:05 | White. The brief is typed by hand: *a 15-second teaser for "Momiji Ramen" on a Kyoto street at dusk*. | **One sentence.** | Polyfork's "one model"; our hero object is a sentence. |
+| 0:05-0:13 | The Studio, zoomed into the viewer: the street drops in piece by piece, clay, and the first cut starts. | **becomes a street.** | The first wow: the sentence is now a place. |
+| 0:13-0:29 | The film, full bleed, its own soundtrack. A word on each cut, none on the 3D title (the title is the word). | **Cut like an editor.** / **Whip.** / **Zoom.** / **Dusk to night.** | Polyfork's reshape / recolor / remix: one verb per beat. |
+| 0:29-0:44 | The Studio, tucked top-right: Claude's cut swaps in; Dream; Hype; a ramp and a cut changed. | **Claude directs.** / **Dream.** / **Hype.** / **Instant.** | Real knobs, real cursor. |
+| 0:44-1:00 | Clay street, cursor to Pay with PayPal; PayPal's own page; back in the Studio the colour sweeps through; the licence panel's payouts land, set large on the right. | **Clay until it is paid.** / **Paid.** / **Five creators. One order.** | The climax no asset store can show: money moving, live. |
+| 1:00-1:08 | The one-order scene: every paid piece flies back to its maker, the order pays all five. | **Every piece, paid to its maker.** | Escalation from one street to its makers. |
+| 1:08-1:24 | White, then six launch films land one by one, each with its real PayPal order id; the count. | **Or hand it to an agent.** / **6 films. 6 PayPal orders. $279.** | One becomes many (Polyfork's 950 configurations). |
+| 1:24-1:29 | The Studio flips to 9:16. | **9:16 for Reels.** | Delivery. |
+| 1:29-1:35 | Logo. | **Brief in. Brand film out. Every creator paid.** | End card, the only sentence of copy. |
+
+Music: the Studio's own synthesised bed (`server/film-music.js`, mood `bright`, 96 s), so the demo's soundtrack is a
+program too. Composition: `oasis-video/videos/oasis-demo-v3/build.py` (HyperFrames); footage from the Studio take
+(`scripts/demo-take.mjs`) and the rendered films.
+
+## The earlier structure (v2: problem 30 s, demo 90 s, business 30 s)
 
 1. **Problem (0:00-0:30).** 91% of businesses use video to market themselves, and 63% already use AI video tools
    (Wyzowl, 2026). Hana runs a ramen shop in Kyoto and needs a 15-second teaser. AI tools give her pixels with no
