@@ -177,7 +177,9 @@ async function drawReceipt(id) {
 
 async function drawKit(el, { limit = 12 } = {}) {
   const list = (await catalog()).filter((a) => a.author !== "oasis" || a.price > 0).slice(0, limit);
-  el.innerHTML = list.map((a) => `<a class="piece" href="#/a/${esc(a.id)}"><img src="${thumb(a.id)}" alt="${esc(a.title)}" loading="lazy" width="360" height="360"><div><b>${esc(a.title)}</b><em>${price(a.price)}</em><span>${esc(a.author)}</span></div></a>`).join("");
+  el.innerHTML = list.map((a) => `<a class="piece" href="#/a/${esc(a.id)}"><span class="sheet"><img src="${thumb(a.id)}" alt="${esc(a.title)}" loading="lazy" width="360" height="360"></span><div><b>${esc(a.title)}</b><em>${price(a.price)}</em><span>${esc(a.author)}</span></div></a>`).join("");
+  // the sheet shimmers until its render arrives, then the picture fades in (cached renders are in at once)
+  el.querySelectorAll(".sheet img").forEach((img) => { const on = () => img.parentElement.classList.add("in"); img.complete && img.naturalWidth ? on() : img.addEventListener("load", on, { once: true }); img.addEventListener("error", on, { once: true }); });
 }
 
 // ---------- sales and creators (shared by home and ledger) ----------
