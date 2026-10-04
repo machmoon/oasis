@@ -287,12 +287,12 @@ export async function createFilmPlayer(el, film, { api = "", audio = false, reve
     const A = LIGHT[from] || LIGHT.day, B = LIGHT[to || from] || A;
     const mix = (key) => lerp(A[key], B[key], k);
     scene.background = null;
-    skyU.bottomColor.value.set(A.sky).lerpHSL(skyB.set(B.sky), k); // through violet, not brown, on the way to night
+    skyU.bottomColor.value.set(A.sky).lerp(skyB.set(B.sky), k); // in RGB: three's lerpHSL walks the hue wheel, so dusk orange to night blue passed through green
     // atmospheric depth: the far end of the street fades toward the horizon colour
     if (!scene.fog) scene.fog = new THREE.Fog(skyU.bottomColor.value.clone(), 30, 140);
     scene.fog.color.copy(skyU.bottomColor.value);
     if (film.weather === "fog") scene.fog.color.lerp(fogWhite, 0.7); // Karl the Fog is white, whatever the hour
-    skyU.topColor.value.set(A.top).lerpHSL(skyB.set(B.top), k);
+    skyU.topColor.value.set(A.top).lerp(skyB.set(B.top), k);
     hemi.intensity = mix("hemi"); ambient.intensity = mix("ambient"); sun.intensity = mix("sun");
     hemi.color.set(A.hemiColor).lerp(skyB.set(B.hemiColor), k);
     sun.color.set(A.sunColor).lerp(skyB.set(B.sunColor), k);

@@ -50,6 +50,15 @@ export const SIGN_ASSETS = {
 const rng = (seed) => { let a = seed >>> 0; return () => { a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
 const hash = (s) => [...s].reduce((h, c) => (Math.imul(h, 31) + c.charCodeAt(0)) | 0, 11);
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, Number(v) || 0));
+// A brand name that fits a sign or a title: whole words up to n characters, corporate suffixes dropped first,
+// so "Sprinkle Compliance Ltd." reads SPRINKLE COMPLIANCE, never SPRINKLE COMPL.
+export function fitName(name, n = 20) {
+  const words = String(name || "").toUpperCase().replace(/\s+/g, " ").trim().split(" ").filter(Boolean);
+  while (words.length > 1 && words.join(" ").length > n && /^(CO\.?|LTD\.?|INC\.?|LLC|CORP\.?|&|AND)$/.test(words.at(-1))) words.pop();
+  let out = "";
+  for (const w of words) { const next = out ? `${out} ${w}` : w; if (next.length > n) break; out = next; }
+  return out || words[0]?.slice(0, n) || "";
+}
 const title = (s) => s.replace(/\s+/g, " ").trim().replace(/\b\w/g, (c) => c.toUpperCase());
 
 /** The brand name a brief implies: quoted words first, then "for X", then the theme's own name. */
@@ -116,7 +125,7 @@ export async function planFilm(brief, { seed } = {}) {
   const second = plan.placements.filter((p) => p.id !== hero.id && ["town-flats", "town-shop", "town-house"].includes(p.asset) && p.rot !== hero.rot).sort((a, b) => Math.abs(a.at[0] - hero.at[0]) - Math.abs(b.at[0] - hero.at[0]))[0];
   const poster = ["retro-sunset-poster", "swiss-poster", "bauhaus-poster"][Math.floor(r() * 3)];
   const signs = [
-    { id: "s0", asset: "wordmark-type", placement: hero.id, where: "roof", w: 5.4, h: 1.8, knobs: { text: name.toUpperCase().slice(0, 14), background: signBg, ink: signInk, accent: signInk === brand.ink ? brand.background : brand.ink, slant: 0, rules: false, style: "stacked shadow" } },
+    { id: "s0", asset: "wordmark-type", placement: hero.id, where: "roof", w: 5.4, h: 1.8, knobs: { text: fitName(name, 20), background: signBg, ink: signInk, accent: signInk === brand.ink ? brand.background : brand.ink, slant: 0, rules: false, style: "stacked shadow" } },
     ...(second && catalog.getAsset(poster) ? [{ id: "s1", asset: poster, placement: second.id, where: "kerb", w: 1.3, h: 1.85, knobs: { headline: name.split(" ")[0] } }] : []),
   ];
   const style = styleOf(brief);
@@ -157,7 +166,7 @@ export function shotsFor(style, plan, hero, name, brand) {
   // Cameras stay in the road (z 12..18 on a 5-row world) or above the roofs: a radius past the far kerb would put
   // the lens inside the building opposite. The hero's centre is about 3 m behind its facade.
   const R = Math.max(W, D);
-  const word = name.toUpperCase().slice(0, 14);
+  const word = fitName(name, 20);
   const tm = titleMountOf(plan);
   // cards wear the brand: a dark panel in the brand's ink, the name in its paper colour, the accent in its most vivid
   const accent = brand ? [brand.highlight, brand.primary, brand.secondary].find((c) => c && !/^#(1|2|3)/i.test(c)) || brand.primary : undefined;
@@ -232,7 +241,7 @@ export function cleanFilm(f) {
     if (shots.length && CUTS.includes(s.cut) && s.cut !== "cut") out.cut = s.cut; // the first shot has nothing to cut from
     if (Number(s.shake) > 0) out.shake = clamp(s.shake, 0, 1);
     if (Array.isArray(s.hits)) { const h = s.hits.filter((x) => x !== null && x !== "" && Number.isFinite(Number(x))).map((x) => clamp(x, 0, seconds)).slice(0, 4); if (h.length) out.hits = h; }
-    if (s.title && String(s.title.text || "").trim()) out.title = { text: String(s.title.text).replace(/[^\x20-\x7E]/g, "").trim().slice(0, 18), at: clamp(s.title.at ?? 1, 0.4, Math.max(0.4, seconds - 0.4)) };
+    if (s.title && String(s.title.text || "").trim()) out.title = { text: String(s.title.text).replace(/[^\x20-\x7E]/g, "").trim().slice(0, 22), at: clamp(s.title.at ?? 1, 0.4, Math.max(0.4, seconds - 0.4)) };
     if (s.kind === "dolly") { out.from = v3(s.from, [0, 2, 15]); out.to = v3(s.to, [30, 2, 15]); out.look = v3(s.look, [40, 1.5, 14]); }
     else {
       out.target = v3(s.target, [plan.size[0] / 2, 1.5, plan.size[1] / 2]);
