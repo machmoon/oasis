@@ -35,6 +35,12 @@ sign and mark. On capture each creator's share is booked and paid out through Pa
 **Agents can run the same loop.** Over MCP (`make_film`, `get_film`, `buy_assets`), an agent makes and licenses a film
 inside a budget a human approved once in PayPal (Vault); an order over the budget is refused before PayPal is called.
 
+## An agent ran a whole campaign
+
+To see how far an agent could take it, we gave Claude only Oasis's MCP tools and one paragraph: it's Friday, six clients need a launch film tonight, one in each world, and the films should make people laugh. Claude invented the clients and wrote every joke. It made a ramen shop so calm a slurp takes a minute, insurance for chips stolen by seagulls, a matchmaker for lonely mittens ("Left, 38, seeks right. Likes cocoa."), and an AI startup that does nothing ("We shipped nothing. Retention is incredible."). Those six films have 33 shots, 25 transitions and 355 placed pieces, and each one was licensed in its own PayPal sandbox order, for $279 in total.
+
+A second run made four throwback films from late-1990s internet memes, such as a mitten shop braced for Y2K and a surf shack whose sign never quite hits the corner. Both transcripts are in the repo ([docs/campaign-friday.md](https://github.com/machmoon/oasis/blob/main/docs/campaign-friday.md) and [docs/campaign-y2k.md](https://github.com/machmoon/oasis/blob/main/docs/campaign-y2k.md)).
+
 ## How we built it
 
 - **An edit engine on three.js** (`public/film-fx.js`): Penner easings for speed ramps (from ai/easings.net), camera
