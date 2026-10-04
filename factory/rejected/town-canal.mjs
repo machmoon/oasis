@@ -1,13 +1,13 @@
-// Town Canal: a 6 x 6 m stretch of town canal with stone quays, water and a little moored rowboat. Block asset.
-// Origin at the footprint corner, y up, street side at z = 0. The canal runs along x so tiles chain end to end.
-// Grid is locked: quays are 1.4 m deep each side and the water channel is 3.2 m wide on every knob value.
+// Canal Tile: a 6 x 6 m stretch of town canal with stone quay walls, layered water and a little moored launch.
+// Block asset: build(p) returns parts in metres on the Oasis Town grid (origin at the footprint corner, y up,
+// street side at z = 0). The canal runs along x, so tiles chain left-right into a waterway.
 export const meta = {
-  title: "Town Canal",
+  title: "Canal Tile",
   kind: "3d",
   format: "blocks",
   kit: "Oasis Town",
-  description: "A canal tile with flush stone quays and a little rowboat moored to the far bank. It chains end to end to run water through town, with optional lamps, bench and bollards.",
-  tags: ["3d", "low poly", "canal", "water", "boat", "rowboat", "quay", "town", "kit"],
+  description: "A 6 m stretch of stone-walled canal with an optional moored launch, adjustable width and quay height, tiling left to right into a waterway through town.",
+  tags: ["3d", "low poly", "canal", "water", "boat", "quay", "waterfront", "town", "kit", "tile"],
   price: 3,
   author: "oasis-factory",
   footprint: [6, 6],
@@ -16,206 +16,214 @@ export const meta = {
 
 export const params = {
   knobs: {
-    stone: { type: "color", role: "surface", label: "Stone", default: "#CFC6B4" },
-    water: { type: "color", role: "secondary", label: "Water", default: "#3E7BFA" },
-    boatColor: { type: "color", role: "primary", label: "Boat", default: "#E5484D" },
-    boat: { type: "toggle", label: "Moored boat", default: true },
-    boatLength: { type: "range", label: "Boat length (m)", default: 3.6, min: 2.8, max: 4.4, step: 0.4 },
-    furniture: { type: "toggle", label: "Lamps & bench", default: true },
-    lights: { type: "toggle", label: "Lights on", default: true },
+    stone: { type: "color", role: "surface", label: "Bank stone", default: "#C9BFAE" },
+    water: { type: "color", role: "primary", label: "Water", default: "#4F8FD6" },
+    boat: { type: "color", role: "primary", label: "Boat paint", default: "#E5484D" },
+    showBoat: { type: "toggle", label: "Moored boat", default: true },
+    channel: { type: "range", label: "Canal width (m)", default: 3.2, min: 2.2, max: 4, step: 0.2 },
+    quay: { type: "range", label: "Quay height (m)", default: 0.85, min: 0.7, max: 1.45, step: 0.15 },
+    dressing: { type: "choice", label: "Quay dressing", default: "quay", options: ["bare", "quay", "promenade"] },
+    lights: { type: "toggle", label: "Lamps lit", default: true },
   },
   presets: {
-    Amsterdam: { stone: "#C2A98A", water: "#355E8C", boatColor: "#2F7A55" },
-    Venice: { stone: "#E8D7BE", water: "#2E9C8F", boatColor: "#2B3242" },
-    Kyoto: { stone: "#B9BEC4", water: "#4F7FA8", boatColor: "#C8553D" },
+    Harbour: { stone: "#B9BEC6", water: "#3E6FB0", boat: "#F2B33D" },
+    Amsterdam: { stone: "#A8735E", water: "#3F6E7A", boat: "#F7B8CF" },
+    Lagoon: { stone: "#E6D8BD", water: "#3FA39A", boat: "#3E7BFA" },
   },
 };
 
-// ---- colour helpers: brand colours keep their hue but are held inside a material-appropriate band
-function toRgb(h) { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
-function toHex(r, g, b) {
-  const f = (v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, "0");
-  return "#" + f(r) + f(g) + f(b);
-}
-function mix(a, b, t) { const A = toRgb(a), B = toRgb(b); return toHex(A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t); }
-function toHsl(hex) {
-  const [r, g, b] = toRgb(hex).map((v) => v / 255);
-  const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
-  let h = 0, s = 0; const l = (mx + mn) / 2;
-  if (mx !== mn) {
-    const d = mx - mn;
-    s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
-    if (mx === r) h = (g - b) / d + (g < b ? 6 : 0);
-    else if (mx === g) h = (b - r) / d + 2;
-    else h = (r - g) / d + 4;
-    h *= 60;
-  }
-  return [h, s, l];
-}
-function fromHsl(h, s, l) {
-  h = ((h % 360) + 360) % 360 / 360;
-  if (s === 0) return toHex(l * 255, l * 255, l * 255);
-  const q = l < 0.5 ? l * (1 + s) : l + s - l * s, pp = 2 * l - q;
-  const f = (t) => { t = (t + 1) % 1; if (t < 1 / 6) return pp + (q - pp) * 6 * t; if (t < 0.5) return q; if (t < 2 / 3) return pp + (q - pp) * (2 / 3 - t) * 6; return pp; };
-  return toHex(f(h + 1 / 3) * 255, f(h) * 255, f(h - 1 / 3) * 255);
-}
-const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-// Water: every input hue maps continuously into the teal-to-blue family (165-235 deg), so distinct brand
-// colours give distinct waters, but never lava or carpet. A light cast of the raw colour keeps the probe visible.
-function waterTone(hex) {
-  const [h, s, l] = toHsl(hex);
-  let wh = h;
-  if (h < 165 || h > 235) { const t = ((h - 235 + 360) % 360) / 290; wh = 235 - t * 70; }
-  const base = fromHsl(wh, clamp(s, 0.3, 0.65), clamp(l, 0.3, 0.52));
-  return mix(base, hex, 0.12);
-}
-// Stone: low saturation, light enough that lit and shaded faces separate.
-function stoneTone(hex) { const [h, s, l] = toHsl(hex); return fromHsl(h, Math.min(s, 0.22), clamp(l, 0.52, 0.8)); }
-// Hull: the brand hue as a painted enamel; saturation and lightness capped so neon never glows.
-function hullTone(hex) { const [h, s, l] = toHsl(hex); return fromHsl(h, Math.min(s, 0.55), clamp(l, 0.3, 0.52)); }
-
 export function build(p) {
   const parts = [];
-  const box = (x, y, z, w, h, d, c, e) => parts.push({ t: "box", p: [x, y, z], s: [w, h, d], c, ...(e ? { e: true } : {}) });
-  const cyl = (x, y, z, r, h, c, n) => parts.push({ t: "cyl", p: [x, y, z], r, h, c, n: n || 10 });
+  const box = (x, y, z, w, h, d, c, e) =>
+    parts.push({ t: "box", p: [x, y, z], s: [w, h, d], c, ...(e ? { e: true } : {}) });
+  const cyl = (cx, y, cz, r, h, c, n) => parts.push({ t: "cyl", p: [cx, y, cz], r, h, c, n });
 
-  // ---- locked grid
-  const S = 6, Wc = 3.2, B = (S - Wc) / 2;   // 1.4 m quay each side
-  const TOP = 0.45, WL = 0.12, CP = 0.08;    // quay top, water surface, coping thickness
-  const zBack = S - B;                       // 4.6: water face of the far quay
-
-  const stone = stoneTone(p.stone);
-  const stoneDark = mix(stone, "#000000", 0.2);
-  const coping = mix(stone, "#FFFFFF", 0.4);
-  const water = waterTone(p.water);
-  const ripple = mix(water, "#FFFFFF", 0.5);
-  const hc = hullTone(p.boatColor);
-  const iron = "#3D4350", wood = "#8A6E52", lit = "#FFD58A", glass = "#7E93A8";
-  const seatWood = "#A88B6A", oarWood = "#D9C29A", rope = "#F6EEE0", rim = "#FBFBFB";
-  const glow = (c) => (p.lights ? lit : c);
-
-  // ---- quays and water: everything flush inside the 6 x 6 footprint
-  box(0, 0, 0, S, TOP, B, stone);
-  box(0, 0, zBack, S, TOP, B, stone);
-  box(0, 0, B, S, WL, Wc, water);
-  // coping strips sit on the quay tops, flush with every edge (no lip over the water)
-  box(0, TOP, 0, S, CP, 0.35, coping);
-  box(0, TOP, B - 0.4, S, CP, 0.4, coping);
-  box(0, TOP, zBack, S, CP, 0.4, coping);
-  box(0, TOP, S - 0.35, S, CP, 0.35, coping);
-  // wet waterline band along the visible far quay wall
-  box(0, WL, zBack - 0.03, S, 0.1, 0.03, stoneDark);
-  // paving joints between the coping strips
-  for (const jx of [0.75, 2.25, 3.75, 5.25]) {
-    box(jx - 0.02, TOP, 0.4, 0.04, 0.02, 0.55, stoneDark);
-    box(jx - 0.02, TOP, zBack + 0.45, 0.04, 0.02, 0.55, stoneDark);
-  }
-
-  // ---- boat geometry, all derived from one hull profile and the length knob
-  const L = p.boatLength, xs = 3.1 - L / 2;  // stern x; the bow stays inside the tile at max length
-  const half = 0.6, zc = zBack - 0.18 - half; // 0.18 m clear of the far wall
-  const HB = 0.06, FLOOR = 0.28, T = 0.08;
-  const prof = [ // [u0, u1, beam fraction, gunwale top]
-    [0, 0.08, 0.8, 0.46],
-    [0.08, 0.2, 0.94, 0.46],
-    [0.2, 0.62, 1.0, 0.46], // open well
-    [0.62, 0.74, 0.9, 0.48],
-    [0.74, 0.84, 0.72, 0.51],
-    [0.84, 0.92, 0.5, 0.55],
-    [0.92, 1.0, 0.26, 0.6],
-  ];
-  const sliceAt = (u) => prof.find(([a, b]) => u >= a && u < b);
-
-  // bollards on the far quay coping, at the same x as the boat's cleats
-  const bz = zBack + 0.22, bollardU = [0.14, 0.68];
-  const bollardX = bollardU.map((u) => xs + u * L);
-  if (p.boat || p.furniture) {
-    for (const bx of bollardX) {
-      cyl(bx, TOP + CP, bz, 0.12, 0.36, iron, 10);
-      cyl(bx, TOP + CP + 0.36, bz, 0.15, 0.06, iron, 10);
+  // ---- colour helpers: HSL with clamped bands so any brand input stays inside the kit's range ----
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const rgb = (c) => {
+    const v = parseInt(String(c).replace("#", ""), 16) || 0;
+    return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
+  };
+  const hex = (a) => "#" + a.map((v) => clamp(Math.round(v), 0, 255).toString(16).padStart(2, "0")).join("").toUpperCase();
+  const mix = (c, d, t) => { const a = rgb(c), b = rgb(d); return hex(a.map((v, i) => v + (b[i] - v) * t)); };
+  const toHsl = (c) => {
+    const [r, g, b] = rgb(c).map((v) => v / 255);
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
+    let h = 0, s = 0;
+    if (d > 1e-6) {
+      s = d / (1 - Math.abs(2 * l - 1));
+      if (mx === r) h = ((g - b) / d) % 6;
+      else if (mx === g) h = (b - r) / d + 2;
+      else h = (r - g) / d + 4;
+      h *= 60;
+      if (h < 0) h += 360;
     }
+    return [h, clamp(s, 0, 1), l];
+  };
+  const fromHsl = (h, s, l) => {
+    l = clamp(l, 0, 1); s = clamp(s, 0, 1); h = ((h % 360) + 360) % 360;
+    const C = (1 - Math.abs(2 * l - 1)) * s, X = C * (1 - Math.abs(((h / 60) % 2) - 1)), m = l - C / 2;
+    const t = [[C, X, 0], [X, C, 0], [0, C, X], [0, X, C], [X, 0, C], [C, 0, X]][Math.floor(h / 60) % 6];
+    return hex(t.map((v) => (v + m) * 255));
+  };
+  const hueDist = (a, b) => { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d; };
+  const clampHue = (h, lo, hi) => (h >= lo && h <= hi ? h : hueDist(h, lo) < hueDist(h, hi) ? lo : hi);
+
+  // stone: muted and capped below the canvas grey so bank tops never bleed into the background
+  let [sh, ss, sl] = toHsl(p.stone);
+  ss = Math.min(ss, 0.3); sl = clamp(sl, 0.48, 0.76);
+  const stoneTop = fromHsl(sh, ss, sl);
+  const stoneSide = fromHsl(sh, ss, sl - 0.16);
+  const joint = fromHsl(sh, ss, sl - 0.26);
+  const coping = fromHsl(sh, ss * 0.5, sl < 0.64 ? sl + 0.12 : sl - 0.12);
+
+  // water: hue held in the blue-teal band, calm saturation, mid lightness; a deeper body under the skin
+  let [wh, ws, wl] = toHsl(p.water);
+  wh = clampHue(wh, 170, 228); ws = clamp(ws, 0.28, 0.52); wl = clamp(wl, 0.4, 0.54);
+  const water = fromHsl(wh, ws, wl);
+  const waterDeep = fromHsl(wh, ws, wl - 0.16);
+  const ripple = fromHsl(wh, ws * 0.6, Math.min(0.84, wl + 0.2));
+  const lit = "#FFD58A";
+  const glint = mix(ripple, lit, 0.6); // lamp reflections: a sun glint by day, a warm streak at night
+
+  // boat: brand accent, but always separated from the water by lightness unless the hue is clearly different
+  let [bh, bs, bl] = toHsl(p.boat);
+  bl = clamp(bl, 0.26, 0.62);
+  const hueClear = hueDist(bh, wh) >= 60 && bs >= 0.35;
+  if (!hueClear && Math.abs(bl - wl) < 0.22) bl = wl - 0.22 >= 0.18 ? wl - 0.22 : wl + 0.22;
+  if (!hueClear) bs = Math.max(bs, 0.45);
+  const boatC = fromHsl(bh, bs, bl);
+  const boot = fromHsl(bh, Math.min(bs, 0.5), Math.max(0.12, bl - 0.2));
+
+  const wood = "#8A6E52", woodDark = "#6E5640", metal = "#4A505B", motor = "#3B4048";
+  const lampOff = "#6B7280", white = "#FBFBFB", rope = "#E8DCC0", leaf = "#79B86A";
+
+  const BANK = p.quay, SLAB = 0.1, COPE = 0.06, WATER = 0.2;
+  const TOP = BANK + COPE;
+  const Wc = p.channel;
+  const zA = (6 - Wc) / 2, zB = zA + Wc; // canal edges (front bank / back bank)
+  const useFront = zA - 0.35, useBack0 = zB + 0.35, useBack = 6 - useBack0; // paved depth behind the coping
+
+  // ---- banks: darker masonry body, lighter paving slab, coping along the water ----
+  for (const [z, d] of [[0, zA], [zB, 6 - zB]]) {
+    box(0, 0, z, 6, BANK - SLAB, d, stoneSide);
+    box(0, BANK - SLAB, z, 6, SLAB, d, stoneTop);
   }
-
-  // ---- quay furniture: lamps on opposite corners (clear of the camera's line onto the boat) and a bench
-  if (p.furniture) {
-    const lamp = (x, z) => {
-      box(x - 0.13, TOP, z - 0.13, 0.26, 0.1, 0.26, iron);
-      cyl(x, TOP + 0.1, z, 0.06, 2.2, iron, 8);
-      const hy = TOP + 2.3;
-      box(x - 0.16, hy, z - 0.16, 0.32, 0.36, 0.32, glow(glass), p.lights);
-      box(x - 0.21, hy + 0.36, z - 0.21, 0.42, 0.08, 0.42, iron);
-    };
-    lamp(5.5, 0.68);
-    lamp(0.5, 5.3);
-
-    // slatted bench on the near quay paving, back to the street, facing the water
-    const x0 = 0.9, BL = 1.2, z0 = 0.42, D = 0.45, y = TOP;
-    for (const fx of [x0, x0 + BL - 0.06]) {
-      box(fx, y, z0, 0.06, 0.42, D, iron);                       // cast end frame
-      box(fx, y + 0.42, z0, 0.06, 0.46, 0.06, iron);             // back post
-      box(fx, y + 0.42, z0 + D - 0.06, 0.06, 0.22, 0.06, iron);  // arm post
-      box(fx, y + 0.64, z0 + 0.06, 0.06, 0.04, D - 0.06, iron);  // armrest
-    }
-    const sd = (D - 0.03) / 2;
-    for (let i = 0; i < 2; i++) box(x0 + 0.06, y + 0.42, z0 + i * (sd + 0.03), BL - 0.12, 0.05, sd, wood);
-    for (const sy of [0.55, 0.72]) box(x0 + 0.06, y + sy, z0 + 0.01, BL - 0.12, 0.11, 0.04, wood);
+  box(0, BANK, zA - 0.35, 6, COPE, 0.35, coping);
+  box(0, BANK, zB, 6, COPE, 0.35, coping);
+  for (const x of [1.5, 3, 4.5]) { // paving joints
+    box(x - 0.02, BANK, 0, 0.04, 0.02, useFront, joint);
+    box(x - 0.02, BANK, useBack0, 0.04, 0.02, useBack, joint);
   }
-
-  // ---- ripples: two clean rows on open water, clear of the hull
-  const openEnd = p.boat ? zc - half : zBack;
-  const avail = openEnd - B;
-  const rz = [B + avail * 0.32, B + avail * 0.68];
-  [[0.5, 1.3, 0], [2.6, 1.3, 0], [4.6, 1.0, 0], [1.5, 1.3, 1], [3.6, 1.3, 1]].forEach(([x, w, row]) => {
-    box(x, WL, rz[row] - 0.04, w, 0.02, 0.08, ripple);
+  // masonry courses on the back quay wall (the face the street looks at); they grow with quay height
+  const lines = [];
+  for (let y = WATER + 0.26; y < BANK - 0.12; y += 0.26) lines.push(y);
+  for (const y of lines) box(0, y, zB - 0.03, 6, 0.03, 0.03, joint);
+  const bands = [WATER, ...lines.map((y) => y + 0.03)];
+  bands.forEach((y0, i) => {
+    const y1 = i < lines.length ? lines[i] : BANK;
+    for (let x = i % 2 ? 0.3 : 0.6; x < 5.9; x += 0.6) box(x - 0.015, y0, zB - 0.03, 0.03, y1 - y0, 0.03, joint);
   });
+  // iron ladder down the quay wall, clear of the boat
+  const lx = 5.35;
+  for (const rx of [lx, lx + 0.3]) box(rx, WATER, zB - 0.05, 0.05, TOP - WATER, 0.05, metal);
+  for (let y = WATER + 0.18; y < TOP - 0.08; y += 0.24) box(lx + 0.05, y, zB - 0.05, 0.25, 0.04, 0.04, metal);
 
-  // ---- the rowboat: tapered stern, open well with seats, rising pointed bow
-  if (p.boat) {
-    prof.forEach(([u0, u1, f, top], i) => {
-      const x0 = xs + u0 * L, len = (u1 - u0) * L, hw = half * f;
-      if (i === 2) {
-        box(x0, HB, zc - hw, len, FLOOR - HB, hw * 2, hc);         // well bottom
-        box(x0, FLOOR, zc - hw, len, top - FLOOR, T, hc);          // street-side wall
-        box(x0, FLOOR, zc + hw - T, len, top - FLOOR, T, hc);      // bank-side wall
-      } else {
-        box(x0, HB, zc - hw, len, top - HB, hw * 2, hc);
-      }
-      box(x0, top - 0.13, zc - hw - 0.03, len, 0.06, 0.03, rim);   // white strake, street side
+  // ---- water: deep body + surface skin ----
+  box(0, 0, zA, 6, WATER - 0.04, Wc, waterDeep);
+  box(0, WATER - 0.04, zA, 6, 0.04, Wc, water);
+
+  // ---- boat geometry (shared origin), floating in the channel with water on both sides ----
+  const L = 3.2, BW = 1.2, R = 0.62, MOT = 0.28;
+  const xb = (6 - (L + R + MOT)) / 2 + MOT; // transom x
+  const zh = zA + (Wc - BW) / 2 + 0.1, zc = zh + BW / 2;
+  const yF = 0.44, GUN = 0.64;
+
+  // glints: reflections of every lit lamp in the open water strip in front of the boat
+  const dressed = p.dressing !== "bare";
+  const lampXs = [1.0, 5.0];
+  const zS = zA + 0.15, zE = p.showBoat ? zh - 0.12 : zB - 0.25;
+  const glints = [];
+  if (p.lights && dressed) for (const x of lampXs) glints.push([x, [0.22, 0.36, 0.5]]);
+  if (p.lights && p.showBoat) glints.push([xb + L + 0.11, [0.14, 0.2, 0.26]]);
+  for (const [gx, ws3] of glints) {
+    [0.15, 0.5, 0.85].forEach((k, i) => {
+      const z = zS + (zE - zS) * k - 0.035;
+      box(gx - ws3[i] / 2, WATER, z, ws3[i], 0.02, 0.07, glint, true);
     });
-    box(xs - 0.03, 0.33, zc - half * 0.8, 0.03, 0.06, half * 1.6, rim); // strake round the transom
+  }
 
-    // inside the well: floorboards, two thwarts, a pair of oars resting on them
-    const wx0 = xs + 0.2 * L, wx1 = xs + 0.62 * L, iz0 = zc - half + T, iw = 2 * (half - T);
-    box(wx0, FLOOR, iz0, wx1 - wx0, 0.02, iw, wood);
-    for (const u of [0.34, 0.5]) box(xs + u * L - 0.12, 0.36, iz0, 0.24, 0.05, iw, seatWood);
-    const ox0 = wx0 + 0.08, ox1 = wx1 - 0.08;
-    for (const oz of [zc - 0.24, zc + 0.16]) {
-      box(ox0, 0.41, oz, ox1 - ox0 - 0.3, 0.035, 0.05, oarWood);   // loom
-      box(ox1 - 0.3, 0.41, oz - 0.035, 0.3, 0.035, 0.12, oarWood); // blade
+  // ripples: in the channel, clear of the boat and of the lamp reflections
+  const rips = [[0.3, 0.3, 0.8], [2.2, 0.45, 0.7], [4.3, 0.25, 0.9], [1.6, 0.9, 0.6], [3.3, 1.05, 0.8], [5.0, 0.8, 0.6],
+    [0.5, 1.6, 0.7], [4.6, 1.7, 0.8], [2.4, 2.3, 0.7], [0.9, 2.8, 0.8], [4.0, 3.1, 0.7], [1.0, 3.5, 0.6], [3.0, 3.6, 0.7]];
+  for (const [x, dz, len] of rips) {
+    const z = zA + dz;
+    if (dz < 0.15 || dz + 0.06 > Wc - 0.2 || x + len > 5.9) continue;
+    if (p.showBoat && x < xb + L + R + 0.1 && x + len > xb - MOT - 0.1 && z + 0.06 > zh - 0.12 && z < zh + BW + 0.12) continue;
+    if (x < lx + 0.45 && x + len > lx - 0.1 && z > zB - 0.4) continue;
+    if (glints.some(([gx]) => x < gx + 0.35 && x + len > gx - 0.35)) continue;
+    box(x, WATER, z, len, 0.02, 0.06, ripple);
+  }
+
+  if (p.showBoat) {
+    // hull: solid bottom, open well with side walls and transom, rounded octagonal bow
+    box(xb, WATER, zh, L, yF - WATER, BW, boatC);
+    box(xb, yF, zh, L, GUN - yF, 0.12, boatC);
+    box(xb, yF, zh + BW - 0.12, L, GUN - yF, 0.12, boatC);
+    box(xb, yF, zh + 0.12, 0.12, GUN - yF, BW - 0.24, boatC);
+    cyl(xb + L, WATER, zc, R, GUN - WATER, boatC, 8);
+    // white gunwale caps outline the hull from above
+    box(xb, GUN, zh, L, 0.04, 0.12, white);
+    box(xb, GUN, zh + BW - 0.12, L, 0.04, 0.12, white);
+    box(xb, GUN, zh + 0.12, 0.12, 0.04, BW - 0.24, white);
+    // dark boot stripe at the waterline on the faces the camera sees
+    box(xb, WATER, zh - 0.03, L, 0.08, 0.03, boot);
+    box(xb - 0.03, WATER, zh, 0.03, 0.08, BW, boot);
+    // floorboards, stern bench and evenly spaced thwarts inside the well
+    box(xb + 0.12, yF, zh + 0.12, L - 0.62, 0.02, BW - 0.24, wood);
+    box(xb + 0.12, yF + 0.02, zh + 0.12, 0.38, 0.12, BW - 0.24, woodDark);
+    for (const tx of [1.1, 2.1]) box(xb + tx, yF + 0.02, zh + 0.12, 0.22, 0.12, BW - 0.24, woodDark);
+    // outboard motor hung on the transom
+    box(xb - MOT, 0.46, zc - 0.14, MOT, 0.34, 0.28, motor);
+    box(xb - 0.2, WATER, zc - 0.04, 0.08, 0.26, 0.08, motor);
+    // bow lantern on the foredeck
+    box(xb + L + 0.08, GUN, zc - 0.03, 0.06, 0.34, 0.06, metal);
+    box(xb + L + 0.03, GUN + 0.34, zc - 0.08, 0.16, 0.16, 0.16, p.lights ? lit : lampOff, p.lights);
+  }
+
+  // mooring points: an iron ring plate on the wall and a painted bollard on the coping above it.
+  // The bollard bands carry the boat paint, so the colour stays visible when the boat is away.
+  for (const bx of [xb + 0.3, xb + L - 0.2]) {
+    box(bx - 0.07, 0.5, zB - 0.04, 0.14, 0.14, 0.04, metal);
+    if (p.showBoat) box(bx - 0.03, 0.55, zh + BW, 0.06, 0.04, zB - 0.04 - (zh + BW), rope);
+    cyl(bx, TOP, zB + 0.22, 0.11, 0.12, metal, 10);
+    cyl(bx, TOP + 0.12, zB + 0.22, 0.13, 0.1, boatC, 10);
+    cyl(bx, TOP + 0.22, zB + 0.22, 0.11, 0.1, metal, 10);
+    box(bx - 0.14, TOP + 0.32, zB + 0.08, 0.28, 0.05, 0.28, metal);
+  }
+
+  // ---- optional quay dressing ----
+  const lamp = (x, z) => {
+    box(x - 0.13, BANK, z - 0.13, 0.26, 0.15, 0.26, metal);
+    cyl(x, BANK + 0.15, z, 0.06, 2.0, metal, 8);
+    box(x - 0.15, BANK + 2.15, z - 0.15, 0.3, 0.3, 0.3, p.lights ? lit : lampOff, p.lights);
+    box(x - 0.19, BANK + 2.45, z - 0.19, 0.38, 0.06, 0.38, metal);
+  };
+  if (dressed) for (const x of lampXs) lamp(x, useBack0 + useBack / 2); // centred on the far paving
+  if (p.dressing === "promenade") {
+    // bench on the street bank, facing the water, centred in the paved strip
+    const bz = Math.max(0.06, (useFront - 0.5) / 2), bx0 = 2.3;
+    for (const x of [bx0 + 0.1, bx0 + 1.2]) box(x, BANK, bz + 0.05, 0.1, 0.42, 0.4, woodDark);
+    box(bx0, BANK + 0.42, bz, 1.4, 0.08, 0.5, wood);
+    box(bx0, BANK + 0.5, bz, 1.4, 0.4, 0.07, wood);
+    // two planters on the street bank, fully in view
+    const pz = Math.max(0.06, (useFront - 0.56) / 2);
+    for (const px of [0.6, 4.6]) {
+      box(px, BANK, pz, 0.56, 0.38, 0.56, wood);
+      box(px - 0.03, BANK + 0.38, pz - 0.03, 0.62, 0.05, 0.62, woodDark);
+      cyl(px + 0.28, BANK + 0.43, pz + 0.28, 0.27, 0.28, leaf, 10);
+      cyl(px + 0.28, BANK + 0.71, pz + 0.28, 0.17, 0.2, leaf, 10);
     }
-    // stern sheets and foredeck in wood
-    const s1 = prof[1], s3 = prof[3];
-    box(xs + s1[0] * L + 0.04, 0.46, zc - half * s1[2] + 0.08, (s1[1] - s1[0]) * L - 0.04, 0.03, 2 * (half * s1[2] - 0.08), seatWood);
-    box(xs + s3[0] * L + 0.04, 0.48, zc - half * s3[2] + 0.08, (s3[1] - s3[0]) * L - 0.08, 0.025, 2 * (half * s3[2] - 0.08), wood);
-
-    // stern lantern and bow light
-    const lx = xs + 0.04 * L;
-    box(lx - 0.03, 0.46, zc - 0.03, 0.06, 0.5, 0.06, iron);
-    box(lx - 0.09, 0.96, zc - 0.09, 0.18, 0.2, 0.18, glow(glass), p.lights);
-    box(lx - 0.12, 1.16, zc - 0.12, 0.24, 0.05, 0.24, iron);
-    const fx = xs + 0.96 * L;
-    box(fx - 0.02, 0.6, zc - 0.02, 0.04, 0.2, 0.04, iron);
-    box(fx - 0.06, 0.8, zc - 0.06, 0.12, 0.12, 0.12, glow(glass), p.lights);
-
-    // cleats on the bank-side gunwale; short thin lines rise and run straight to the bollards
-    const ry = 0.75;
-    bollardU.forEach((u, i) => {
-      const bx = bollardX[i], sl = sliceAt(u), top = sl[3], zEdge = zc + half * sl[2];
-      box(bx - 0.09, top, zEdge - 0.08, 0.18, 0.06, 0.06, iron);
-      const rz0 = zEdge - 0.0675;
-      box(bx - 0.0175, top + 0.06, rz0, 0.035, ry - (top + 0.06), 0.035, rope);
-      box(bx - 0.0175, ry, rz0, 0.035, 0.035, bz - rz0, rope);
-    });
   }
 
   return { parts };

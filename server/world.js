@@ -15,12 +15,14 @@ function rng(seed) {
 const hash = (s) => [...s].reduce((h, c) => (Math.imul(h, 31) + c.charCodeAt(0)) | 0, 7);
 
 const THEMES = {
-  kyoto: { words: ["kyoto", "japan", "tokyo", "shrine", "sakura", "cherry", "temple", "zen"], season: "spring", awnings: ["#E5484D", "#D9402E", "#2B3242"], walls: ["#F3E3C8", "#EFD9BC", "#F6EEE0"], roofs: ["#3B4250", "#5B6270"], torii: true, trees: "blossom" },
-  seaside: { words: ["sea", "beach", "coast", "harbor", "harbour", "surf", "ocean", "island", "summer"], season: "summer", awnings: ["#0E7C7B", "#FF7A59", "#3E7BFA"], walls: ["#F5EBDD", "#E3F1F3", "#FFFFFF"], roofs: ["#0E7C7B", "#FF7A59"], trees: "round" },
-  winter: { words: ["winter", "snow", "christmas", "alpine", "ski", "nordic", "cold"], season: "winter", awnings: ["#C8553D", "#2F7A55", "#3B4A5A"], walls: ["#D8E3EC", "#F6EEE0", "#EAD2C0"], roofs: ["#F3F6F9", "#3B4A5A"], trees: "pine" },
-  autumn: { words: ["autumn", "fall", "harvest", "cozy", "cosy", "maple", "pumpkin"], season: "autumn", awnings: ["#E58A3A", "#7A4A3A", "#C8553D"], walls: ["#F3E3C8", "#E2C29B", "#F6EEE0"], roofs: ["#7A4A3A", "#5B6270"], trees: "round" },
-  candy: { words: ["candy", "pastel", "cute", "kawaii", "pink", "sweet", "toy"], season: "spring", awnings: ["#FF5C8A", "#7D5BA6", "#FFB347"], walls: ["#FFF0F4", "#F2E6EE", "#FBE7EF"], roofs: ["#7D5BA6", "#FF5C8A"], trees: "blossom" },
-  town: { words: [], season: "spring", awnings: ["#E5484D", "#3E7BFA", "#2F7A55"], walls: ["#F3E3C8", "#F6EEE0", "#D8DEE3"], roofs: ["#5B6270", "#C8553D"], trees: "blossom" },
+  kyoto: { words: ["kyoto", "japan", "tokyo", "shrine", "sakura", "cherry", "temple", "zen"], season: "spring", awnings: ["#E5484D", "#D9402E", "#2B3242"], walls: ["#F3E3C8", "#EFD9BC", "#F6EEE0"], roofs: ["#5A6478", "#707A8E"], torii: true, trees: "blossom", ground: "plaza", props: ["town-flowercart", "town-park-bench"] },
+  seaside: { words: ["sea", "beach", "coast", "harbor", "harbour", "surf", "ocean", "island", "summer"], season: "summer", awnings: ["#0E7C7B", "#FF7A59", "#3E7BFA"], walls: ["#F5EBDD", "#E3F1F3", "#FFFFFF"], roofs: ["#0E7C7B", "#FF7A59"], trees: "round", props: ["town-lighthouse", "town-park-bench", "town-flowercart"] },
+  winter: { words: ["winter", "snow", "christmas", "alpine", "ski", "nordic", "cold"], season: "winter", awnings: ["#C8553D", "#2F7A55", "#3B4A5A"], walls: ["#D8E3EC", "#F6EEE0", "#EAD2C0"], roofs: ["#F3F6F9", "#3B4A5A"], trees: "pine", props: ["town-busstop", "town-park-bench", "town-plaza-fountain"] },
+  autumn: { words: ["autumn", "fall", "harvest", "cozy", "cosy", "maple", "pumpkin"], season: "autumn", awnings: ["#E58A3A", "#7A4A3A", "#C8553D"], walls: ["#F3E3C8", "#E2C29B", "#F6EEE0"], roofs: ["#7A4A3A", "#5B6270"], trees: "round", props: ["town-flowercart", "town-park-bench", "town-busstop"] },
+  candy: { words: ["candy", "pastel", "cute", "kawaii", "pink", "sweet", "toy"], season: "spring", awnings: ["#FF5C8A", "#7D5BA6", "#FFB347"], walls: ["#FFF0F4", "#F2E6EE", "#FBE7EF"], roofs: ["#7D5BA6", "#FF5C8A"], trees: "blossom", props: ["town-flowercart", "town-plaza-fountain", "town-park-bench"] },
+  // San Francisco: pastel Painted Ladies, a cable car on the hill street, the fog rolling in
+  sf: { words: ["san francisco", "bay area", "founder", "startup", "series a", "seed round", "silicon valley", "mission district", "hayes valley", " sf ", " sf,", "sf "], season: "summer", awnings: ["#F28CB1", "#5FB8B0", "#F6C85F", "#8E7CC3"], walls: ["#F7E3C6", "#D6E9F2", "#F4D3DE", "#E3EFD3", "#FFF4D6"], roofs: ["#5A6478", "#7D6A99"], trees: "round", ground: "paving", props: ["town-busstop", "town-park-bench", "town-flowercart"], tram: true },
+  town: { words: [], season: "spring", awnings: ["#E5484D", "#3E7BFA", "#2F7A55"], walls: ["#F3E3C8", "#F6EEE0", "#D8DEE3"], roofs: ["#5B6270", "#C8553D"], trees: "blossom", props: ["town-busstop", "town-flowercart", "town-park-bench", "town-plaza-fountain"] },
 };
 
 export function themeOf(prompt) {
@@ -32,12 +34,12 @@ export function themeOf(prompt) {
 /** A street of kit pieces for a prompt: two rows of buildings facing a road, greenery front and back. */
 export function planWorld(prompt = "a cosy little town", { seed } = {}) {
   const p = prompt.toLowerCase();
-  const themeName = themeOf(p), T = THEMES[themeName];
+  const themeName = themeOf(` ${p} `), T = THEMES[themeName];
   const r = rng(seed ?? hash(prompt));
   const pick = (arr) => arr[Math.floor(r() * arr.length)];
   const time = /night|neon|evening|midnight/.test(p) ? "night" : /dusk|sunset|golden/.test(p) ? "dusk" : "day";
   const market = /market|stall|food|bazaar|fair/.test(p);
-  const tram = /tram|train|transit|rail/.test(p) || r() > 0.5;
+  const tram = T.tram || /tram|train|transit|rail|cable car/.test(p) || r() > 0.5;
   const cols = /big|city|long|large/.test(p) ? 6 : 5;
   const placements = [];
   const place = (asset, cx, cz, knobs = {}, { rot = 0, dx = 0, dz = 0 } = {}) => {
@@ -46,8 +48,9 @@ export function planWorld(prompt = "a cosy little town", { seed } = {}) {
   };
   // ground: lawns front and back, plaza strip by the shops
   for (let cx = 0; cx < cols; cx++) {
-    place("town-plaza", cx, 0, { surface: "grass", grass: T.season === "winter" ? "#EEF2F6" : T.season === "autumn" ? "#C9B58E" : "#A9C48A", beds: r() > 0.7 });
-    place("town-plaza", cx, 4, { surface: "grass", grass: T.season === "winter" ? "#EEF2F6" : T.season === "autumn" ? "#C9B58E" : "#A9C48A" });
+    if (T.ground) { place("town-plaza", cx, 0, { surface: T.ground }); place("town-plaza", cx, 4, { surface: T.ground }); }
+    else place("town-plaza", cx, 0, { surface: "grass", grass: T.season === "winter" ? "#EEF2F6" : T.season === "autumn" ? "#C9B58E" : "#A9C48A", beds: r() > 0.7 });
+    if (!T.ground) place("town-plaza", cx, 4, { surface: "grass", grass: T.season === "winter" ? "#EEF2F6" : T.season === "autumn" ? "#C9B58E" : "#A9C48A" });
     place("town-road", cx, 2, { feature: tram ? "tram" : cx === Math.floor(cols / 2) ? "crossing" : "lanes" });
     place("town-plaza", cx, 1, { surface: "paving" });
     place("town-plaza", cx, 3, { surface: "paving" });
@@ -70,7 +73,7 @@ export function planWorld(prompt = "a cosy little town", { seed } = {}) {
     if (cx % 2 === 0) { place("town-lamp", cx, 2, {}, { dx: 2.5, dz: -0.2 }); place("town-lamp", cx, 2, {}, { dx: 3.5, dz: 5.4 }); }
   }
   if (tram) placements.push({ asset: "town-tram", at: [CELL * 0.6, 0.1, CELL * 2 + 1.95], rot: 0, knobs: { body: pick(T.awnings), cars: 2, lights: time !== "day" } });
-  // props: any small kit piece the factory has published (benches, fountains, carts...) dots the lawns
+  // props: small kit pieces that belong in this theme (a lighthouse is a seaside thing, not a Kyoto lane)
   const CORE = new Set(["town-shop", "town-house", "town-stall", "town-torii", "town-tram", "town-robot", "town-gate", "town-road", "town-plaza", "town-tree", "town-lamp", "town-flats", "town-hatchback"]);
   // parked cars along both kerbs
   const cars = 2 + Math.floor(r() * 3);
@@ -78,7 +81,7 @@ export function planWorld(prompt = "a cosy little town", { seed } = {}) {
     const far = r() > 0.5, x = 1 + r() * (cols * CELL - 6);
     placements.push({ asset: "town-hatchback", at: far ? [x + 4, 0.1, CELL * 2 + 5.2] : [x, 0.1, CELL * 2 + 0.75], rot: far ? 180 : 0, knobs: { body: pick([...T.awnings, "#F6EEE0", "#3A3F48"]), roof: r() > 0.85 ? "taxi" : "plain", lights: time !== "day" } });
   }
-  const props = catalog.allAssets().filter((a) => a.format === "blocks" && !CORE.has(a.id) && a.footprint && Math.max(...a.footprint) <= 4).sort((a, b) => a.id.localeCompare(b.id));
+  const props = catalog.allAssets().filter((a) => a.format === "blocks" && !CORE.has(a.id) && a.footprint && Math.max(...a.footprint) <= 4 && (!T.props || T.props.includes(a.id))).sort((a, b) => a.id.localeCompare(b.id));
   if (props.length) for (let cx = 0; cx < cols; cx++) for (const cz of [0, 4]) if (r() > 0.45) {
     const a = pick(props);
     place(a.id, cx, cz, {}, { dx: Math.min(6 - a.footprint[0], 0.5 + r() * 2), dz: Math.min(6 - a.footprint[1], 0.3 + r() * 1.5) });

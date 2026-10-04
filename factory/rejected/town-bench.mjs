@@ -1,178 +1,182 @@
-// Park Bench: a slatted town bench on painted end frames, with optional timber planters at each end.
-// Block asset: build(p) returns parts in metres on the Oasis Town grid (origin at the footprint's corner, y up,
-// street side at z = 0). Length is the overall length; planters keep a fixed real size and the seat takes the rest.
+// Park Bench: a slatted wooden park bench with optional planter boxes at each end. Block asset: build(p)
+// returns parts in metres on the Oasis Town grid (origin at the footprint's corner, y up, street side at z = 0).
+//
+// Footprint: the brief asks for a 2 x 1 lot and a 1.5-3 m length. A 3 m bench plus two planters needs about
+// 4 m, so the lot is declared as 4 x 1. It is drawn as a strip of 1 m paving flags in the kit kerb tone.
+// The strip always covers the whole lot, so the model's bounds never change with any knob. A fixed-fit camera
+// then keeps one world-to-pixel scale, and the flag joints show the bench length in real grid metres.
+// The default bench (2 m seat) fills two flags, the brief's 2 x 1 module.
 export const meta = {
   title: "Park Bench",
   kind: "3d",
   format: "blocks",
   kit: "Oasis Town",
-  description: "A slatted park bench on painted end frames with optional flowering planters at each end, sized to line a town street or square.",
-  tags: ["3d", "low poly", "bench", "park", "street furniture", "planter", "seating", "town"],
+  description: "A slatted wooden park bench on a strip of 1 m paving flags, with optional flowering planter boxes at each end, to line a town pavement or face a little square.",
+  tags: ["3d", "low poly", "bench", "park", "street furniture", "planter", "seating", "town", "kit"],
   price: 1,
   author: "oasis-factory",
-  footprint: [2, 1],
+  footprint: [4, 1],
   size: [1000, 1000],
 };
 
 export const params = {
   knobs: {
-    wood: { type: "color", role: "secondary", label: "Wood", default: "#8A6E52" },
-    frame: { type: "color", role: "ink", label: "Frame", default: "#2F7A55" },
-    flowers: { type: "color", role: "highlight", label: "Flowers", default: "#F7B8CF" },
-    length: { type: "range", label: "Length (m)", default: 2, min: 1.5, max: 3, step: 0.1 },
-    slats: { type: "range", label: "Seat slats", default: 4, min: 3, max: 6, step: 1 },
-    back: { type: "choice", label: "Back", default: "slatted", options: ["slatted", "backless"] },
-    planters: { type: "toggle", label: "Planters", default: true },
+    wood: { type: "color", role: "primary", label: "Wood stain", default: "#8A6E52" },
+    frame: { type: "color", role: "ink", label: "Iron frame", default: "#5B6270" },
+    planter: { type: "color", role: "primary", label: "Planter boxes", default: "#2F7A55" },
+    bloom: { type: "color", role: "highlight", label: "Flowers", default: "#F7B8CF" },
+    length: { type: "range", label: "Seat length (m)", default: 2, min: 1.5, max: 3, step: 0.25 },
+    planters: { type: "toggle", label: "Planter boxes", default: true },
+    arms: { type: "toggle", label: "Armrests", default: true },
   },
   presets: {
-    Harbour: { wood: "#A88A6A", frame: "#3E7BFA", flowers: "#F2B33D" },
-    Civic: { wood: "#6E5440", frame: "#5B6270", flowers: "#E5484D" },
-    Orchard: { wood: "#B08A5E", frame: "#2B3242", flowers: "#FFFFFF" },
+    Harbour: { wood: "#A9845E", frame: "#2B3242", planter: "#D8DEE3", bloom: "#E5484D" },
+    Seaside: { wood: "#B89470", frame: "#2B4F9E", planter: "#F6EEE0", bloom: "#F2B33D" },
+    Brick: { wood: "#6E5440", frame: "#2B3242", planter: "#C8553D", bloom: "#FFF4E0" },
   },
 };
+
+// ---- colour helpers: every brand input is clamped into the band its material lives in ----
+function toHsl(hex) {
+  const n = parseInt(String(hex).slice(1), 16) || 0;
+  const r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2;
+  let h = 0, s = 0;
+  if (mx !== mn) {
+    const d = mx - mn;
+    s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+    if (mx === r) h = ((g - b) / d + (g < b ? 6 : 0)) * 60;
+    else if (mx === g) h = ((b - r) / d + 2) * 60;
+    else h = ((r - g) / d + 4) * 60;
+  }
+  return [h, s, l];
+}
+function fromHsl(h, s, l) {
+  h = ((h % 360) + 360) % 360;
+  const c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs(((h / 60) % 2) - 1)), m = l - c / 2;
+  let r = 0, g = 0, b = 0;
+  if (h < 60) [r, g, b] = [c, x, 0]; else if (h < 120) [r, g, b] = [x, c, 0];
+  else if (h < 180) [r, g, b] = [0, c, x]; else if (h < 240) [r, g, b] = [0, x, c];
+  else if (h < 300) [r, g, b] = [x, 0, c]; else [r, g, b] = [c, 0, x];
+  const f = (v) => Math.round(clamp(v + m, 0, 1) * 255).toString(16).padStart(2, "0");
+  return "#" + f(r) + f(g) + f(b);
+}
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+
+// Wood is a stain. The input sets its lightness and nudges the hue, but it always stays a warm, mid-light timber.
+function woodHsl(hex) {
+  const [h, s, l] = toHsl(hex);
+  const hue = h >= 15 && h <= 45 && s > 0.05 ? h : 30 + ((h % 30) - 15) * 0.5;
+  return [hue, clamp(s, 0.22, 0.4), clamp(l, 0.38, 0.6)];
+}
+// Iron frame: cool and dark, always at least 0.18 darker than the wood, so the frame never merges with the slats.
+function ironTone(hex, woodL) {
+  const [h, s, l] = toHsl(hex);
+  return fromHsl(h, Math.min(s, 0.45), clamp(l, 0.12, Math.min(0.3, woodL - 0.18)));
+}
+// Painted planter: saturation is capped so a neon brand becomes a painted tone. The lightness floor keeps its faces readable at night.
+function paintTone(hex) {
+  const [h, s, l] = toHsl(hex);
+  return fromHsl(h, Math.min(s, 0.5), clamp(l, 0.36, 0.74));
+}
+// Flowers stay out of the leaf-green and cyan band, and stay bright.
+function bloomTone(hex) {
+  let [h, s, l] = toHsl(hex);
+  if (h >= 70 && h <= 200) h = h < 135 ? 52 : 222;
+  return fromHsl(h, Math.max(s, 0.5), clamp(l, 0.62, 0.88));
+}
+// Shift lightness away from the base, for rims, seams and alternate planks.
+function shade(hex, amt) {
+  const [h, s, l] = toHsl(hex);
+  return fromHsl(h, s, l < 0.5 ? Math.min(0.92, l + amt) : Math.max(0.08, l - amt));
+}
+function hash(i) {
+  const v = Math.sin(i * 127.1 + 311.7) * 43758.5453;
+  return v - Math.floor(v);
+}
 
 export function build(p) {
   const parts = [];
   const box = (x, y, z, w, h, d, c) => parts.push({ t: "box", p: [x, y, z], s: [w, h, d], c });
-  const cyl = (cx, y, cz, r, h, c, n) => parts.push({ t: "cyl", p: [cx, y, cz], r, h, c, n: n || 10 });
+  const cyl = (x, y, z, r, h, c, n) => parts.push({ t: "cyl", p: [x, y, z], r, h, c, n });
+  const cone = (x, y, z, r, h, c, n) => parts.push({ t: "cone", p: [x, y, z], r, h, c, n });
 
-  // ---- colour guards -------------------------------------------------------------------------------------
-  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  const hex = (c) => [1, 3, 5].map((i) => parseInt(String(c).slice(i, i + 2), 16) || 0);
-  const toHex = (a) => "#" + a.map((v) => clamp(Math.round(v), 0, 255).toString(16).padStart(2, "0")).join("");
-  const toHsl = (c) => {
-    const [r, g, b] = hex(c).map((v) => v / 255);
-    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2;
-    if (mx === mn) return [0, 0, l];
-    const d = mx - mn, s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
-    const h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
-    return [h * 60, s, l];
-  };
-  const fromHsl = (h, s, l) => {
-    const q = l < 0.5 ? l * (1 + s) : l + s - l * s, m = 2 * l - q;
-    const f = (t) => {
-      t = ((t % 1) + 1) % 1;
-      if (t < 1 / 6) return m + (q - m) * 6 * t;
-      if (t < 1 / 2) return q;
-      if (t < 2 / 3) return m + (q - m) * (2 / 3 - t) * 6;
-      return m;
-    };
-    const k = h / 360;
-    return toHex([f(k + 1 / 3), f(k), f(k - 1 / 3)].map((v) => v * 255));
-  };
-  const shade = (c, k) => toHex(hex(c).map((v) => v * k));
+  const [wh, ws, wl] = woodHsl(p.wood);
+  const wood = fromHsl(wh, ws, wl);
+  const wood2 = fromHsl(wh, ws, wl - 0.06);       // alternate plank, always a touch darker
+  const iron = ironTone(p.frame, wl);
+  const paint = paintTone(p.planter);
+  const bloom = bloomTone(p.bloom);
 
-  // wood always reads as timber: hue folded into the warm band, saturation and lightness bounded
-  const woodTone = (c) => {
-    let [h, s, l] = toHsl(c);
-    if (h < 15 || h > 48) h = 15 + (h / 360) * 33;
-    return fromHsl(h, clamp(s, 0.18, 0.45), clamp(l, 0.32, 0.6));
-  };
-  // painted frame: any hue, lightness kept in a band that shades well and separates from wood and paving
-  const frameTone = (c) => {
-    const [h, s, l] = toHsl(c);
-    return fromHsl(h, s, clamp(l, 0.2, 0.5));
-  };
-  // flowers: any hue, always a bright bloom that pops off the leaves
-  const bloomTone = (c) => {
-    let [h, s, l] = toHsl(c);
-    if (s > 0.1) s = Math.max(s, 0.5);
-    return fromHsl(h, s, clamp(l, 0.55, 0.9));
-  };
+  // ---- paving strip: covers the full 4 x 1 lot at every knob value (fixed bounds = fixed scale) ----
+  const LOT = 4, G = 0.04;
+  box(0, 0, 0, LOT, G, 1, "#D9DCE1");
+  for (let k = 1; k < LOT; k++) box(k - 0.01, G, 0.03, 0.02, 0.006, 0.94, "#C4C9D0"); // 1 m flag joints
 
-  const wood = woodTone(p.wood);
-  const woodAlt = shade(wood, 0.9);
-  const frame = frameTone(p.frame);
-  const bloom = bloomTone(p.flowers);
-  const planterWood = shade(wood, 0.84), planterSeam = shade(wood, 0.7);
-  // fixed materials
-  const kerb = "#D9DCE1", soil = "#6B5440", sun = "#F2B33D";
-  const leafDark = "#5E9A52", leaf = "#79B86A", leafLight = "#8FC77F";
+  const S = clamp(p.length, 1.5, 3);              // seat length
+  const PW = 0.34, GAP = 0.14;                    // planter width and the clear gap to the bench
+  const side = p.planters ? PW + GAP : 0;
+  const x0 = (LOT - (S + 2 * side)) / 2;          // max run 3.96 m, so it always fits inside the lot
+  const bx0 = x0 + side, bx1 = bx0 + S;
 
-  // ---- layout --------------------------------------------------------------------------------------------
-  const L = clamp(Number(p.length) || 2, 1.5, 3);
-  const X0 = 1 - L / 2, X1 = 1 + L / 2; // centred on the 2 m footprint
-  const G = 0.05; // paving pad height
-  const pl = !!p.planters;
-  const hasBack = p.back !== "backless";
-  const PW = 0.4, PD = 0.64, PZ = 0.16, PH = 0.48, GAP = 0.06; // planters: fixed real size
-  const sx0 = pl ? X0 + PW + GAP : X0, sx1 = pl ? X1 - PW - GAP : X1, SL = sx1 - sx0;
+  // ---- bench profile ----
+  const SEAT_Y = G + 0.41, SEAT_H = 0.05;         // seat top 0.46 m above the paving
+  const SZ0 = 0.24, SZ1 = 0.66;
+  const LEG = 0.06, FOOT = 0.03;
+  const FZ = 0.26, RZ = SZ1;
+  const nBack = 4, BACK_Y0 = G + 0.52, BACK_P = 0.11, BACK_H = 0.09;
+  const backTop = BACK_Y0 + (nBack - 1) * BACK_P + BACK_H; // tallest point of the piece at every setting
+  const ARM_Y = G + 0.6;
 
-  box(X0 - 0.05, 0, 0.1, L + 0.1, G, 0.8, kerb); // paving pad
+  // end frames sit inset so the armrests never reach past the seat ends
+  const frameXs = [bx0 + 0.06, bx1 - 0.06 - LEG];
+  if (S > 1.7) frameXs.push((bx0 + bx1) / 2 - LEG / 2);
 
-  // ---- end frames: each a closed side frame (front leg, rear leg or post, seat rail, foot rail) ------------
-  const fw = 0.08, RAIL = 0.34, SEAT = 0.45, BACK_TOP = 0.9;
-  const zF = 0.2, zB = 0.64; // seat front / back edge
-  const zLegF = zF + 0.03; // front leg sits just behind the seat's front lip
-  const zLegB = hasBack ? zB : zB - 0.03 - fw; // rear member: back post behind the seat, or a leg under it
-  const inset = pl ? 0.12 : 0; // with planters, frames step in so the legs show in the gap
-  const frames = [sx0 + inset, sx1 - inset - fw];
-  if (SL > 1.6) frames.splice(1, 0, sx0 + SL / 2 - fw / 2);
-
-  for (const fx of frames) {
-    box(fx, G, zLegF, fw, RAIL - G, fw, frame); // front leg
-    if (hasBack) box(fx, G, zLegB, fw, BACK_TOP - G, fw, frame); // back post, ground to back top
-    else box(fx, G, zLegB, fw, RAIL - G, fw, frame); // rear leg
-    box(fx, RAIL, zLegF, fw, 0.06, zLegB + (hasBack ? 0 : fw) - zLegF, frame); // seat rail on the legs
-    box(fx, G + 0.06, zLegF + fw, fw, 0.06, zLegB - zLegF - fw, frame); // foot rail, leg to leg
-  }
-
-  // ---- seat slats across the seat depth, resting on the rails -----------------------------------------------
-  const n = clamp(Math.round(p.slats), 3, 6);
-  const sgap = 0.025, sw = (zB - zF - sgap * (n - 1)) / n;
-  for (let i = 0; i < n; i++) box(sx0, RAIL + 0.06, zF + i * (sw + sgap), SL, 0.05, sw, i % 2 ? woodAlt : wood);
-
-  // ---- back: slats on the front face of the posts, painted cap across the post tops -------------------------
-  if (hasBack) {
-    [0.52, 0.66, 0.8].forEach((y, k) => box(sx0, y, zB - 0.04, SL, 0.1, 0.04, k % 2 ? woodAlt : wood));
-    box(sx0 - 0.02, BACK_TOP, zB - 0.05, SL + 0.04, 0.04, fw + 0.07, frame);
-  }
-
-  // ---- armrests on a free-standing bench (planters act as the ends otherwise) ------------------------------
-  if (!pl) {
-    const armEnd = hasBack ? zB - 0.04 : zB - 0.03;
-    for (const fx of [frames[0], frames[frames.length - 1]]) {
-      box(fx, SEAT, zLegF, fw, 0.22, fw, frame); // front arm post over the front leg
-      if (!hasBack) box(fx, SEAT, zLegB, fw, 0.22, fw, frame); // rear arm post over the rear leg
-      box(fx - 0.02, SEAT + 0.22, zF - 0.02, fw + 0.04, 0.05, armEnd - zF + 0.02, wood); // arm top
+  frameXs.forEach((fx, i) => {
+    const armed = i < 2 && p.arms;
+    box(fx - 0.02, G, FZ - 0.02, LEG + 0.04, FOOT, LEG + 0.04, iron);
+    box(fx - 0.02, G, RZ - 0.02, LEG + 0.04, FOOT, LEG + 0.04, iron);
+    box(fx, G + FOOT, FZ, LEG, (armed ? ARM_Y : SEAT_Y) - G - FOOT, LEG, iron);
+    // every rear post finishes flush with the top back slat: nothing pokes above the back
+    box(fx, G + FOOT, RZ, LEG, backTop - G - FOOT, LEG, iron);
+    box(fx, SEAT_Y - 0.05, FZ, LEG, 0.05, RZ - FZ + LEG, iron); // seat rail, hidden under the slats
+    if (armed) {
+      box(fx, ARM_Y, FZ - 0.04, LEG, 0.05, (RZ - 0.05) - (FZ - 0.04), iron);
+      box(fx - 0.02, ARM_Y + 0.05, FZ - 0.06, LEG + 0.04, 0.04, (RZ - 0.05) - (FZ - 0.06), wood);
     }
-  }
+  });
+  // low stretcher tying the legs together, so the frame reads as one cast-iron piece
+  box(frameXs[0] + LEG, G + 0.12, RZ + 0.01, frameXs[1] - frameXs[0] - LEG, 0.04, 0.04, iron);
 
-  // ---- planters: timber boxes with painted corner posts and rim, soil, flowering shrubs ---------------------
-  if (pl) {
-    const flower = (cx, y, cz, r) => {
-      cyl(cx, y, cz, r, 0.03, bloom, 8);
-      cyl(cx, y + 0.03, cz, r * 0.4, 0.012, sun, 6);
-    };
-    const shrub = (cx, cz, y, tall, off) => {
-      const tiers = [[0.16, 0.12, leafDark], [0.12, tall ? 0.12 : 0.09, leaf], [0.07, 0.07, leafLight]];
-      const tops = [];
-      let yy = y;
-      for (const [r, h, c] of tiers) { cyl(cx, yy, cz, r, h, c); yy += h; tops.push(yy); }
-      // blooms nestle on each leafy ledge, on the street- and camera-facing side
-      for (const a of [205, 265, 325]) {
-        const t = ((a + off) * Math.PI) / 180;
-        flower(cx + 0.135 * Math.cos(t), tops[0], cz + 0.135 * Math.sin(t), 0.035);
+  // seat: four boards with slim gaps and alternating tone
+  const nSeat = 4, gap = 0.02;
+  const sd = (SZ1 - SZ0 - gap * (nSeat - 1)) / nSeat;
+  for (let i = 0; i < nSeat; i++) box(bx0, SEAT_Y, SZ0 + i * (sd + gap), S, SEAT_H, sd, i % 2 ? wood2 : wood);
+  // back: four close boards against the front face of the rear posts
+  for (let i = 0; i < nBack; i++) box(bx0, BACK_Y0 + i * BACK_P, RZ - 0.05, S, BACK_H, 0.05, i % 2 ? wood2 : wood);
+
+  // ---- planter boxes: free-standing, 0.14 m clear of the seat ends and below the armrests ----
+  if (p.planters) {
+    const rim = shade(paint, 0.16), seam = shade(paint, 0.1);
+    const PZ0 = 0.2, PZ1 = 0.8, PH = 0.42;
+    const leaf = "#79B86A", leafDark = "#5E9A52";
+    [x0, bx1 + GAP].forEach((px, s) => {
+      box(px + 0.03, G, PZ0 + 0.03, PW - 0.06, PH, PZ1 - PZ0 - 0.06, paint);
+      box(px, G + PH, PZ0, PW, 0.06, PZ1 - PZ0, rim);
+      for (const f of [0.33, 0.66]) box(px + 0.03 + (PW - 0.06) * f - 0.015, G + 0.04, PZ0 + 0.01, 0.03, PH - 0.08, 0.02, seam);
+      box(px + 0.06, G + PH + 0.06, PZ0 + 0.06, PW - 0.12, 0.02, PZ1 - PZ0 - 0.12, "#6B5440");
+
+      const soilY = G + PH + 0.08, cx = px + PW / 2, r = 0.12;
+      const hv = hash(s * 7 + 1);
+      const fz = PZ0 + 0.18, h1 = 0.12 + hv * 0.05;
+      cyl(cx, soilY, fz, r, h1, leaf, 7);
+      cyl(cx, soilY + h1, fz, r * 0.62, 0.07, leaf, 7);
+      for (let k = 0; k < 3; k++) {
+        const a = k * 2.1 + hv * 3 + s;
+        box(cx + Math.cos(a) * r * 0.75 - 0.033, soilY + h1, fz + Math.sin(a) * r * 0.75 - 0.033, 0.066, 0.05, 0.066, bloom);
       }
-      for (const a of [235, 305]) {
-        const t = ((a + off) * Math.PI) / 180;
-        flower(cx + 0.092 * Math.cos(t), tops[1], cz + 0.092 * Math.sin(t), 0.03);
-      }
-      flower(cx, tops[2], cz, 0.035);
-    };
-    [X0, X1 - PW].forEach((px, side) => {
-      box(px + 0.02, G, PZ + 0.02, PW - 0.04, PH, PD - 0.04, planterWood); // timber body
-      for (const [cx, cz] of [[px, PZ], [px + PW - 0.06, PZ], [px, PZ + PD - 0.06], [px + PW - 0.06, PZ + PD - 0.06]]) {
-        box(cx, G, cz, 0.06, PH, 0.06, frame); // painted corner posts
-      }
-      box(px + 0.06, G + PH / 2 - 0.02, PZ, PW - 0.12, 0.04, 0.02, planterSeam); // board seam, front
-      const sideX = side === 0 ? px : px + PW - 0.02;
-      box(sideX, G + PH / 2 - 0.02, PZ + 0.06, 0.02, 0.04, PD - 0.12, planterSeam); // board seam, outer side
-      box(px - 0.01, G + PH, PZ - 0.01, PW + 0.02, 0.05, PD + 0.02, frame); // painted rim
-      box(px + 0.04, G + PH + 0.05, PZ + 0.04, PW - 0.08, 0.02, PD - 0.08, soil); // soil
-      const cx = px + PW / 2, top = G + PH + 0.07;
-      shrub(cx, PZ + 0.18, top, false, side * 15);
-      shrub(cx, PZ + PD - 0.18, top, true, 20 - side * 15);
+      box(cx - 0.035, soilY + h1 + 0.07, fz - 0.035, 0.07, 0.05, 0.07, bloom);
+      cone(cx, soilY, PZ1 - 0.18, r * 0.95, 0.22 + hash(s * 13 + 4) * 0.1, leafDark, 7); // stays below the bench back
     });
   }
 

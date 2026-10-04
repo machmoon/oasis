@@ -32,7 +32,8 @@ test("the same brief plans the same film", async () => {
   assert.ok(a.seconds > 10 && a.seconds <= 30);
   assert.ok(a.shots.some((s) => s.time === "night"), "ends with the windows lit");
   assert.ok(a.shots.at(-1).card, "ends on a card");
-  assert.equal(a.shots.at(-1).card.knobs.text, "MOMIJI RAMEN");
+  assert.equal(a.shots.at(-1).card.name, "MOMIJI RAMEN", "the end card is the brand's lockup");
+  assert.equal(a.shots.at(-1).card.knobs.letters, "MR", "with the brand's monogram");
 });
 
 test("brand names come from the brief", () => {
@@ -144,7 +145,7 @@ test("the soundtrack is a program: same seed, same bytes, a real WAV", async () 
 
 test("weather, music, light ramps, lower-thirds and formats survive cleanFilm; junk does not", async () => {
   const f = await film.planFilm(BRIEF);
-  assert.equal(f.weather, "blossom");
+  assert.equal(f.weather, "leaves", "momiji is maple: a Momiji brief gets falling leaves, not blossom");
   assert.equal(f.music.mood, "warm");
   assert.equal(f.format, "16:9");
   const crane = f.shots.find((s) => s.kind === "crane");
@@ -157,7 +158,7 @@ test("weather, music, light ramps, lower-thirds and formats survive cleanFilm; j
   assert.equal(c.shots[0].timeTo, undefined, "a ramp to the same time is no ramp");
   assert.equal(c.shots[0].card.layout, "full");
   const tall = film.cleanFilm({ ...f, format: "9:16" });
-  assert.deepEqual(tall.size, [720, 1280]);
+  assert.deepEqual(tall.size, [1080, 1920]);
   assert.equal(film.cleanFilm({ ...f, music: null }).music, null);
 });
 
@@ -170,4 +171,28 @@ test("HTTP: music.wav streams and a format change keeps the cut and resets the r
   assert.deepEqual(sq.size, [1080, 1080]);
   assert.deepEqual(sq.shots.map((s) => s.id), f.shots.map((s) => s.id));
   assert.equal(sq.render.status, "idle");
+});
+
+test("the edit: styles, ramps, cuts, one title, and junk dropped", async () => {
+  const f = await film.planFilm(BRIEF);
+  assert.equal(f.edit.style, "hype", "a teaser is cut as a hype edit");
+  assert.ok(f.shots.slice(1).some((s) => s.cut === "whip") && f.shots.some((s) => s.ramp === "expo" || s.ramp === "punch"));
+  assert.equal(f.shots.filter((s) => s.title).length, 1, "one 3D title per film");
+  assert.equal(f.shots[0].cut, undefined, "the first shot has nothing to cut from");
+  const calm = await film.planFilm('a calm dreamy film for "Tidepool" by the sea');
+  assert.equal(calm.edit.style, "dream");
+  const r = film.restyle(f, "clean");
+  assert.equal(r.edit.style, "clean");
+  assert.deepEqual(r.world, f.world, "a restyle keeps the street");
+  const c = film.cleanFilm({ ...f, edit: { style: "chaos" }, shots: [
+    { kind: "orbit", seconds: 3, cut: "whip", ramp: "bounce", shake: 9, title: { text: "A" } },
+    { kind: "static", seconds: 3, cut: "teleport", hits: [99, "x"], title: { text: "SECOND" } },
+  ] });
+  assert.equal(c.edit.style, "clean");
+  assert.equal(c.shots[0].cut, undefined); assert.equal(c.shots[0].ramp, undefined); assert.equal(c.shots[0].shake, 1);
+  assert.equal(c.shots[1].cut, undefined, "unknown cuts are dropped");
+  assert.deepEqual(c.shots[1].hits, [3], "hits are clamped into the shot");
+  assert.equal(c.shots[1].title, undefined, "only the first title survives");
+  const mount = film.titleMountOf(f.world);
+  assert.ok(mount.at[0] > 0 && mount.at[0] < f.world.size[0], "the title lands inside the street");
 });

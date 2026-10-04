@@ -15,8 +15,9 @@ for (const a of catalog.allAssets()) {
     const out = a.price > 0 ? catalog.watermark(svg, catalog.sizeOf(svg, a.size)) : svg;
     fs.writeFileSync(`${OUT}${a.id}--${b ? b.slug : "default"}.svg`, out);
     // Low-res raster comps for cards and the hero: clean, quick to decode; full vectors stay gated.
-    fs.writeFileSync(`${OUT}${a.id}--${b ? b.slug : "default"}.png`, catalog.toPng(svg, 560));
+    fs.writeFileSync(`${OUT}${a.id}--${b ? b.slug : "default"}.png`, await catalog.toPng(svg, 560));
     n++;
   }
 }
 console.log(`prerendered ${n} previews`);
+process.exit(0); // the rasteriser child keeps the event loop alive

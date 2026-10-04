@@ -2,7 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
-import { Resvg } from "@resvg/resvg-js";
+import { rasterize } from "./raster.js";
 import { inspect, renderSource } from "./sandbox.js";
 import { renderInPool, buildInPool } from "./pool.js";
 import { resolveKnobs, applyPreset, brandKnobs } from "./knobs.js";
@@ -161,9 +161,14 @@ export async function buildAsync(a, input = {}) {
 /** A paid asset's preview carries a tiled watermark until it is licensed. */
 export function watermark(svg, size) {
   const [w, h] = size;
-  const inner = svg.replace(/^<svg\b([^>]*)>/, (m, attrs) => `<svg x="0" y="0" width="${w}" height="${h}"${attrs.replace(/\s(width|height|x|y)="[^"]*"/g, "")}>`);
+  // The asset's content is inlined (its root <svg> unwrapped into a group shifted by its viewBox), not nested as a
+  // second <svg>: resvg panics on a nested <svg> whose content uses filters, and a panic aborts the process.
+  const open = svg.match(/^<svg\b[^>]*>/)?.[0] || "";
+  const vb = open.match(/viewBox="\s*([-\d.]+)[\s,]+([-\d.]+)/);
+  const body = svg.slice(open.length).replace(/<\/svg>\s*$/, "");
+  const inner = `<g transform="translate(${vb ? -Number(vb[1]) : 0},${vb ? -Number(vb[2]) : 0})">${body}</g>`;
   const fs = Math.max(13, Math.round(Math.min(w, h) / 26));
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}"><defs><pattern id="oasis-wm" width="${fs * 15}" height="${fs * 9}" patternUnits="userSpaceOnUse" patternTransform="rotate(-24)"><text x="0" y="${fs * 2}" font-family="Helvetica, Arial, sans-serif" font-size="${fs}" font-weight="700" fill="#000000" fill-opacity="0.11" stroke="#ffffff" stroke-opacity="0.3" stroke-width="0.7">oasis preview</text></pattern></defs>${inner}<rect width="${w}" height="${h}" fill="url(#oasis-wm)"/></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}"><defs><pattern id="oasis-wm" width="${fs * 15}" height="${fs * 9}" patternUnits="userSpaceOnUse" patternTransform="rotate(-24)"><text x="0" y="${fs * 2}" font-family="Helvetica, Arial, sans-serif" font-size="${fs}" font-weight="700" fill="#000000" fill-opacity="0.11" stroke="#ffffff" stroke-opacity="0.3" stroke-width="0.7">oasis preview</text></pattern></defs>${inner}<rect width="${w}" height="${h}" fill="url(#oasis-wm)"/></svg>`;
 }
 
 export function sizeOf(svg, fallback) {
@@ -171,8 +176,9 @@ export function sizeOf(svg, fallback) {
   return m ? [Number(m[1]), Number(m[2])] : fallback;
 }
 
+/** SVG to PNG, in a supervised child process so a resvg panic can't take the server down (server/raster.js). */
 export function toPng(svg, width = 1024) {
-  return new Resvg(svg, { fitTo: { mode: "width", value: width }, font: { loadSystemFonts: true } }).render().asPng();
+  return rasterize(svg, width);
 }
 
 export async function addFork(doc) {

@@ -87,8 +87,8 @@ const TOOL_DEFS = [
   },
 ];
 
-function imageBlock(svg) {
-  const png = catalog.toPng(svg, 512);
+async function imageBlock(svg) {
+  const png = await catalog.toPng(svg, 512);
   return { type: "image", source: { type: "base64", media_type: "image/png", data: png.toString("base64") } };
 }
 
@@ -143,7 +143,7 @@ async function execute(call, cart, emit, budget) {
     case "remix_asset": {
       const r = await tools.remixAsset(input);
       emit("variant", { assetId: r.asset.id, title: r.asset.title, price: r.price_usd, knobs: r.values, previewUrl: r.preview_url });
-      return [{ type: "text", text: JSON.stringify({ asset_id: r.asset.id, knobs: r.values, price_usd: r.price_usd }) }, imageBlock(r.svg)];
+      return [{ type: "text", text: JSON.stringify({ asset_id: r.asset.id, knobs: r.values, price_usd: r.price_usd }) }, await imageBlock(r.svg)];
     }
     case "add_to_cart": {
       const r = await tools.remixAsset(input);
@@ -162,7 +162,7 @@ async function execute(call, cart, emit, budget) {
       const fork = await forkAsset({ assetId: input.asset_id, instruction: input.instruction, author: "oasis-agent" });
       const { svg } = await catalog.renderAsync(fork, {});
       emit("fork", { assetId: fork.id, title: fork.title, forkedFrom: fork.forkedFrom });
-      return [{ type: "text", text: JSON.stringify(tools.getAsset({ asset_id: fork.id })) }, imageBlock(svg)];
+      return [{ type: "text", text: JSON.stringify(tools.getAsset({ asset_id: fork.id })) }, await imageBlock(svg)];
     }
     default:
       throw new Error(`Unknown tool ${call.name}`);

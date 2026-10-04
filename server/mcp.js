@@ -26,7 +26,7 @@ function getServer() {
     const a = catalog.getAsset(asset_id);
     if (!a || a.format !== "blocks") throw new Error(`No 3D asset "${asset_id}"`);
     const { svg, values } = await catalog.renderAsync(a, knobs);
-    return { content: [{ type: "image", data: catalog.toPng(svg, 512).toString("base64"), mimeType: "image/png" }, { type: "text", text: JSON.stringify({ asset_id, knobs: values, price_usd: a.price }) }] };
+    return { content: [{ type: "image", data: (await catalog.toPng(svg, 512)).toString("base64"), mimeType: "image/png" }, { type: "text", text: JSON.stringify({ asset_id, knobs: values, price_usd: a.price }) }] };
   });
   server.registerTool("buy_assets", {
     description: "License 3D assets with the budget the human approved in PayPal (a funded mandate, mdt_...). Oasis charges the human's saved PayPal wallet in one order, inside the budget, with no redirect, and pays each creator their share. Returns a module URL per asset to import in the scene: import { createAsset } from '<module>'. Buy everything the scene needs in one call. If it is over what is left, the call is refused and nothing is charged.",

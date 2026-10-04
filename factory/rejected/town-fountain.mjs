@@ -1,15 +1,13 @@
-// Plaza Fountain: a round stepped-stone fountain on a paved 4 x 4 m plaza square. Upper bowls overflow in
-// bell-shaped water sheets, rim nozzles arc jets into the basin and a chunky plume crowns the column.
+// Plaza Fountain: a round stepped stone fountain whose bowls overflow in flared sheets of water, crowned by a jet.
 // Block asset: build(p) returns parts in metres on the Oasis Town grid (origin at the footprint's corner,
-// y up, street side at z = 0). The plaza square and overall height stay fixed so it always sits on the grid
-// at the same scale as town-shop.mjs.
+// y up, street side at z = 0). Everything is centred on the 4 x 4 lot and stays inside it at every size.
 export const meta = {
   title: "Plaza Fountain",
   kind: "3d",
   format: "blocks",
   kit: "Oasis Town",
-  description: "A tiered stone fountain on its own paved square, with sheeting bowls, arcing rim jets and corner lamps: the heart of a little town plaza.",
-  tags: ["3d", "low poly", "fountain", "plaza", "square", "water", "park", "town", "kit"],
+  description: "A round plaza fountain with a stepped stone basin, bowls that overflow in flared sheets of water and an arcing crown jet. It makes the centrepiece of a town square.",
+  tags: ["3d", "low poly", "fountain", "plaza", "square", "water", "stone", "town", "kit", "block"],
   price: 3,
   author: "oasis-factory",
   footprint: [4, 4],
@@ -18,165 +16,252 @@ export const meta = {
 
 export const params = {
   knobs: {
-    stone: { type: "color", role: "surface", label: "Stone", default: "#F6EEE0" },
-    water: { type: "color", role: "secondary", label: "Water tint", default: "#86C3EC" },
-    accent: { type: "color", role: "highlight", label: "Brass & lamp caps", default: "#F2B33D" },
+    stone: { type: "color", role: "surface", label: "Stone", default: "#D9DCE1" },
+    water: { type: "color", role: "primary", label: "Water", default: "#A9D8F2" },
+    accent: { type: "color", role: "highlight", label: "Plaque & orb", default: "#F2B33D" },
     tiers: { type: "range", label: "Tiers", default: 2, min: 1, max: 3, step: 1 },
-    size: { type: "range", label: "Basin diameter (m, plaza stays 4)", default: 3, min: 2.6, max: 3.2, step: 0.2 },
-    jets: { type: "range", label: "Rim jets", default: 4, min: 0, max: 8, step: 1 },
-    lamps: { type: "range", label: "Plaza lamps", default: 4, min: 0, max: 4, step: 1 },
-    lights: { type: "toggle", label: "Lights on", default: true },
+    size: { type: "range", label: "Fountain size", default: 0.8, min: 0.6, max: 1.0, step: 0.05 },
+    top: { type: "choice", label: "Top", default: "jet", options: ["jet", "ball", "spire"] },
+    lights: { type: "toggle", label: "Night lights", default: true },
   },
   presets: {
-    Travertine: { stone: "#F6EEE0", water: "#86C3EC", accent: "#F2B33D" },
-    Slate: { stone: "#D8DEE3", water: "#6FCBBE", accent: "#2F7A55" },
-    Terracotta: { stone: "#EBCBA9", water: "#7AB8E8", accent: "#C8553D" },
+    Sandstone: { stone: "#E8D3B0", water: "#9CD6D0", accent: "#2F7A55" },
+    Slate: { stone: "#B7BEC8", water: "#8CC4E8", accent: "#C8553D" },
+    Blossom: { stone: "#F6EEE0", water: "#B9DDF5", accent: "#E5484D" },
   },
+};
+
+// ---------- colour helpers: every input stays plausible for its material ----------
+const hex = (c) => {
+  const n = parseInt(String(c).replace("#", ""), 16) || 0;
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+};
+const toHex = (v) => "#" + v.map((x) => Math.max(0, Math.min(255, Math.round(x))).toString(16).padStart(2, "0")).join("").toUpperCase();
+const mix = (a, b, t) => {
+  const A = hex(a), B = hex(b);
+  return toHex(A.map((x, i) => x + (B[i] - x) * t));
+};
+const toHsl = (c) => {
+  const [r, g, b] = hex(c).map((x) => x / 255);
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  const l = (mx + mn) / 2;
+  let h = 0, s = 0;
+  if (d > 1e-6) {
+    s = d / (1 - Math.abs(2 * l - 1));
+    if (mx === r) h = ((g - b) / d) % 6;
+    else if (mx === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h *= 60;
+    if (h < 0) h += 360;
+  }
+  return [h, Math.min(1, s), l];
+};
+const fromHsl = (h, s, l) => {
+  const C = (1 - Math.abs(2 * l - 1)) * s, X = C * (1 - Math.abs(((h / 60) % 2) - 1)), m = l - C / 2;
+  const [r, g, b] = h < 60 ? [C, X, 0] : h < 120 ? [X, C, 0] : h < 180 ? [0, C, X] : h < 240 ? [0, X, C] : h < 300 ? [X, 0, C] : [C, 0, X];
+  return toHex([r, g, b].map((v) => (v + m) * 255));
+};
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const hueDist = (a, b) => { const d = Math.abs(a - b) % 360; return Math.min(d, 360 - d); };
+
+// water: a calm, pale aqua-to-sky blue whatever the brand input
+const waterHue = (c) => {
+  let [h, s] = toHsl(c);
+  if (s < 0.1) h = 200;
+  if (h < 180 || h > 215) h = hueDist(h, 180) < hueDist(h, 215) ? 180 : 215;
+  return h;
+};
+const waterTone = (c) => {
+  const [, s, l] = toHsl(c);
+  return fromHsl(waterHue(c), s < 0.1 ? 0.42 : clamp(s, 0.3, 0.55), clamp(l, 0.72, 0.84));
+};
+// stone: always light and low in chroma, never a black glyph or a neon block
+const stoneTone = (c) => {
+  let [h, s, l] = toHsl(c);
+  l = clamp(l, 0.62, 0.92);
+  s = Math.min(s, 0.22 / Math.max(0.05, 1 - Math.abs(2 * l - 1)));
+  return fromHsl(h, s, l);
+};
+// accent: keeps its hue, never too dark or too pale to read on stone
+const accentTone = (c) => {
+  const [h, s, l] = toHsl(c);
+  return fromHsl(h, s, clamp(l, 0.35, 0.66));
 };
 
 export function build(p) {
   const parts = [];
-  const C = 2; // footprint centre
-  const em = (e) => (e ? { e: true } : {});
-  const box = (x, y, z, w, h, d, c, e) => parts.push({ t: "box", p: [x, y, z], s: [w, h, d], c, ...em(e) });
-  const cyl = (r, y, h, c, n, e, cx = C, cz = C) => parts.push({ t: "cyl", p: [cx, y, cz], r, h, c, n: n || 12, ...em(e) });
-  const cone = (r, y, h, c, n, e, cx = C, cz = C) => parts.push({ t: "cone", p: [cx, y, cz], r, h, c, n: n || 12, ...em(e) });
+  const box = (x, y, z, w, h, d, c, e) => parts.push({ t: "box", p: [x, y, z], s: [w, h, d], c, ...(e ? { e: true } : {}) });
+  const cyl = (cx, y, cz, r, h, c, n, e) => parts.push({ t: "cyl", p: [cx, y, cz], r, h, c, n: n || 12, ...(e ? { e: true } : {}) });
+  const cone = (cx, y, cz, r, h, c, n, e) => parts.push({ t: "cone", p: [cx, y, cz], r, h, c, n: n || 10, ...(e ? { e: true } : {}) });
 
-  // ---- colour helpers: clamp themed colours so materials stay believable ----
-  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  const rgb = (h) => { const n = parseInt(String(h).slice(1, 7), 16) || 0; return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
-  const toHex = (a) => "#" + a.map((v) => clamp(Math.round(v), 0, 255).toString(16).padStart(2, "0")).join("").toUpperCase();
-  const toHsl = (h) => {
-    const [r, g, b] = rgb(h).map((v) => v / 255);
-    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2;
-    if (mx === mn) return [0, 0, l];
-    const d = mx - mn, s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
-    const hh = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
-    return [hh * 60, s, l];
+  const CX = 2, CZ = 2;
+  const s = clamp(Number(p.size) || 0.8, 0.6, 1);
+  const tiers = clamp(Math.round(Number(p.tiers) || 2), 1, 3);
+  const L = !!p.lights;
+
+  // ---------- tonal families ----------
+  const stone = stoneTone(p.stone);
+  const dark = "#4A4F5A";
+  const step1C = mix(stone, dark, 0.2);
+  const step2C = mix(stone, dark, 0.1);
+  const underC = mix(stone, dark, 0.16);
+  const copeC = mix(stone, "#FFFFFF", 0.2);
+  const waterC = waterTone(p.water);
+  const wh = waterHue(p.water);
+  const waterHi = mix(waterC, "#FFFFFF", 0.22);
+  // falling water: day = pale tint of the water; night = a brighter, cooler glow of the SAME hue
+  const fallC = L ? fromHsl(wh, 0.6, 0.8) : mix(waterC, "#FFFFFF", 0.35);
+  const rippleC = mix(waterC, "#FFFFFF", 0.55);
+  const foam = L ? fromHsl(wh, 0.5, 0.93) : "#FFFFFF";
+  const accent = accentTone(p.accent);
+  const lampOn = "#FFD58A", glassOff = "#7E93A8", metal = "#8C929C", capC = "#5B6270";
+
+  // ---------- water primitives ----------
+  // Overflow sheet: a continuous bell of stacked bands following the free-fall profile r = r0 + flare*sqrt(fall).
+  // Bands share edges, so the sheet is one closed surface; it whitens as it falls (aeration) and ends in foam.
+  const curtain = (r0, flare, yTop, yBot) => {
+    const NB = 8, D = yTop - yBot;
+    for (let i = 0; i < NB; i++) {
+      const yHi = yTop - (D * i) / NB;
+      const yLo = i === NB - 1 ? yBot - 0.02 : yTop - (D * (i + 1)) / NB;
+      const r = r0 + flare * Math.sqrt((i + 0.5) / NB);
+      cyl(CX, yLo, CZ, r, yHi - yLo, mix(fallC, "#FFFFFF", 0.05 + (0.3 * i) / (NB - 1)), 16, L);
+    }
+    const rBot = r0 + flare;
+    cyl(CX, yBot - 0.005, CZ, rBot + 0.1, 0.015, rippleC, 16);   // ripple ring spreading on the pool
+    cyl(CX, yBot - 0.01, CZ, rBot + 0.05, 0.04, foam, 16, L);    // churned foam where the sheet lands
   };
-  const hsl = (h, s, l) => {
-    const k = (n) => (n + h / 30) % 12, a = s * Math.min(l, 1 - l);
-    const f = (n) => l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1));
-    return toHex([f(0) * 255, f(8) * 255, f(4) * 255]);
-  };
-  const mix = (a, b, t) => { const x = rgb(a), y = rgb(b); return toHex(x.map((v, i) => v + (y[i] - v) * t)); };
-
-  // Stone: light, low-chroma masonry so faceted sides always shade, even under a black brand.
-  const [sh, ss0, sl0] = toHsl(p.stone);
-  const ss = Math.min(ss0, 0.38), sl = clamp(sl0, 0.68, 0.92);
-  const stone = hsl(sh, ss, sl);
-  const stoneDark = hsl(sh, ss, sl - 0.14);
-  const pave = mix(stone, "#D9DCE1", 0.45);
-  const paveEdge = hsl(sh, Math.min(ss, 0.2), clamp(sl - 0.2, 0.55, 0.74));
-  const ink = hsl(sh, Math.min(ss, 0.18), 0.34);
-
-  // Water: hue locked to blue-teal; off-hue themes (red, orange...) fall back to sky water.
-  let [wh, ws, wl] = toHsl(p.water);
-  wh = wh >= 150 && wh <= 235 ? clamp(wh, 165, 215) : 203;
-  ws = clamp(ws, 0.35, 0.7); wl = clamp(wl, 0.6, 0.74);
-  const water = hsl(wh, ws, wl);
-  const sheet = hsl(wh, ws * 0.85, Math.min(0.86, wl + 0.1));   // falling sheet
-  const foam = hsl(wh, ws * 0.7, Math.min(0.9, wl + 0.16));     // spill lips and plume
-  const ripple = mix(water, sheet, 0.5);                        // landing ripples: never pure white
-
-  // Accent: readable brass-like trim, never black or blown out.
-  const [ah, as, al] = toHsl(p.accent);
-  const accent = hsl(ah, as, clamp(al, 0.38, 0.64));
-  const bloom = mix("#F7B8CF", accent, 0.25);
-  const leaf = "#79B86A", leafDark = "#5E9A52", lit = "#FFD58A", glass = "#7E93A8";
-
-  const R = clamp(p.size / 2, 1.3, 1.6);
-  const tiers = clamp(Math.round(p.tiers), 1, 3);
-  const jets = clamp(Math.round(p.jets), 0, 8);
-  const lamps = clamp(Math.round(p.lamps), 0, 4);
-
-  // ---- Plaza: fixed 4 x 4 paved square, plus a walkway ring that follows the basin ----
-  box(0, 0, 0, 4, 0.06, 4, paveEdge);
-  box(0.12, 0.06, 0.12, 3.76, 0.03, 3.76, pave);
-  const G = 0.09;
-  cyl(R + 0.22, G, 0.02, paveEdge, 16);
-
-  // ---- Stepped basin ----
-  cyl(R, G + 0.02, 0.12, stoneDark);           // kerb step
-  cyl(R - 0.06, G + 0.14, 0.02, stone);        // step tread
-  cyl(R - 0.22, G + 0.16, 0.5, stoneDark);     // basin wall
-  cyl(R - 0.12, G + 0.66, 0.12, stone);        // coping lip (top G + 0.78)
-  const basinWR = R - 0.3;
-  cyl(basinWR, G + 0.7, 0.06, water);          // water surface, recessed below the coping
-  const basinTop = G + 0.76;
-
-  // Lily pads with a blossom, near the rim
-  const padR = basinWR - 0.2;
-  for (const a of [0.9, 2.95, 5.0]) {
-    const px = C + Math.cos(a) * padR, pz = C + Math.sin(a) * padR;
-    cyl(0.15, basinTop, 0.02, leaf, 8, false, px, pz);
-    cyl(0.07, basinTop + 0.02, 0.02, leafDark, 6, false, px + 0.05, pz - 0.04);
-    cyl(0.045, basinTop + 0.02, 0.05, bloom, 6, false, px - 0.04, pz + 0.03);
-  }
-
-  // ---- Plaza lamps: front pair first, then the back pair ----
-  const lampSpots = [[0.42, 0.42], [3.58, 0.42], [3.58, 3.58], [0.42, 3.58]];
-  for (let i = 0; i < lamps; i++) {
-    const [lx, lz] = lampSpots[i];
-    box(lx - 0.15, G, lz - 0.15, 0.3, 0.1, 0.3, ink);
-    box(lx - 0.06, G + 0.1, lz - 0.06, 0.12, 0.66, 0.12, ink);
-    box(lx - 0.13, G + 0.76, lz - 0.13, 0.26, 0.26, 0.26, p.lights ? lit : glass, p.lights);
-    box(lx - 0.16, G + 1.02, lz - 0.16, 0.32, 0.07, 0.32, accent);
-  }
-
-  // ---- Column and bowls: overall height is fixed, tiers share it ----
-  const colTop = 2.35, span = colTop - basinTop;
-  const bowlR = tiers === 3 ? [Math.max(0.7, 0.54 * R), Math.max(0.42, 0.32 * R)] : [Math.max(0.72, 0.5 * R)];
-
-  cyl(0.32, basinTop, 0.12, stoneDark);         // column foot
-  cyl(0.22, basinTop, colTop - basinTop, stone); // column shaft
-  if (tiers === 1) {
-    cyl(0.3, basinTop + 0.55, 0.16, stone, 10);  // carved knop
-    cyl(0.31, basinTop + 0.6, 0.05, accent, 10);
-  }
-
-  let lowY = basinTop, lowWR = basinWR, innerR = 0.4;
-  for (let k = 1; k < tiers; k++) {
-    const rb = bowlR[k - 1];
-    const yb = basinTop + (span * k) / tiers - 0.12;
-    // Falling sheet: a flared bell from the bowl down to the water below, wider at the bottom
-    const drop = yb + 0.12 - lowY;
-    const rLow = Math.min(rb + 0.1, lowWR - 0.05), rHigh = Math.min(rb + 0.05, rLow);
-    cyl(rLow, lowY, drop * 0.4, sheet, 14);
-    cyl(rHigh, lowY + drop * 0.4, drop * 0.6, foam, 14);
-    cyl(Math.min(rb + 0.18, lowWR - 0.02), lowY, 0.015, ripple, 14); // landing ripple
-    // Bowl with an overflowing lip
-    cyl(rb, yb + 0.12, 0.18, stone, 14);
-    cyl(rb + 0.03, yb + 0.24, 0.07, foam, 14);
-    cyl(rb - 0.1, yb + 0.31, 0.03, water, 14);
-    cyl(0.27, yb + 0.34, 0.06, accent, 10);     // brass band where the column leaves the bowl
-    if (k === 1) innerR = rLow + 0.12;
-    lowY = yb + 0.34; lowWR = rb - 0.1;
-  }
-
-  // ---- Crown plume: a bold, chunky water jet that glows at night ----
-  cyl(0.29, colTop, 0.06, accent, 10);
-  const cr = colTop + 0.06;
-  cyl(0.24, cr, 0.05, foam, 10);                 // splash dish
-  cyl(0.1, cr + 0.05, 0.42, sheet, 8);           // rising stem
-  cyl(0.17, cr + 0.47, 0.14, foam, 8);           // plume bulb
-  cone(0.17, cr + 0.61, 0.28, foam, 8, p.lights);
-
-  // ---- Rim jets: brass nozzles on the coping arcing into the outer basin, clear of the sheets ----
-  if (jets > 0) {
-    const r0 = R - 0.2, r1 = Math.max(innerR, (basinWR + innerR) / 2 - 0.05);
-    const y0 = G + 0.84, y1 = basinTop, hp = 0.32 + 0.12 * R, n = 6;
-    const at = (t) => [r0 + (r1 - r0) * t, y0 + (y1 - y0) * t + 4 * hp * t * (1 - t)];
-    for (let i = 0; i < jets; i++) {
-      const a = Math.PI / 8 + (i / jets) * Math.PI * 2;
-      const ca = Math.cos(a), sa = Math.sin(a);
-      box(C + ca * r0 - 0.07, G + 0.78, C + sa * r0 - 0.07, 0.14, 0.06, 0.14, accent); // nozzle
-      for (let s = 0; s < n; s++) {
-        const [ra, ya] = at(s / n), [rbb, yb2] = at((s + 1) / n);
-        const rr = (ra + rbb) / 2, lo = Math.min(ya, yb2), hi = Math.max(ya, yb2);
-        cyl(0.06, lo - 0.03, hi - lo + 0.07, sheet, 6, false, C + ca * rr, C + sa * rr);
+  // Arcing spout: a continuous stepped ribbon along an axis, each segment spanning its neighbour's end point.
+  const ribbon = (dx, dz, r0, y0, kick, thr, y1) => {
+    const N = Math.max(6, Math.ceil(thr / 0.05)), drop = y0 - y1, th = 0.08, w = 0.08;
+    const Y = (t) => y0 + kick * t - (kick + drop) * t * t;
+    for (let i = 0; i < N; i++) {
+      const t0 = i / N, t1 = (i + 1) / N;
+      const ra = r0 + thr * t0 - 0.005, rb = r0 + thr * t1 + 0.005;
+      const lo = Math.min(Y(t0), Y(t1)) - th / 2, hi = Math.max(Y(t0), Y(t1)) + th / 2;
+      if (dx) {
+        const xa = CX + dx * ra, xb = CX + dx * rb;
+        box(Math.min(xa, xb), lo, CZ - w / 2, Math.abs(xb - xa), hi - lo, w, fallC, L);
+      } else {
+        const za = CZ + dz * ra, zb = CZ + dz * rb;
+        box(CX - w / 2, lo, Math.min(za, zb), w, hi - lo, Math.abs(zb - za), fallC, L);
       }
-      cyl(0.13, basinTop, 0.015, ripple, 8, false, C + ca * r1, C + sa * r1);
+    }
+  };
+  const splash = (x, z, ySurf) => {
+    cyl(x, ySurf - 0.005, z, 0.12, 0.015, rippleC, 10);
+    cyl(x, ySurf - 0.01, z, 0.065, 0.04, foam, 8, L);
+  };
+  const AXES = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+
+  // ---------- basin: one radial profile from R ----------
+  const R = 1.97 * s;            // outer step (1.97 at max keeps it inside the 4 m lot)
+  const Rb = R - 0.34;           // basin wall
+  const Rw = Rb - 0.16;          // basin water
+  const wallH = 0.32 + 0.22 * s;
+  const wallTop = 0.24 + wallH, copeTop = wallTop + 0.1, WT = copeTop + 0.03;
+  cyl(CX, 0, CZ, R, 0.12, step1C, 16);
+  cyl(CX, 0.12, CZ, R - 0.17, 0.12, step2C, 16);
+  cyl(CX, 0.24, CZ, Rb, wallH, stone, 16);
+  cyl(CX, wallTop, CZ, Rb + 0.06, 0.1, copeC, 16);
+  cyl(CX, wallTop, CZ, Rw, WT - wallTop, waterC, 16);          // brim-full pool, 0.03 proud of the coping
+
+  // front plaque keyed into the wall on the street side, sized to the facet it sits on
+  const pw = Math.min(0.5 + 0.4 * s, 0.74 * Rb);
+  const back = Rb * Math.cos(Math.PI / 8) - 0.07;
+  box(CX - pw / 2, 0.32, CZ - Rb - 0.03, pw, wallH - 0.16, Rb + 0.03 - back, accent);
+
+  // four lamp bollards on the upper step at the diagonals, clear of the plaque
+  const lr = Rb + 0.1;
+  for (const ad of [45, 135, 225, 315]) {
+    const a = (ad * Math.PI) / 180, lx = CX + Math.cos(a) * lr, lz = CZ + Math.sin(a) * lr;
+    cyl(lx, 0.24, lz, 0.06, 0.36, metal, 8);
+    cyl(lx, 0.6, lz, 0.075, 0.13, L ? lampOn : glassOff, 8, L);
+    cyl(lx, 0.73, lz, 0.09, 0.04, capC, 8);
+  }
+
+  // ---------- column ----------
+  const colR = 0.1 + 0.08 * s;
+  cyl(CX, wallTop, CZ, colR + 0.12, WT + 0.12 - wallTop, stone, 12);   // pedestal rising out of the pool
+
+  // ---------- tier 2: a wide shallow saucer whose sheet flares into the basin ----------
+  const r2 = Math.min(Rb * 0.55, Rw - 0.27);
+  const w2 = r2 - 0.09;
+  const y2 = WT + 0.75 + 0.55 * s;
+  const top2 = y2 + 0.19;
+  // ---------- tier 3: a small deep goblet, a shorter step up (shrinking rhythm) ----------
+  const r3 = Math.max(Rb * 0.28, colR + 0.12);
+  const w3 = r3 - 0.07;
+  const y3 = top2 + 0.45 + 0.35 * s;
+  const top3 = y3 + 0.29;
+
+  if (tiers >= 2) {
+    cyl(CX, y2 - 0.26, CZ, r2 * 0.35, 0.12, underC, 10);
+    cyl(CX, y2 - 0.14, CZ, r2 * 0.7, 0.14, step2C, 12);
+    cyl(CX, y2, CZ, r2, 0.16, stone, 12);
+    cyl(CX, y2 + 0.06, CZ, r2 + 0.03, 0.1, copeC, 12);          // rim band, crowns the sheet
+    cyl(CX, y2 + 0.06, CZ, w2, 0.13, waterHi, 12);
+    const r0 = r2 + 0.05;
+    const flare = Math.min(0.1 + 0.2 * s, Rw - 0.12 - r0);
+    if (flare >= 0.04) curtain(r0, flare, y2 + 0.12, WT);
+  }
+  if (tiers >= 3) {
+    cyl(CX, y3 - 0.18, CZ, r3 * 0.6, 0.18, step2C, 10);
+    cyl(CX, y3, CZ, r3, 0.24, stone, 12);
+    cyl(CX, y3 + 0.14, CZ, r3 + 0.03, 0.12, copeC, 12);
+    cyl(CX, y3 + 0.1, CZ, w3, 0.19, waterHi, 12);
+    const r0 = r3 + 0.05;
+    const flare = Math.min(0.06 + 0.1 * s, w2 - 0.12 - r0);
+    if (flare >= 0.04) curtain(r0, flare, y3 + 0.22, top2);
+  }
+
+  const topY = tiers === 1 ? WT : tiers === 2 ? top2 : top3;
+  const colTop = tiers === 1 ? WT + 1.0 + 0.8 * s : topY + 0.1;
+  const capR = colR + (tiers === 1 ? 0.08 : 0.03);
+  cyl(CX, WT + 0.12, CZ, colR, colTop - WT - 0.12, stone, 10);
+  if (tiers === 1) cyl(CX, WT + 0.45, CZ, colR + 0.05, 0.12, underC, 10);   // knuckle on the tall column
+  cyl(CX, colTop, CZ, capR, 0.08, copeC, 10);
+  const oy = colTop + 0.08;
+
+  // the receiving pool for anything falling from the top: always the topmost water, so nothing crosses a bowl
+  const recvY = topY;
+  const recvR = tiers === 1 ? Rw : tiers === 2 ? w2 : w3;
+  const lo = tiers === 1 ? colR + 0.27 : capR + 0.06;
+  const hi = recvR - 0.13;
+  const land = hi - lo >= 0.01 ? lo + (hi - lo) * 0.6 : 0;
+
+  // ---------- top ornament ----------
+  if (p.top === "jet") {
+    const jetH = (0.5 + 0.7 * s) * (tiers === 1 ? 1.25 : 1);
+    const j0 = oy + 0.05;
+    cyl(CX, oy, CZ, capR - 0.02, 0.05, waterHi, 10);
+    cyl(CX, j0, CZ, 0.13, jetH * 0.4, fallC, 8, L);
+    cyl(CX, j0 + jetH * 0.4, CZ, 0.095, jetH * 0.35, fallC, 8, L);
+    cyl(CX, j0 + jetH * 0.75, CZ, 0.065, jetH * 0.25, fallC, 8, L);
+    const tip = j0 + jetH;
+    cyl(CX, tip - 0.04, CZ, land ? 0.12 : 0.16, 0.08, foam, 10, L);
+    // four arcs bloom from the tip and land in the topmost pool
+    if (land) for (const [dx, dz] of AXES) {
+      ribbon(dx, dz, 0, tip, 0.28, land, recvY - 0.02);
+      splash(CX + dx * land, CZ + dz * land, recvY);
+    }
+  } else {
+    if (p.top === "ball") {
+      cyl(CX, oy, CZ, 0.09, 0.1, stone, 8);
+      cyl(CX, oy + 0.1, CZ, 0.17, 0.07, accent, 10);
+      cyl(CX, oy + 0.17, CZ, 0.25, 0.22, accent, 12);
+      cyl(CX, oy + 0.39, CZ, 0.17, 0.07, accent, 10);
+    } else {
+      cyl(CX, oy, CZ, colR + 0.02, 0.12, step1C, 10);
+      cone(CX, oy + 0.12, CZ, colR + 0.04, 0.85, stone, 10);
+      cyl(CX, oy + 0.62, CZ, 0.07, 0.08, copeC, 8);                 // carved stone collar on the spire
+    }
+    // single tier: four stone spouts on the cap pour arcs into the basin
+    if (tiers === 1 && land) for (const [dx, dz] of AXES) {
+      const r0 = capR - 0.02;
+      box(CX + dx * (capR - 0.04) - 0.05, colTop + 0.02, CZ + dz * (capR - 0.04) - 0.05, 0.1, 0.07, 0.1, copeC);
+      ribbon(dx, dz, r0, colTop + 0.06, 0.12, land - r0, WT - 0.02);
+      splash(CX + dx * land, CZ + dz * land, WT);
     }
   }
 

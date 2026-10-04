@@ -1,40 +1,37 @@
-// Telephone Booth: a classic kiosk with gridded glazing, glowing crown signs in the header, an optional payphone
-// glimpsed through the side glass and a small brass finial on a stepped or domed roof. Block asset: build(p) returns
-// parts in metres on the Oasis Town grid (origin at the footprint's corner, y up, street side at z = 0).
-// Brand paint is luminance-clamped so the frame always stays well below the glazing and the warm sign.
+// Phone Booth: a classic telephone kiosk with gridded glazing, a crown-badged pediment and an illuminated
+// header sign carrying a bold handset pictogram. Block asset: build(p) returns parts in metres on the Oasis
+// Town grid (origin at the footprint's corner, y up, street side at z = 0, the door faces the street).
 export const meta = {
-  title: "Telephone Booth",
+  title: "Town Phone Booth",
   kind: "3d",
   format: "blocks",
   kit: "Oasis Town",
-  description: "A classic telephone booth with gridded glass, a payphone seen through the side and glowing crown signs in its header, sized to stand on any pavement corner.",
+  description: "A red telephone booth with gridded glass, a stepped dome and a glowing crown sign with a telephone pictogram, sized for any kerb beside the town's shops.",
   tags: ["3d", "low poly", "phone booth", "telephone", "kiosk", "street furniture", "town", "kit"],
-  price: 2,
+  price: 1,
   author: "oasis-factory",
   footprint: [1, 1],
-  size: [800, 1000],
+  size: [1000, 1000],
 };
 
 export const params = {
   knobs: {
     body: { type: "color", role: "primary", label: "Booth paint", default: "#E5484D" },
-    crown: { type: "color", role: "highlight", label: "Sign crown", default: "#C8553D" },
-    height: { type: "range", label: "Height (m)", default: 2.5, min: 2.4, max: 2.8, step: 0.1 },
-    panes: { type: "range", label: "Pane rows", default: 7, min: 3, max: 8, step: 1 },
-    roof: { type: "choice", label: "Roof", default: "stepped", options: ["stepped", "dome"] },
-    phone: { type: "toggle", label: "Payphone inside", default: true },
-    lights: { type: "toggle", label: "Lit at night", default: true },
+    sign: { type: "color", role: "surface", label: "Sign panels", default: "#F6EEE0" },
+    rows: { type: "range", label: "Pane rows", default: 4, min: 2, max: 8, step: 1 },
+    roof: { type: "choice", label: "Crown", default: "dome", options: ["dome", "flat"] },
+    lights: { type: "toggle", label: "Lit sign & panes", default: true },
   },
   presets: {
-    "Racing Green": { body: "#2F7A55", crown: "#2F7A55" },
-    "Navy Blue": { body: "#2B3A67", crown: "#3E7BFA" },
-    "Sky Blue": { body: "#3E7BFA", crown: "#5B6270" },
+    Tram: { body: "#2F7A55", sign: "#F3E3C8" },
+    Harbour: { body: "#3E7BFA", sign: "#F6EEE0" },
+    Slate: { body: "#5B6270", sign: "#F7B8CF" },
   },
 };
 
-// ---------- colour helpers ----------
-function toHsl(hex) {
-  const n = parseInt(String(hex).replace("#", "").slice(0, 6), 16) || 0;
+// ---- colour helpers -------------------------------------------------------------------------------------------
+function hexToHsl(hex) {
+  const n = parseInt(String(hex).replace("#", "").padEnd(6, "0").slice(0, 6), 16);
   const r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
   const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2;
   let h = 0, s = 0;
@@ -48,140 +45,154 @@ function toHsl(hex) {
   }
   return [h, s, l];
 }
-function toHex(h, s, l) {
+function hslToHex(h, s, l) {
   const f = (t) => {
-    t = (t + 1) % 1;
+    t = (t % 1 + 1) % 1;
     const q = l < 0.5 ? l * (1 + s) : l + s - l * s, pp = 2 * l - q;
     if (t < 1 / 6) return pp + (q - pp) * 6 * t;
     if (t < 1 / 2) return q;
     if (t < 2 / 3) return pp + (q - pp) * (2 / 3 - t) * 6;
     return pp;
   };
-  const c = (v) => Math.round(Math.max(0, Math.min(1, v)) * 255).toString(16).padStart(2, "0");
-  return "#" + c(f(h + 1 / 3)) + c(f(h)) + c(f(h - 1 / 3));
+  const to = (v) => Math.round(Math.min(1, Math.max(0, v)) * 255).toString(16).padStart(2, "0");
+  return "#" + to(f(h + 1 / 3)) + to(f(h)) + to(f(h - 1 / 3));
 }
-function lum(hex) {
-  const n = parseInt(String(hex).replace("#", "").slice(0, 6), 16) || 0;
+function luminance(hex) {
+  const n = parseInt(hex.slice(1), 16);
   const lin = (v) => { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
   return 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
 }
-// keep hue, cap saturation, and solve lightness so relative luminance lands in [lo, hi] (times mul)
-function fit(hex, lo, hi, mul, smax) {
-  const [h, s0] = toHsl(hex);
-  const s = Math.min(s0, smax || 0.85);
-  const target = Math.max(lo, Math.min(hi, lum(hex))) * (mul || 1);
-  let a = 0, b = 1;
-  for (let i = 0; i < 22; i++) {
-    const m = (a + b) / 2;
-    if (lum(toHex(h, s, m)) < target) a = m; else b = m;
-  }
-  return toHex(h, s, (a + b) / 2);
-}
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+
+// Telephone pictogram (row 0 at the top): handset over a desk base. Left-right symmetric, so it reads
+// identically on every face from any camera, with nothing to mirror or split across a corner.
+const ICON = [
+  ".111111111.",
+  "111.....111",
+  "11.......11",
+  "...11111...",
+  "..1111111..",
+];
 
 export function build(p) {
   const parts = [];
-  const box = (x, y, z, w, h, d, c, e) => parts.push({ t: "box", p: [x, y, z], s: [w, h, d], c, ...(e ? { e: true } : {}) });
-  const cyl = (y, r, h, c, n) => parts.push({ t: "cyl", p: [0.5, y, 0.5], r, h, c, n });
-
+  const box = (x, y, z, w, h, d, c, e) =>
+    parts.push({ t: "box", p: [x, y, z], s: [w, h, d], c, ...(e ? { e: true } : {}) });
   const lit = !!p.lights;
-  // brand paint: frame always far darker than glass and sign; dark step is a fixed ratio so tiers never merge
-  const paint = fit(p.body, 0.07, 0.19, 1);
-  const paintDark = fit(p.body, 0.07, 0.19, 0.55);
-  const emblem = fit(p.crown, 0.03, 0.09, 1, 0.9); // crown glyph, always dark on the warm sign panel
-  // fixed materials and state colours (never brand-tinted)
-  const brass = "#F2B33D";
-  const glass = lit ? "#FFD58A" : "#7E93A8";
-  const signFace = lit ? "#FFD58A" : "#F6EEE0";
-  const ink = "#2B3242", metal = "#5B6270", kerb = "#D9DCE1";
 
-  // ---------- shared unit system ----------
-  const B0 = 0.05, BW = 0.9;                // booth body extents inside the 1 m footprint
-  const POST = 0.15;                        // chunky corner posts
-  const G0 = B0 + 0.1;                      // glass plane, set back so posts stand proud
-  const U0 = B0 + POST, U1 = 1 - B0 - POST; // glazing span along a face
-  const SPAN = U1 - U0;
-  const H = p.height;                       // top of the cap
-  const SB = 0.34, CAP = 0.08;              // sign band and cap
-  const yA = 0.38;                          // top of base
-  const yB = H - SB - CAP;                  // top of glazing / bottom of sign band
-  const GH = yB - yA;
+  // ---- palette: keep the paint mid-to-dark (dark brands stay dark) so pale glass and signs always read ----
+  const [bh, bs, bl] = hexToHsl(p.body);
+  const bS = clamp(bs, 0, 0.8);
+  let bL = clamp(bl, 0.18, 0.6);
+  let body = hslToHex(bh, bS, bL);
+  while (luminance(body) > 0.22 && bL > 0.18) { bL -= 0.02; body = hslToHex(bh, bS, bL); }
+  const trim = hslToHex(bh, bS, bL < 0.3 ? bL + 0.1 : bL - 0.1);           // plinth, cornice, ledge
+  const [sh, ss] = hexToHsl(p.sign);
+  const signC = lit ? hslToHex(sh, clamp(ss, 0.15, 0.5), 0.88) : hslToHex(sh, clamp(ss, 0, 0.35), 0.8);
+  const ink = "#2B3242", kerb = "#D9DCE1", metal = "#5B6270";
+  const gilt = "#F2B33D";
+  const giltC = lit ? "#FFD58A" : gilt;                                     // crown badge glows gold
+  const glass = lit ? "#CFDCE8" : "#7E93A8";                                // glass brightens, stays blue-grey
 
-  // detail on a face: inset = plane distance from footprint edge, t = thickness proud of that plane
-  const face = (f, inset, u, y, w, h, t, c, e) => {
-    if (f === 0) box(u, y, inset - t, w, h, t, c, e);              // front (-z), the door
-    else if (f === 1) box(1 - u - w, y, 1 - inset, w, h, t, c, e); // back (+z)
-    else if (f === 2) box(inset - t, y, 1 - u - w, t, h, w, c, e); // left (-x), the phone side
-    else box(1 - inset, y, u, t, h, w, c, e);                      // right (+x)
+  // ---- fixed proportions: a 0.9 m square booth, 2.5 m to the sign top (real K6 scale) ----
+  const X0 = 0.05, X1 = 0.95, Z0 = 0.05, Z1 = 0.95, W = X1 - X0, cx = (X0 + X1) / 2;
+  const IN = 0.04, POST = 0.11;
+  const H = 2.5, BAND = 0.36, signY = H - BAND;
+  const BASE = 0.04, PLINTH = 0.14, lowTop = 0.42, railH = 0.06;
+  const gY0 = lowTop, gY1 = signY - railH, gh = gY1 - gY0;
+
+  box(0, 0, 0, 1, BASE, 1, kerb);
+  box(0.02, BASE, 0.02, 0.96, PLINTH - BASE, 0.96, trim);
+  for (const [x, z] of [[X0, Z0], [X1 - POST, Z0], [X0, Z1 - POST], [X1 - POST, Z1 - POST]])
+    box(x, PLINTH, z, POST, signY - PLINTH, POST, body);
+
+  const c0 = X0 + IN, cw = W - 2 * IN;
+  box(c0, PLINTH, c0, cw, lowTop - PLINTH, cw, body);       // kick panel
+  box(c0, gY0, c0, cw, gh, cw, glass, lit);                  // glazing core
+  box(c0, gY1, c0, cw, railH, cw, body);                     // top rail
+  box(X0, signY, Z0, W, BAND, W, body);                      // sign band
+
+  // rectangle on a face; u runs along the face, d = how far it stands proud of `plane`
+  const onFace = (side, plane, u, y, w, h, d, c, e) => {
+    if (side === "front") box(u, y, plane - d, w, h, d, c, e);
+    else if (side === "back") box(u, y, plane, w, h, d, c, e);
+    else if (side === "left") box(plane - d, y, u, d, h, w, c, e);
+    else box(plane, y, u, d, h, w, c, e);
   };
-  // crown pictogram: band with three prongs, the centre one taller
-  const crownGlyph = (f, inset, uc, y0, k, c, t) => {
-    const bw = 0.26 * k, pw = 0.055 * k, bh = 0.05 * k;
-    face(f, inset, uc - bw / 2, y0, bw, bh, t, c);
-    face(f, inset, uc - bw / 2, y0 + bh, pw, 0.07 * k, t, c);
-    face(f, inset, uc - pw / 2, y0 + bh, pw, 0.1 * k, t, c);
-    face(f, inset, uc + bw / 2 - pw, y0 + bh, pw, 0.07 * k, t, c);
-  };
+  const sides = ["front", "back", "left", "right"];
+  const outward = { front: -1, left: -1, back: 1, right: 1 };
+  const glassPlane = { front: Z0 + IN, back: Z1 - IN, left: X0 + IN, right: X1 - IN };
+  const outerPlane = { front: Z0, back: Z1, left: X0, right: X1 };
+  const u0 = X0 + POST, u1 = X1 - POST, uw = u1 - u0;
+  const BAR = 0.03, BD = 0.03;
+  const rows = clamp(Math.round(p.rows), 2, 8), cols = 3;
 
-  // ---------- plinth and base ----------
-  box(0, 0, 0, 1, 0.08, 1, kerb);
-  box(B0, 0.08, B0, BW, yA - 0.08, BW, paintDark);
+  // sign panel and pictogram, sized as proportions of the band
+  const pw = W - 0.1, ph = BAND * 0.78, pu = cx - pw / 2, py = signY + (BAND - ph) / 2;
+  const iconRows = ICON.length, iconCols = ICON[0].length;
+  const cellH = (ph * 0.74) / iconRows;
+  const cellW = Math.min(cellH * 1.3, (pw * 0.7) / iconCols);
+  const ix0 = cx - (iconCols * cellW) / 2, iy0 = py + (ph - iconRows * cellH) / 2;
 
-  // ---------- glazed core and corner posts ----------
-  box(G0, yA, G0, 1 - 2 * G0, GH, 1 - 2 * G0, glass, lit);
-  for (const x of [B0, 1 - B0 - POST]) for (const z of [B0, 1 - B0 - POST]) box(x, yA, z, POST, GH, POST, paint);
+  for (const s of sides) {
+    const gp = glassPlane[s];
+    for (let r = 1; r < rows; r++) onFace(s, gp, u0, gY0 + (gh * r) / rows - BAR / 2, uw, BAR, BD, body);
+    for (let c = 1; c < cols; c++) onFace(s, gp, u0 + (uw * c) / cols - BAR / 2, gY0, BAR, gh, BD, body);
 
-  // ---------- glazing grid: rails, rows, two mullions -> three columns ----------
-  const rows = Math.round(p.panes);
-  const bar = 0.035, t = 0.04, rail = 0.07;
-  const inner = GH - 2 * rail;
-  const rowY = (k) => yA + rail + (inner * k) / rows; // boundary k (0 = top of bottom rail)
-  for (let f = 0; f < 4; f++) {
-    face(f, G0, U0, yA, SPAN, rail, t, paint);
-    face(f, G0, U0, yB - rail, SPAN, rail, t, paint);
-    for (let k = 1; k < rows; k++) face(f, G0, U0, rowY(k) - bar / 2, SPAN, bar, t, paint);
-    for (let j = 1; j < 3; j++) face(f, G0, U0 + (SPAN * j) / 3 - bar / 2, yA, bar, GH, t, paint);
+    // illuminated header panel with the handset pictogram in solid ink runs
+    const op = outerPlane[s];
+    onFace(s, op, pu, py, pw, ph, 0.02, signC, lit);
+    const lp = op + outward[s] * 0.02;
+    for (let r = 0; r < iconRows; r++) {
+      const row = ICON[r];
+      let i = 0;
+      while (i < iconCols) {
+        if (row[i] !== "1") { i++; continue; }
+        let j = i;
+        while (j < iconCols && row[j] === "1") j++;
+        onFace(s, lp, ix0 + i * cellW, iy0 + (iconRows - 1 - r) * cellH, (j - i) * cellW, cellH, 0.015, ink);
+        i = j;
+      }
+    }
   }
 
-  // ---------- payphone seen through the side glass, fitted inside one pane so it never crosses a bar ----------
-  if (p.phone) {
-    let k = 0;
-    while (k < rows - 1 && rowY(k + 1) < 1.3) k++;
-    const cy0 = rowY(k) + (k === 0 ? 0 : bar / 2), cy1 = rowY(k + 1) - (k === rows - 1 ? 0 : bar / 2);
-    const cu0 = U0 + SPAN / 3 + bar / 2, cu1 = U0 + (2 * SPAN) / 3 - bar / 2;
-    const m = 0.018, ph = Math.min(0.34, cy1 - cy0 - 2 * m), py = (cy0 + cy1) / 2 - ph / 2;
-    face(2, G0, cu0 + m, py, cu1 - cu0 - 2 * m, ph, 0.012, ink);                    // phone body
-    face(2, G0 - 0.012, cu0 + m + 0.02, py + ph - 0.07, cu1 - cu0 - 2 * m - 0.04, 0.045, 0.012, metal); // handset
+  // door on the street face: stiles and handle
+  const fp = glassPlane.front;
+  box(u0, gY0, fp - BD, 0.05, gh, BD, body);
+  box(u1 - 0.05, gY0, fp - BD, 0.05, gh, BD, body);
+  box(u1 - 0.045, 1.0, fp - BD - 0.025, 0.03, 0.3, 0.025, metal);
+
+  // cornice, then a pediment tier carrying a crown badge on every face (present in both crown styles)
+  box(X0 - 0.03, H, Z0 - 0.03, W + 0.06, 0.06, W + 0.06, trim);
+  const pedY = H + 0.06, PED = 0.18, pi = 0.02;
+  box(X0 + pi, pedY, Z0 + pi, W - 2 * pi, PED, W - 2 * pi, body);
+  for (const s of sides) {
+    const plane = outerPlane[s] - outward[s] * pi;
+    const by = pedY + 0.03;
+    onFace(s, plane, cx - 0.12, by, 0.24, 0.04, 0.025, giltC, lit);               // band
+    onFace(s, plane, cx - 0.12, by + 0.04, 0.05, 0.06, 0.025, giltC, lit);        // left point
+    onFace(s, plane, cx - 0.03, by + 0.04, 0.06, 0.09, 0.025, giltC, lit);        // centre point
+    onFace(s, plane, cx + 0.07, by + 0.04, 0.05, 0.06, 0.025, giltC, lit);        // right point
   }
+  const ledgeY = pedY + PED;
+  box(X0 - 0.01, ledgeY, Z0 - 0.01, W + 0.02, 0.03, W + 0.02, trim);
+  const capY = ledgeY + 0.03;
 
-  // door handle on the street face, proud of the bars beside the right post
-  box(U1 - 0.07, 0.95, G0 - 0.07, 0.035, 0.28, 0.07, metal);
-
-  // ---------- header: big warm sign panels with a crown on every face ----------
-  box(B0, yB, B0, BW, SB, BW, paint);
-  for (let f = 0; f < 4; f++) {
-    face(f, B0, 0.16, yB + 0.05, 0.68, 0.24, 0.03, signFace, lit);
-    crownGlyph(f, B0 - 0.03, 0.5, yB + 0.075, 1.1, emblem, 0.02);
-  }
-  box(0, yB + SB, 0, 1, CAP, 1, paintDark); // overhanging cap, top = H
-
-  // ---------- roof: both options are concentric about the booth centre ----------
-  let yf;
   if (p.roof === "dome") {
-    box(0.08, H, 0.08, 0.84, 0.07, 0.84, paint);
-    cyl(H + 0.07, 0.4, 0.08, paintDark, 12);
-    cyl(H + 0.15, 0.32, 0.07, paint, 12);
-    cyl(H + 0.22, 0.21, 0.06, paintDark, 12);
-    yf = H + 0.28;
+    // three clean concentric steps read as the shallow booth dome from above
+    const steps = [[0.07, 0.08], [0.17, 0.07], [0.27, 0.05]];
+    let y = capY;
+    for (const [inset, h] of steps) {
+      box(X0 + inset, y, Z0 + inset, W - 2 * inset, h, W - 2 * inset, body);
+      y += h;
+    }
+    parts.push({ t: "cyl", p: [cx, y, cx], r: 0.04, h: 0.05, c: gilt, n: 8 });
+    parts.push({ t: "cone", p: [cx, y + 0.05, cx], r: 0.045, h: 0.06, c: gilt, n: 8 });
   } else {
-    box(0.08, H, 0.08, 0.84, 0.1, 0.84, paint);
-    box(0.18, H + 0.1, 0.18, 0.64, 0.1, 0.64, paintDark);
-    box(0.29, H + 0.2, 0.29, 0.42, 0.08, 0.42, paint);
-    yf = H + 0.28;
+    // flat crown: a low slab and a tonal cap, no extra accent colour
+    box(X0 + 0.05, capY, Z0 + 0.05, W - 0.1, 0.05, W - 0.1, body);
+    box(X0 + 0.16, capY + 0.05, Z0 + 0.16, W - 0.32, 0.03, W - 0.32, trim);
   }
-
-  // small brass finial, centred and proportioned to the top tier
-  cyl(yf, 0.075, 0.06, brass, 8);
-  parts.push({ t: "cone", p: [0.5, yf + 0.06, 0.5], r: 0.055, h: 0.1, c: brass, n: 8 });
 
   return { parts };
 }

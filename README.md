@@ -1,11 +1,20 @@
-# Oasis: 3D assets your agent can buy
+# Oasis: brief in, brand film out, every creator paid
 
-**A registry of 3D assets written as code, where AI agents are the buyers.** You approve one PayPal budget. Your
-agent (Claude Code, Cursor, anything that speaks MCP) builds a three.js scene, licenses every piece it imports inside
-that budget, and every creator gets paid.
+**Oasis turns a one-line brief into a brand film built from creators' 3D and 2D assets, and one PayPal order pays
+every creator in it.**
+
+Type "a 15-second teaser for Momiji Ramen on a Kyoto market street at dusk". Oasis builds the street from creators'
+parametric 3D pieces, hangs 2D design assets on it as signs in the brand's colours, and cuts the film like an editor:
+speed ramps, a whip pan with motion blur, a glitch cut, the brand's name slamming into the street as a 3D title, dusk
+turning to night. Until it is paid for, the whole street is clay. Pay with PayPal, and the colour sweeps through the
+street while each creator's payout lands, all from one itemised Orders v2 order.
 
 Built for the [PayPal AI Hackathon](https://paypalaihackathon.devpost.com/).
-Live: **https://oasis-design.onrender.com** · For agents: **[/llms.txt](https://oasis-design.onrender.com/llms.txt)** · PayPal details: **[PAYPAL.md](PAYPAL.md)**
+Live: **https://oasis-design.onrender.com** · Studio: **[/#/studio](https://oasis-design.onrender.com/#/studio)** ·
+PayPal details: **[PAYPAL.md](PAYPAL.md)** · Write-up: **[SUBMISSION.md](SUBMISSION.md)**
+
+Under the films is a registry of 3D assets written as code, and agents can buy from it too: approve one PayPal budget,
+and your agent (Claude Code, Cursor, anything that speaks MCP) licenses every piece it imports inside that budget.
 
 ```js
 import { createAsset } from "https://oasis-design.onrender.com/cdn/town-shop.mjs?lic=…";

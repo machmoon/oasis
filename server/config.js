@@ -11,6 +11,8 @@ export const config = {
   },
   anthropicKey: process.env.ANTHROPIC_API_KEY || "",
   agentModel: process.env.OASIS_AGENT_MODEL || "claude-opus-5-5",
+  // the film director answers while the person watches the first cut, so it uses the faster model
+  directorModel: process.env.OASIS_DIRECTOR_MODEL || "claude-sonnet-5-5",
   s3Bucket: process.env.OASIS_S3_BUCKET || "",
   dataDir: process.env.OASIS_DATA_DIR || new URL("../data/", import.meta.url).pathname,
   // Share of each sale, in basis points. A fork's sale pays its creator, then its ancestors.

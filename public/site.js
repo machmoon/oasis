@@ -66,153 +66,113 @@ async function mountStreet(el, { prompt = "a kyoto market street", time = "day",
 }
 
 // ---------- home ----------
+// One story, in the order a judge needs it: the film, the clay that turns to colour when it is paid for, the bill that
+// pays every creator in one PayPal order, the agent that can do all of it, and the pieces it is made from.
 async function pageHome() {
   app.innerHTML = `
-  <div class="wrap">
-    <section class="hero">
-      <div>
-        <h1>Your agent builds the scene. Every creator gets paid.</h1>
-        <p class="lede">Oasis is a registry of 3D assets written as code. Approve one PayPal budget, and agents license every piece they import.</p>
-        <div class="cta">
-          <a class="btn primary" href="#/budget">Give your agent a budget</a>
-          <a class="link" href="#/studio">Make a film in the studio</a>
-        </div>
+  <section class="wrap hero2">
+    <div class="hero2-copy">
+      <h1>Brief in. Brand film out.</h1>
+      <p class="lede">Oasis cuts a brand film from creators' 3D and 2D assets. One PayPal order pays every creator.</p>
+      <div class="cta">
+        <a class="btn primary" href="#/studio">Make a film</a>
+        <a class="link" href="#pay">How payment works</a>
       </div>
-      <div class="stage" id="hero-stage" role="img" aria-label="A Kyoto street built from Oasis registry pieces, rotating slowly"><div class="tag" id="hero-tag">Loading the street</div></div>
-    </section>
-  </div>
+    </div>
+    <figure class="hero2-film" id="hero-film"><div class="skel"></div></figure>
+  </section>
 
-  <section class="band"><div class="wrap">
-    <div class="head rise"><h2>Paid by agents, as it happens.</h2><p>Every sale below is a real PayPal sandbox order an agent placed inside a human's budget. Each creator's share is booked the moment it clears.</p></div>
-    <div class="ledger rise">
-      <div class="sales" id="sales"><div class="sale"><div class="who skel"></div><div><div class="skel" style="height:16px;width:70%"></div><div class="skel" style="height:12px;width:40%;margin-top:10px"></div></div><div></div></div></div>
+  <section class="wrap compare-sec">
+    <h2>Clay until it is paid for.</h2>
+    <p class="lede">Every paid piece renders as clay and every sign is watermarked. License the film and the street takes its colours.</p>
+    <div class="compare" id="compare" style="--at:50%">
+      <img src="/media/street-licensed.jpg" alt="The Momiji Ramen street after licensing, in colour" width="1600" height="900">
+      <img class="clay" src="/media/street-clay.jpg" alt="The same street before licensing, in clay" width="1600" height="900">
+      <div class="handle" aria-hidden="true"><span>${icon("arrows-left-right")}</span></div>
+      <input type="range" min="0" max="100" value="50" id="compare-range" aria-label="Compare the clay preview with the licensed film">
+      <span class="cap left">Preview</span><span class="cap right">Licensed</span>
+    </div>
+  </section>
+
+  <section class="wrap pay" id="pay">
+    <div class="pay-copy">
+      <h2>One approval pays everyone.</h2>
+      <p class="lede">You approve a budget once in PayPal. The Studio, or your agent, buys inside it.</p>
+      <dl class="facts">
+        <dt>${icon("wallet")} Budget</dt><dd>Approved once with PayPal Vault. It has a cap and an expiry.</dd>
+        <dt>${icon("shield-check")} Guardrail</dt><dd>An order over the cap is refused before PayPal is called.</dd>
+        <dt>${icon("coins")} Payout</dt><dd>Each creator's share goes out through PayPal Payouts.</dd>
+      </dl>
+    </div>
+    <div class="receipt" id="receipt"><div class="skel" style="height:320px"></div></div>
+  </section>
+
+  <section class="wrap sales-sec" id="sales-sec" hidden>
+    <h2>Paid by agents.</h2>
+    <div class="ledger">
+      <div class="sales" id="sales"></div>
       <div class="creators" id="creators"></div>
     </div>
-  </div></section>
+  </section>
 
-  <section class="band"><div class="wrap">
-    <div class="head rise"><h2>A model is a program. Import it.</h2><p>Knobs don't stretch the mesh. They rebuild it: five floors become eight with more windows, not taller ones. The licence rides in the URL.</p></div>
-    <div class="program rise">
-      <div class="code" id="code"></div>
-      <div class="knobbox"><div class="stage" id="knob-stage" role="img" aria-label="Apartment Flats, rebuilt live as you move the knobs"></div>
-        <div class="knobs" id="knobs"><div class="skel" style="height:20px"></div></div></div>
+  <section class="wrap agents2">
+    <div>
+      <h2>Agents run the same loop.</h2>
+      <p class="lede">Connect Claude Code over MCP. It makes the film, licenses it inside your budget, and you approve nothing twice.</p>
+      <a class="btn" href="/llms.txt">Read llms.txt</a>
     </div>
-  </div></section>
+    <div class="code" id="mcp-code"></div>
+  </section>
 
-  <section class="band"><div class="wrap">
-    <div class="head rise"><h2>Describe a film. Every creator in it gets paid.</h2><p>The studio builds a street from the kit, hangs 2D design assets on it as signs in your brand, cuts the camera moves and renders the MP4. Every frame is a program, so the same brief gives the same film.</p></div>
-    <div class="reel rise" id="reel"></div>
-  </div></section>
-
-  <section class="band"><div class="wrap">
-    <div class="head rise"><h2>You approve once. The agent does the rest.</h2></div>
-    <div class="flow rise">
-      <div><span class="glyph">${icon("hand-coins")}</span><h3>Approve a budget</h3><p>One PayPal approval saves your wallet for Oasis agents, capped at the amount you pick and expiring when you say.</p><code>PayPal Vault, setup token to payment token</code></div>
-      <div><span class="glyph">${icon("robot")}</span><h3>The agent buys what it imports</h3><p>It searches the registry, picks pieces from many creators and pays inside your budget. Anything over is refused before PayPal is called.</p><code>MCP buy_assets, or HTTP 402 in x402 shape</code></div>
-      <div><span class="glyph">${icon("coins")}</span><h3>Creators get paid</h3><p>One order per scene, charged to your saved wallet with no redirect. Each creator's share is paid out by PayPal Payouts.</p><code>Orders v2 with vault_id, then Payouts</code></div>
-    </div>
-  </div></section>
-
-  <section class="band"><div class="wrap">
-    <div class="head rise"><h2>One kit, many creators.</h2><p>Every piece sits on the same 6 m grid and palette, so a shop from one creator fits beside a tram from another.</p></div>
-    <div class="kit rise" id="kit"></div>
-  </div></section>
-
-  <section class="band"><div class="wrap agents">
-    <div class="rise">
-      <h2>Built for agents first.</h2>
-      <ul>
-        <li>${icon("plug")}<span>Add the MCP server to Claude Code, Cursor or any MCP client.</span></li>
-        <li>${icon("lock-key")}<span>The agent holds a budget token. The server holds the money and refuses anything over the cap.</span></li>
-        <li>${icon("x-circle")}<span>Revoke the token and the next purchase fails at once.</span></li>
-      </ul>
-      <div class="cta" style="margin-top:26px"><a class="btn" href="/llms.txt">Read llms.txt</a></div>
-    </div>
-    <div class="code rise" id="mcp-code"></div>
-  </div></section>`;
-  rise();
+  <section class="wrap kit-sec">
+    <h2>Made from creators' pieces.</h2>
+    <div class="kit" id="kit"></div>
+  </section>`;
 
   const host = location.origin;
-  $("#code").innerHTML = `<span class="c">// in any three.js page with an import map for "three"</span>
-<span class="k">import</span> { createAsset }
-  <span class="k">from</span> <span class="s">"${host}/cdn/town-flats.mjs?lic=…"</span>;
+  $("#mcp-code").innerHTML = `<span class="c"># connect once</span>
+claude mcp add --transport http oasis ${esc(host)}/mcp
 
-scene.add(createAsset({ floors: <span id="code-floors">5</span>, tank: <span id="code-bal">true</span> }));
+<span class="c"># then ask in plain words</span>
+<span class="s">"Make a 15-second teaser for Momiji Ramen on a
+ Kyoto street at dusk and license it. Budget: mdt_…"</span>
 
-<span class="c">// no licence? the import still loads, as a grey</span>
-<span class="c">// placeholder with the real footprint.</span>
-<span class="c">// agents fetching it get HTTP 402 with the price.</span>`;
-  $("#mcp-code").innerHTML = `<span class="c"># Claude Code</span>
-claude mcp add --transport http oasis ${host}/mcp
+<span class="c"># what it calls</span>
+make_film   get_film   buy_assets   get_budget`;
 
-<span class="c"># then, in your project</span>
-<span class="s">"Build a cozy Kyoto street in three.js.
- Use Oasis for the 3D pieces. Budget token: mdt_…"</span>
+  // the compare slider: the clay image is clipped to the left of the handle
+  const cmp = $("#compare"), range = $("#compare-range");
+  range.addEventListener("input", () => cmp.style.setProperty("--at", `${range.value}%`));
 
-<span class="c"># what the agent can call</span>
-search_assets   get_asset   preview_asset
-buy_assets      get_budget`;
-
-  mountStreet($("#hero-stage")).then(({ plan }) => {
-    const types = new Map(plan.placements.map((p) => [p.asset, p]));
-    const creators = new Set(plan.placements.map((p) => p.author).filter((a) => a !== "oasis"));
-    $("#hero-tag").innerHTML = `${plan.placements.length} pieces, ${types.size} programs, <b>${creators.size} creators</b>`;
-  }).catch(() => ($("#hero-tag").textContent = "The street could not load. Refresh to try again."));
-
-  mountKnobDemo();
-  drawKit($("#kit"));
-  drawSales();
-  drawReel();
-}
-
-async function drawReel() {
-  const el = $("#reel");
+  // the film: the latest rendered film in colour, else any rendered film, else the street it would be shot in
   const films = await api("/api/films").catch(() => []);
-  const f = films[0];
-  el.innerHTML = f
-    ? `<video src="${esc(f.mp4)}" autoplay muted loop playsinline aria-label="${esc(f.title)}, a film rendered by the Oasis studio"></video>
-       <div class="reel-side"><h3>${esc(f.title)}</h3><p class="muted">"${esc(f.brief)}"</p><p>${f.seconds}s, ${f.creators} creators${f.licensed ? ", licensed in one PayPal order" : ""}.</p><a class="btn primary" href="#/studio">Make yours</a></div>`
-    : `<div class="reel-side"><h3>No film has been rendered here yet.</h3><p class="muted">Open the studio, describe one, and it builds in front of you.</p><a class="btn primary" href="#/studio">Make a film</a></div>`;
+  const best = films[0] || null;
+  const hero = $("#hero-film");
+  if (best) {
+    hero.innerHTML = `<div class="frame"><img src="${esc(best.poster)}" alt="" onerror="this.remove()"><video src="${esc(best.mp4)}" poster="${esc(best.poster)}" autoplay muted loop playsinline aria-label="${esc(best.title)}, rendered by the Oasis Studio"></video></div>
+      <figcaption><b>${esc(best.title)}</b><span>"${esc(best.brief)}"</span></figcaption>`;
+    drawReceipt(best.id);
+  } else {
+    hero.innerHTML = `<div class="frame" id="hero-stage"></div><figcaption><b>A street built from the kit</b><span>Open the Studio to cut a film in it.</span></figcaption>`;
+    mountStreet($("#hero-stage")).catch(() => {});
+    $("#receipt").innerHTML = `<p class="muted">The bill for a film appears here once one is made.</p>`;
+  }
+  drawKit($("#kit"), { limit: 10 });
+  drawSales().then((n) => { if (n) $("#sales-sec").hidden = false; });
 }
 
-async function mountKnobDemo() {
-  const id = "town-flats";
-  const a = await api(`/api/assets/${id}`);
-  const v = createViewer($("#knob-stage"), { time: "day", autoRotate: !reduced });
-  viewers.push(v);
-  const values = Object.fromEntries(Object.entries(a.knobs).map(([k, d]) => [k, d.default]));
-  const show = ["floors", "tank", "lights"].filter((k) => a.knobs[k]);
-  const box = $("#knobs");
-  box.innerHTML = show.map((k) => {
-    const d = a.knobs[k];
-    if (d.type === "range") return `<div class="knob"><label for="k-${k}">${esc(d.label || k)}</label><input type="range" id="k-${k}" data-k="${k}" min="${d.min}" max="${d.max}" step="${d.step || 1}" value="${d.default}"><output id="o-${k}">${d.default}</output></div>`;
-    if (d.type === "toggle") return `<div class="knob"><label for="k-${k}">${esc(d.label || k)}</label><input type="checkbox" id="k-${k}" data-k="${k}" ${d.default ? "checked" : ""}><output id="o-${k}">${d.default ? "on" : "off"}</output></div>`;
-    return "";
-  }).join("") + `<div class="readout" id="readout">Building…</div>`;
-  let n = 0;
-  // Frame once on the tallest version, then hold the camera still so the building visibly grows.
-  const tallest = await api(`/api/assets/${id}/parts.json?p=${encodeURIComponent(JSON.stringify({ floors: a.knobs.floors?.max }))}`);
-  v.setParts(tallest.parts, { reframe: true });
-  const rebuild = async () => {
-    const run = ++n;
-    const diff = Object.fromEntries(show.map((k) => [k, values[k]]));
-    const { parts } = await api(`/api/assets/${id}/parts.json?p=${encodeURIComponent(JSON.stringify(diff))}`);
-    if (run !== n) return;
-    v.setParts(parts, { lock: true });
-    const s = v.stats();
-    $("#readout").innerHTML = `Rebuilt: <b>${parts.length}</b> parts, <b>${s.tris.toLocaleString()}</b> triangles`;
-    if ($("#code-floors")) $("#code-floors").textContent = values.floors;
-    if ($("#code-bal")) $("#code-bal").textContent = String(!!values.tank);
-  };
-  box.addEventListener("input", (e) => {
-    const k = e.target.dataset.k;
-    if (!k) return;
-    values[k] = e.target.type === "checkbox" ? e.target.checked : Number(e.target.value);
-    $(`#o-${k}`).textContent = e.target.type === "checkbox" ? (e.target.checked ? "on" : "off") : e.target.value;
-    clearTimeout(rebuild.t);
-    rebuild.t = setTimeout(rebuild, 60);
-  });
-  rebuild();
+/** The real bill of a film, grouped by creator, as one PayPal order. */
+async function drawReceipt(id) {
+  const el = $("#receipt");
+  try {
+    const f = await api(`/api/films/${encodeURIComponent(id)}`);
+    const paid = f.bill.lines.filter((l) => l.price > 0);
+    const by = new Map();
+    for (const l of paid) { if (!by.has(l.author)) by.set(l.author, []); by.get(l.author).push(l); }
+    el.innerHTML = `<div class="r-head"><b>${esc(f.title)}</b><span>${paid.length} licences, ${by.size} creators</span></div>
+      ${[...by].map(([author, ls]) => `<div class="r-who"><div class="r-name">${esc(author)}<em>${usd(ls.reduce((a, l) => a + l.price, 0))}</em></div>${ls.map((l) => `<div class="r-line"><span>${esc(l.title)}</span><span>${usd(l.price)}</span></div>`).join("")}</div>`).join("")}
+      <div class="r-total"><span>One PayPal order</span><b>${usd(f.bill.total)}</b></div>`;
+  } catch { el.innerHTML = ""; }
 }
 
 async function drawKit(el, { limit = 12 } = {}) {
@@ -246,10 +206,13 @@ async function drawSales({ limit = 6 } = {}) {
       : `<div class="empty"><h3>No agent has bought anything yet.</h3><p>Give an agent a budget and ask it to build a scene. Its purchase shows up here the moment PayPal completes it.</p><a class="btn" href="#/budget">Give your agent a budget</a></div>`;
     const totals = creatorTotals(sales);
     $("#creators").innerHTML = totals.length ? totals.map(([a, v]) => `<div class="creator"><img src="${face(a) ? thumb(face(a), 120) : ""}" alt=""><div><b>${esc(a)}</b><div class="muted" style="font-size:13px">sandbox creator account</div></div><div class="earn${bump.includes(a) ? " bump" : ""}">${usd(v)}</div></div>`).join("")
-      : (sales.length ? "" : `<div class="creator"><div class="skel" style="width:52px;height:52px"></div><div class="muted">Creators appear here with what they earned.</div><div></div></div>`);
+      : "";
+    $("#creators").hidden = !totals.length;
+    $("#sales").closest(".ledger")?.classList.toggle("solo", !totals.length);
   };
   paint();
   feed((s) => { sales = [s, ...sales]; paint(s.creators.map((c) => c.author)); });
+  return sales.length;
 }
 let source = null;
 function feed(onSale) {

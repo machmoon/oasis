@@ -1,16 +1,16 @@
-// Town Bakery: a bakery whose whole street front is a shop. A full-width shopfront bay projects from the house; a giant
-// scored batard loaf sits on its flat roof as the sign. Below, a tiered bay window displays boules, batards and a
-// basket of baguettes under a striped awning, and a brick oven chimney smokes above. Block asset: build(p) returns
-// parts in metres on the Oasis Town grid (origin at the footprint's corner, y up, street side at z = 0).
-// Colour knobs are clamped by role, so any brand palette still reads as a bakery.
+// Town Bakery: a corner bakery with a single-storey shopfront. A giant 3D loaf stands on a painted sign
+// plinth on the shop roof, a sloped striped awning runs the full width over a bay window of bread, and the
+// flats above have a brick oven chimney. Block asset: build(p) returns parts in metres on the Oasis Town grid
+// (origin at the footprint's corner, y up, street side at z = 0). It shares the Town Shop's 3.1 m ground
+// floor, 2.6 m storeys and 5 m frontage, so the two pieces sit side by side on the 6 m grid.
 export const meta = {
   title: "Town Bakery",
   kind: "3d",
   format: "blocks",
   kit: "Oasis Town",
-  description: "A corner bakery with a giant scored loaf on its shopfront roof, a bay window of bread under a striped awning and a smoking brick chimney, sized for the 6 m grid beside the Town Shop.",
+  description: "A corner bakery with a giant loaf sign on its shop roof, a striped awning over a bay window full of bread and an oven chimney, with flats above that match the Town Shop.",
   tags: ["3d", "low poly", "building", "bakery", "bread", "shop", "town", "kit"],
-  price: 4,
+  price: 3,
   author: "oasis-factory",
   footprint: [6, 6],
   size: [1000, 1000],
@@ -20,187 +20,200 @@ export const params = {
   knobs: {
     wall: { type: "color", role: "surface", label: "Walls", default: "#F3E3C8" },
     awning: { type: "color", role: "primary", label: "Awning", default: "#E5484D" },
-    sign: { type: "color", role: "highlight", label: "Loaf sign & bread (golden to russet)", default: "#F2B33D" },
-    roof: { type: "color", role: "ink", label: "Roof & shopfront", default: "#5B6270" },
+    sign: { type: "color", role: "highlight", label: "Sign board", default: "#F2B33D" },
     floors: { type: "range", label: "Floors", default: 2, min: 1, max: 3, step: 1 },
     chimney: { type: "toggle", label: "Oven chimney", default: true },
-    lights: { type: "toggle", label: "Lit windows", default: true },
+    lights: { type: "toggle", label: "Lit windows & sign", default: true },
   },
   presets: {
-    Pistachio: { wall: "#E3F2EA", awning: "#2F7A55", sign: "#C98B3E", roof: "#3B4A44" },
-    Terracotta: { wall: "#F6EEE0", awning: "#3E7BFA", sign: "#E0A848", roof: "#C8553D" },
-    Rye: { wall: "#F7E6EC", awning: "#C8553D", sign: "#A8642C", roof: "#6B5A63" },
+    Pistachio: { wall: "#F6EEE0", awning: "#2F7A55", sign: "#F7B8CF" },
+    Blueberry: { wall: "#D8DEE3", awning: "#3E7BFA", sign: "#F2B33D" },
+    Rye: { wall: "#EAD9C6", awning: "#7A3E2E", sign: "#79B86A" },
   },
 };
 
-// ---- colour helpers: every brand-driven colour is clamped to a role-safe range ----
-function toHsl(hex, fb) {
-  const s = typeof hex === "string" && /^#?[0-9a-fA-F]{6}$/.test(hex) ? hex.replace("#", "") : fb.slice(1);
-  const n = parseInt(s, 16);
-  const r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
-  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn, l = (mx + mn) / 2;
-  const sat = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
-  let h = 0;
-  if (d !== 0) {
-    if (mx === r) h = 60 * (((g - b) / d) % 6);
-    else if (mx === g) h = 60 * ((b - r) / d + 2);
-    else h = 60 * ((r - g) / d + 4);
+// Colour helpers. Brand inputs are clamped so no probe goes black, neon or unreadable.
+const toRgb = (c) => {
+  const s = typeof c === "string" && /^#[0-9a-fA-F]{6}$/.test(c) ? c : "#808080";
+  return [1, 3, 5].map((i) => parseInt(s.slice(i, i + 2), 16));
+};
+const toHex = (r) => "#" + r.map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, "0")).join("").toUpperCase();
+const mix = (a, b, t) => { const A = toRgb(a), B = toRgb(b); return toHex(A.map((v, i) => v + (B[i] - v) * t)); };
+const hsl = (c) => {
+  const [r, g, b] = toRgb(c).map((v) => v / 255);
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
+  let h = 0, s = 0;
+  if (d > 0) {
+    s = d / (1 - Math.abs(2 * l - 1));
+    if (mx === r) h = ((g - b) / d + 6) % 6; else if (mx === g) h = (b - r) / d + 2; else h = (r - g) / d + 4;
+    h *= 60;
   }
-  if (h < 0) h += 360;
-  return [h, sat, l];
-}
-function toHex(h, s, l) {
-  const a = s * Math.min(l, 1 - l);
-  const f = (k0) => {
-    const k = (k0 + h / 30) % 12;
-    const v = l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
-    return Math.round(Math.max(0, Math.min(1, v)) * 255).toString(16).padStart(2, "0");
-  };
-  return "#" + f(0) + f(8) + f(4);
-}
-const cl = (v, a, b) => Math.max(a, Math.min(b, v));
-const hueDist = (a, b) => Math.min(Math.abs(a - b), 360 - Math.abs(a - b));
-const snapHue = (h, lo, hi) => (h >= lo && h <= hi ? h : hueDist(h, lo) < hueDist(h, hi) ? lo : hi);
+  return [h, s, l];
+};
+const fromHsl = (h, s, l) => {
+  const C = (1 - Math.abs(2 * l - 1)) * s, X = C * (1 - Math.abs(((h / 60) % 2) - 1)), m = l - C / 2;
+  const rgb = [[C, X, 0], [X, C, 0], [0, C, X], [0, X, C], [X, 0, C], [C, 0, X]][Math.floor(h / 60) % 6];
+  return toHex(rgb.map((v) => (v + m) * 255));
+};
+const tame = (c, lo, hi, smax) => { const [h, s, l] = hsl(c); return fromHsl(h, Math.min(s, smax), Math.max(lo, Math.min(hi, l))); };
 
 export function build(p) {
   const parts = [];
   const box = (x, y, z, w, h, d, c, e) => parts.push({ t: "box", p: [x, y, z], s: [w, h, d], c, ...(e ? { e: true } : {}) });
-  const cyl = (cx, y, cz, r, h, c, n) => parts.push({ t: "cyl", p: [cx, y, cz], r, h, c, n: n || 8 });
+  const cyl = (cx, y, cz, r, h, c, n, e) => parts.push({ t: "cyl", p: [cx, y, cz], r, h, c, n: n || 10, ...(e ? { e: true } : {}) });
 
-  const floors = Math.max(1, Math.min(3, Math.round(p.floors)));
-  const L = !!p.lights;
-  const base = 0.15, SHOP = 3.2, FLOOR = 2.6;
-  const X0 = 0.3, X1 = 5.7, W = X1 - X0; // building width
-  const zF = 0.6, zH = 1.9, zB = 5.8; // shopfront face, house face, back wall
-  const top = SHOP + (floors - 1) * FLOOR;
+  // Kit materials. These never take brand colours.
+  const KERB = "#D9DCE1", LIP = "#C9CED6", ROOF = "#5B6270", WOOD = "#8A6E52", GLASS = "#7E93A8", LIT = "#FFD58A";
+  const BRICK = "#C8553D", LEAF = "#79B86A", BLOSSOM = "#F7B8CF", WHITE = "#FBFBFB", METAL = "#C9CED6";
+  const DARKWOOD = mix(WOOD, "#3A2A1C", 0.3);
+  const CRUST = ["#C98A4B", "#E0B070", "#A8663A"];
+  const LOAF = ["#A8643A", "#C98A4B", "#E0B070"], SCORE = "#F6E2B8";
 
-  // ---- role-clamped colours ----
-  const [wh, ws, wl] = toHsl(p.wall, "#F3E3C8");
-  const wallL = cl(wl, 0.62, 0.93);
-  const wall = toHex(wh, cl(ws, 0, 0.35), wallL);
-  const [rh, rs, rl] = toHsl(p.roof, "#5B6270");
-  const roofWarm = rh <= 40 || rh >= 340; // terracotta tiles may stay warm, everything else desaturates to slate
-  const roof = toHex(rh, cl(rs, 0, roofWarm ? 0.55 : 0.3), cl(rl, 0.32, Math.min(0.52, wallL - 0.25)));
-  let [ah, as, al] = toHsl(p.awning, "#E5484D");
-  if (ah >= 50 && ah <= 145) { ah = 150; as = Math.min(as, 0.5); } // limes and yellow-greens become kit tram green
-  const awn = toHex(ah, cl(as, 0.42, 0.65), cl(al, 0.42, 0.55));
-  const [sh, ss, sl] = toHsl(p.sign, "#F2B33D");
-  const bh = snapHue(sh, 18, 46), bs = cl(ss, 0.45, 0.85);
-  const bl = cl(sl, 0.36, Math.max(0.36, Math.min(0.64, wallL - 0.18)));
-  const bread = toHex(bh, bs, bl);
-  const breadDark = toHex(bh, bs, Math.max(0.2, bl - 0.16));
-  const breadScore = toHex(bh, 0.6, Math.min(0.84, bl + 0.22));
+  const on = !!p.lights;
+  const glow = (c) => (on ? mix(c, LIT, 0.3) : c);   // night tone derived from each part's own hue
 
-  // fixed materials
-  const glass = "#7E93A8", lit = "#FFD58A", wood = "#8A6E52", darkWood = "#6E5440", cream = "#F6EEE0";
-  const kerb = "#D9DCE1", white = "#FBFBFB";
-  const win = L ? lit : glass;
+  // Brand-driven colours, clamped for legibility.
+  const wallC = tame(p.wall, 0.45, 0.94, 0.7);
+  const awnC = tame(p.awning, 0.34, 0.62, 0.8);
+  const signC = tame(p.sign, 0.45, 0.8, 0.9);
+  const wallShade = mix(wallC, "#5B4636", 0.2);
+  const signInk = mix(signC, "#2E2018", 0.55);
+  const signFace = on ? mix(signC, "#FFFFFF", 0.2) : signC;
+  const shutterC = mix(awnC, ROOF, 0.45);
 
-  // ---- masses: plinth, shopfront bay block, house ----
-  box(X0 - 0.15, 0, zF - 0.15, W + 0.3, base, zB - zF + 0.3, "#BFC3CA");
-  box(X0, base, zF, W, SHOP - base, zH - zF, wall); // single-storey shop block
-  box(X0, base, zH, W, top - base, zB - zH, wall); // house behind
-  box(X0 - 0.05, SHOP, zF - 0.05, W + 0.1, 0.08, zH - zF + 0.07, cream); // shop roof cap
+  // One shared frame. The shop is a one-storey block at the street, and the house with flats sits behind it.
+  const W = 5, BASE = 0.1, GROUND = 3.1, FLOOR = 2.6;
+  const x0 = (6 - W) / 2, zf = 1.2, zh = 2.6, D = 3.2;
+  const shopTop = BASE + GROUND;
+  const top = BASE + GROUND + (p.floors - 1) * FLOOR;
 
-  // ---- shopfront frame: pilasters and fascia with marquee bulbs ----
-  box(X0, base, zF - 0.08, 0.28, 2.5, 0.08, roof);
-  box(X1 - 0.28, base, zF - 0.08, 0.28, 2.5, 0.08, roof);
-  box(X0, 2.65, zF - 0.06, W, 0.5, 0.06, roof);
-  for (let i = 0; i < 6; i++) box(X0 + 0.55 + i * 0.86, 2.85, zF - 0.09, 0.12, 0.12, 0.03, L ? lit : cream, L);
+  // Pavement covers the whole tile around the building, with a kerb lip on the street edge.
+  box(0, 0, 0, 6, BASE + 0.02, 0.15, LIP);
+  box(0, 0, 0.15, 6, BASE, zf - 0.15, KERB);
+  box(0, 0, zf, x0, BASE, 6 - zf, KERB);
+  box(x0 + W, 0, zf, 6 - x0 - W, BASE, 6 - zf, KERB);
+  box(x0, 0, zh + D, W, BASE, 6 - zh - D, KERB);
 
-  // ---- tiered bay window of bread (open front so the loaves read) ----
-  const bx = 0.75, bw = 2.9, bz = zF - 0.5;
-  box(bx, 0, bz, bw, 0.6, 0.5, wood);
-  box(bx + 0.15, 0.15, bz - 0.03, bw - 0.3, 0.3, 0.03, darkWood);
-  box(bx - 0.05, 0.6, bz - 0.05, bw + 0.1, 0.06, 0.55, cream); // sill
-  box(bx + 0.08, 0.66, zF - 0.05, bw - 0.16, 1.44, 0.05, win, L); // glowing back of the display
-  // front row: four big scored boules
-  for (let i = 0; i < 4; i++) {
-    const lx = bx + 0.36 + i * 0.73;
-    cyl(lx, 0.66, bz + 0.2, 0.2, 0.2, i % 2 ? breadDark : bread, 8);
-    cyl(lx, 0.86, bz + 0.2, 0.13, 0.07, i % 2 ? bread : breadScore, 8);
+  // Massing: shop block and house block, both solid from the ground.
+  box(x0, 0, zf, W, shopTop, zh - zf, wallC);
+  box(x0, 0, zh, W, top, D, wallC);
+  box(x0 - 0.03, BASE, zf, 0.03, 0.3, zh + D - zf, wallShade);                 // side base course
+  const cornBack = p.floors > 1 ? zh : zh - 0.22;                               // clears the 1-floor roof eave
+  box(x0 - 0.08, shopTop, zf - 0.08, W + 0.16, 0.14, cornBack - (zf - 0.08), wallShade); // shop roof cap
+
+  // ---------- fascia board over the awning ----------
+  box(x0 + 0.1, 2.78, zf - 0.05, W - 0.2, 0.36, 0.05, signFace, on);
+  box(x0 + 0.3, 2.92, zf - 0.08, W - 0.6, 0.08, 0.03, signInk);
+
+  // ---------- giant loaf sign on the shop roof (the hero) ----------
+  // Centred between the upper windows so nothing on the facade can overlap it at any floor count.
+  const lcx = x0 + W / 2, lcz = zf + 0.6, yb = shopTop + 0.14;
+  box(lcx - 1.3, yb, lcz - 0.55, 2.6, 0.24, 1.1, signFace, on);                // painted plinth
+  box(lcx - 1.15, yb + 0.06, lcz - 0.58, 2.3, 0.12, 0.03, signInk);              // plinth inset band
+  box(lcx - 1.32, yb + 0.24, lcz - 0.57, 2.64, 0.05, 1.14, signInk);             // cap
+  const tier = (L, r, y, h, c) => {
+    const st = L - 2 * r;
+    box(lcx - st / 2, y, lcz - r, st, h, 2 * r, c, on);
+    for (const s of [-1, 1]) cyl(lcx + s * st / 2, y, lcz, r, h, c, 12, on);
+  };
+  const y1 = yb + 0.29, h1 = 0.34, h2 = 0.22, h3 = 0.13;
+  tier(2.3, 0.46, y1, h1, glow(LOAF[0]));                                         // crusty base
+  tier(2.14, 0.38, y1 + h1, h2, glow(LOAF[1]));                                   // rising dome
+  tier(1.86, 0.26, y1 + h1 + h2, h3, glow(LOAF[2]));                              // golden top
+  const yt = y1 + h1 + h2 + h3;
+  for (const dx of [-0.55, 0, 0.55]) {                                            // three slanted scores
+    box(lcx + dx - 0.12, yt, lcz - 0.22, 0.16, 0.035, 0.22, glow(SCORE), on);
+    box(lcx + dx + 0.02, yt, lcz, 0.16, 0.035, 0.22, glow(SCORE), on);
   }
-  // upper shelf: two batards and a basket of standing baguettes
-  box(bx + 0.1, 1.2, zF - 0.35, bw - 0.2, 0.06, 0.3, cream);
-  for (const ox of [0.25, 1.7]) {
-    box(bx + ox, 1.26, zF - 0.32, 0.8, 0.2, 0.24, bread);
-    box(bx + ox + 0.12, 1.46, zF - 0.26, 0.56, 0.04, 0.12, breadScore);
+
+  // ---------- door (front, left, clear of the bay so the camera sees it) ----------
+  const dx0 = x0 + 0.4;
+  box(dx0 - 0.08, BASE, zf - 0.04, 1.06, 2.12, 0.04, WOOD);
+  box(dx0, BASE, zf - 0.07, 0.9, 2.05, 0.03, DARKWOOD);
+  box(dx0 + 0.2, 1.2, zf - 0.1, 0.5, 0.65, 0.03, on ? LIT : GLASS, on);
+  box(dx0 + 0.72, 1.0, zf - 0.1, 0.06, 0.18, 0.03, METAL);
+  box(dx0 - 0.15, BASE, zf - 0.45, 1.2, 0.1, 0.38, KERB);
+
+  // ---------- bay window of loaves (front, right) ----------
+  const bx0 = x0 + 1.65, bx1 = x0 + 4.75, bz0 = zf - 0.65, sill = 0.7, bayTop = 2.0;
+  const bw = bx1 - bx0, inX = bx0 + 0.12, inW = bw - 0.24;
+  box(bx0, BASE, bz0, bw, sill - BASE, zf - bz0, WOOD);
+  box(inX, sill, zf - 0.06, inW, bayTop - sill, 0.06, on ? LIT : GLASS, on);
+  for (const px of [bx0, bx1 - 0.12]) box(px, sill, bz0, 0.12, bayTop - sill, 0.12, WOOD);
+  for (const gx of [bx0 + 0.01, bx1 - 0.07]) box(gx, sill, bz0 + 0.12, 0.06, bayTop - sill, zf - bz0 - 0.18, GLASS);
+  box(bx0 - 0.05, bayTop, bz0 - 0.05, bw + 0.1, 0.14, zf - bz0 + 0.05, WOOD);
+  box(inX, sill, bz0 + 0.3, inW, 0.3, zf - 0.06 - (bz0 + 0.3), WOOD);           // display step
+  const fs = inW / 4;
+  for (let i = 0; i < 4; i++) {                                                   // front row on the sill
+    const cx = inX + fs * (i + 0.5), col = CRUST[i % 3];
+    if (i % 2 === 0) {
+      cyl(cx, sill, bz0 + 0.15, 0.15, 0.12, col, 10);
+      cyl(cx, sill + 0.12, bz0 + 0.15, 0.09, 0.06, mix(col, "#FFFFFF", 0.2), 10);
+    } else {
+      box(cx - 0.3, sill, bz0 + 0.07, 0.6, 0.11, 0.16, col);
+      box(cx - 0.26, sill + 0.11, bz0 + 0.09, 0.52, 0.05, 0.12, mix(col, "#FFFFFF", 0.2));
+    }
   }
-  box(bx + 1.27, 1.26, zF - 0.33, 0.36, 0.22, 0.26, darkWood);
-  [0.07, 0.18, 0.29].forEach((o, k) => cyl(bx + 1.27 + o, 1.48, zF - 0.2, 0.045, 0.5 - k * 0.06, k % 2 ? breadDark : bread, 6));
-  for (const px of [bx, bx + bw - 0.08]) box(px, 0.66, bz, 0.08, 1.44, 0.08, wood); // corner posts
-  for (const px of [bx, bx + bw - 0.04]) box(px, 0.66, bz + 0.08, 0.04, 1.44, 0.42, glass); // side panes
-  box(bx - 0.06, 2.1, bz - 0.05, bw + 0.12, 0.1, 0.55, roof); // bay cap
+  const bs = inW / 5, stepTop = sill + 0.3;
+  for (let i = 0; i < 5; i++) {                                                   // tin loaves on the step
+    const cx = inX + bs * (i + 0.5), col = CRUST[(i + 1) % 3];
+    box(cx - 0.18, stepTop, bz0 + 0.36, 0.36, 0.18, 0.18, col);
+    box(cx - 0.2, stepTop + 0.18, bz0 + 0.35, 0.4, 0.09, 0.2, mix(col, "#FFFFFF", 0.15));
+  }
+  box(bx0 + 0.07, 1.5, zf - 0.3, bw - 0.14, 0.05, 0.24, WOOD);                   // top shelf
+  const rs = (bw - 0.14) / 6;
+  for (let i = 0; i < 6; i++) cyl(bx0 + 0.07 + rs * (i + 0.5), 1.55, zf - 0.18, 0.11, 0.1, CRUST[(i + 2) % 3], 10);
 
-  // ---- door ----
-  const dx = 4.25;
-  box(dx - 0.08, base, zF - 0.04, 1.06, 2.1, 0.04, cream);
-  box(dx, 0.17, zF - 0.07, 0.9, 1.98, 0.03, wood);
-  box(dx + 0.2, 1.2, zF - 0.09, 0.5, 0.65, 0.02, win, L);
-  box(dx + 0.72, 0.95, zF - 0.1, 0.06, 0.2, 0.03, "#F2B33D"); // brass handle
-  box(dx - 0.1, 0, zF - 0.3, 1.1, 0.17, 0.3, kerb); // step
-
-  // ---- striped awning: one clean slab of touching stripes with a straight valance ----
-  const ax = X0 + 0.25, aw = W - 0.5, stripes = 9, sw = aw / stripes, ad = 0.55;
+  // ---------- sloped striped awning across the whole shopfront ----------
+  // Each stripe is a gable with its ridge in the facade, so only the street slope shows. The underside
+  // (2.3 m) clears the bay cap (2.14 m) and the door frame (2.22 m).
+  const P = 0.95, ay = 2.3, AH = 0.4, stripes = 8, ax0 = x0 + 0.05, sw = (W - 0.1) / stripes;
   for (let i = 0; i < stripes; i++) {
-    const c = i % 2 ? white : awn;
-    box(ax + i * sw, 2.42, zF - ad, sw, 0.14, ad, c);
-    box(ax + i * sw, 2.26, zF - ad, sw, 0.16, 0.05, c);
+    const c = i % 2 ? WHITE : awnC, sx = ax0 + i * sw;
+    parts.push({ t: "gable", p: [sx, ay, zf - P], s: [sw, AH, 2 * P], c, axis: "x" });
+    box(sx, ay - 0.22, zf - P - 0.03, sw, 0.24, 0.05, c);
+    box(sx + sw * 0.25, ay - 0.3, zf - P - 0.03, sw * 0.5, 0.08, 0.05, c);
   }
 
-  // ---- giant batard loaf sign on the shop roof: rounded in plan and section, with diagonal scores ----
-  const LX = 3.6 + 0.4 * (floors - 1), LD = 0.95, lcx = 3.0, lzc = zF + 0.1 + LD / 2;
-  const layers = [[0.12, 0.86, 0.7, breadDark], [0.22, 1, 1, bread], [0.2, 0.97, 0.9, bread], [0.16, 0.88, 0.74, bread], [0.12, 0.74, 0.56, bread]];
-  let ly = SHOP + 0.08;
-  for (const [h, lf, df, c] of layers) {
-    const len = LX * lf, dep = LD * df;
-    box(lcx - (len * 0.84) / 2, ly, lzc - dep / 2, len * 0.84, h, dep, c); // body
-    box(lcx - len / 2, ly, lzc - (dep * 0.6) / 2, len, h, dep * 0.6, c); // rounded ends
-    ly += h;
-  }
-  for (let i = 0; i < 4; i++) {
-    const sx = lcx + (i - 1.5) * LX * 0.14;
-    [0.17, 0, -0.17].forEach((oz, k) => box(sx - 0.22 + k * 0.12, ly, lzc + oz - 0.085, 0.2, 0.04, 0.17, breadScore));
-  }
+  // ---------- side wall: bakehouse windows and a downpipe ----------
+  box(x0 - 0.06, 0.9, zf + 0.25, 0.06, 1.2, 0.9, on ? LIT : GLASS, on);
+  box(x0 - 0.09, 2.1, zf + 0.19, 0.09, 0.1, 1.02, wallShade);
+  box(x0 - 0.06, 0.9, zh + 0.9, 0.06, 1.3, 1.4, on ? LIT : GLASS, on);
+  box(x0 - 0.09, 2.2, zh + 0.84, 0.09, 0.1, 1.52, wallShade);
+  box(x0 - 0.12, 0.8, zh + 0.84, 0.12, 0.1, 1.52, WOOD);
+  box(x0 - 0.08, BASE + 0.3, zh + 0.02, 0.08, top - BASE - 0.3, 0.08, ROOF);
 
-  // ---- side windows ----
-  box(X0 - 0.04, 0.8, zF + 0.3, 0.04, 1.2, 0.7, win, L);
-  box(X0 - 0.1, 0.74, zF + 0.25, 0.1, 0.06, 0.8, cream);
-  box(X0 - 0.04, 0.8, 3.3, 0.04, 1.2, 1.1, win, L);
-  box(X0 - 0.1, 0.74, 3.25, 0.1, 0.06, 1.2, cream);
-
-  // ---- flats above: every window follows the lights toggle ----
-  for (let f = 1; f < floors; f++) {
-    const y = SHOP + (f - 1) * FLOOR + 0.85;
-    for (const fx of [1.1, 3.9]) {
-      box(fx, y, zH - 0.04, 1, 1.2, 0.04, win, L);
-      box(fx - 0.05, y + 1.2, zH - 0.08, 1.1, 0.08, 0.08, roof); // lintel
-      if (f === 1) box(fx - 0.05, y - 0.08, zH - 0.08, 1.1, 0.08, 0.08, cream); // sill above the loaf
-      else {
-        box(fx - 0.05, y - 0.22, zH - 0.3, 1.1, 0.22, 0.3, wood); // window box
-        for (let k = 0; k < 4; k++) box(fx + 0.04 + k * 0.24, y, zH - 0.26, 0.2, 0.16, 0.2, k % 2 ? "#79B86A" : "#F7B8CF");
+  // ---------- flats above: window boxes on odd floors, shutters on even floors ----------
+  for (let f = 1; f < p.floors; f++) {
+    const wy = BASE + GROUND + (f - 1) * FLOOR + 0.8;
+    [0.25, W - 1.25].forEach((fx, i) => {
+      const lit = on && (f * 5 + i * 3 + p.floors) % 5 !== 0;
+      box(x0 + fx, wy, zh - 0.06, 1, 1.2, 0.06, lit ? LIT : GLASS, lit);
+      box(x0 + fx - 0.06, wy + 1.2, zh - 0.08, 1.12, 0.1, 0.08, wallShade);
+      if (f % 2 === 1) {
+        box(x0 + fx - 0.05, wy - 0.25, zh - 0.24, 1.1, 0.2, 0.24, WOOD);
+        for (let k = 0; k < 4; k++) box(x0 + fx + 0.04 + k * 0.25, wy - 0.05, zh - 0.2, 0.2, 0.12, 0.16, k % 2 ? LEAF : BLOSSOM);
+      } else {
+        for (const sx of [fx - 0.22, fx + 1.02]) box(x0 + sx, wy, zh - 0.05, 0.2, 1.2, 0.05, shutterC);
+        box(x0 + fx - 0.05, wy - 0.1, zh - 0.12, 1.1, 0.1, 0.12, wallShade);
       }
-    }
-    box(X0 - 0.04, y, 3.3, 0.04, 1.2, 1.1, win, L);
-    box(X0 - 0.08, y + 1.2, 3.25, 0.08, 0.08, 1.2, roof);
+    });
+    [zh + 0.7, zh + 2.0].forEach((sz, i) => {
+      const lit = on && (f + i + p.floors) % 3 !== 0;
+      box(x0 - 0.06, wy, sz, 0.06, 1.2, 0.9, lit ? LIT : GLASS, lit);
+      box(x0 - 0.09, wy + 1.2, sz - 0.06, 0.09, 0.1, 1.02, wallShade);
+    });
   }
 
-  // ---- roof ----
-  parts.push({ t: "gable", p: [X0 - 0.2, top, zH - 0.15], s: [W + 0.4, 1.6, zB - zH + 0.35], c: roof, axis: "x" });
-
-  // ---- brick oven chimney on the street-side slope, with a curl of smoke ----
+  // ---------- roof and chimney ----------
+  parts.push({ t: "gable", p: [x0 - 0.2, top, zh - 0.2], s: [W + 0.4, 1.6, D + 0.4], c: ROOF, axis: "x" });
   if (p.chimney) {
-    const chx = 4.1, chz = 2.6, cw = 0.8, ch = 2.4;
-    box(chx, top, chz, cw, ch, cw, "#C8553D");
-    box(chx - 0.03, top + 1.5, chz - 0.03, cw + 0.06, 0.1, cw + 0.06, cream);
-    box(chx - 0.08, top + ch, chz - 0.08, cw + 0.16, 0.14, cw + 0.16, "#5B6270");
-    cyl(chx + cw / 2, top + ch + 0.14, chz + cw / 2, 0.16, 0.2, "#5B6270", 8);
-    let sy = top + ch + 0.34;
-    for (const [r, h, ox, oz] of [[0.26, 0.26, 0, 0], [0.36, 0.3, 0.14, 0.06], [0.3, 0.26, 0.3, 0.14]]) {
-      cyl(chx + cw / 2 + ox, sy, chz + cw / 2 + oz, r, h, white, 8);
-      sy += h;
-    }
+    const cx = x0 + W - 1.4, cz = zh + D - 1.5, CH = 2.4;
+    box(cx, top, cz, 0.7, CH, 0.7, BRICK);
+    box(cx - 0.03, top + CH - 0.5, cz - 0.03, 0.76, 0.1, 0.76, mix(BRICK, "#3A2A1C", 0.25));
+    box(cx - 0.08, top + CH, cz - 0.08, 0.86, 0.14, 0.86, ROOF);
+    cyl(cx + 0.22, top + CH + 0.14, cz + 0.35, 0.1, 0.3, BRICK, 8);
+    cyl(cx + 0.5, top + CH + 0.14, cz + 0.35, 0.1, 0.22, BRICK, 8);
   }
-
   return { parts };
 }

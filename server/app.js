@@ -65,7 +65,7 @@ export async function createApp() {
   app.get("/api/assets/:id/render.png", wrap(async (req, res) => {
     const a = mustAsset(req.params.id);
     const { svg } = await catalog.renderAsync(a, parseKnobs(req));
-    res.set("Content-Type", "image/png").set("Cache-Control", "public, max-age=300").send(catalog.toPng(svg, Math.min(1024, Number(req.query.w) || 640)));
+    res.set("Content-Type", "image/png").set("Cache-Control", "public, max-age=300").send(await catalog.toPng(svg, Math.min(1024, Number(req.query.w) || 640)));
   }));
   app.get("/api/assets/:id/render.svg", wrap(async (req, res) => {
     const a = mustAsset(req.params.id);
@@ -160,7 +160,7 @@ export async function createApp() {
     const f = FORMATS[fmt];
     if (!f) throw Object.assign(new Error(`Unknown format ${fmt}`), { status: 400 });
     const { svg, values } = await catalog.renderAsync(a, knobs);
-    res.set("Content-Type", f.type).set("Content-Disposition", `attachment; filename="${a.id}.${f.ext}"`).send(f.make(svg, a, values));
+    res.set("Content-Type", f.type).set("Content-Disposition", `attachment; filename="${a.id}.${f.ext}"`).send(await f.make(svg, a, values));
   }
 
   app.post("/api/assets/:id/fork", wrap(async (req, res) => {
@@ -247,7 +247,7 @@ export async function createApp() {
     if (!f) throw Object.assign(new Error("No such film"), { status: 404 });
     return f;
   };
-  const filmView = async (f) => ({ ...(await film.hydrate(f)), render: f.render || { status: "idle" }, licensed: !!f.licence, licence: f.licence ? { orderId: f.licence.orderId, total: f.licence.total, creators: f.licence.creators } : null, renderer: await filmRender.available(), link: `${config.baseUrl}/#/film/${f.id}` });
+  const filmView = async (f) => ({ ...(await film.hydrate(f)), render: f.render || { status: "idle" }, licensed: !!f.licence, licence: f.licence ? { orderId: f.licence.orderId, total: f.licence.total, creators: f.licence.creators, platformUsd: f.licence.platformUsd, platformPct: f.licence.platformPct } : null, renderer: await filmRender.available(), link: `${config.baseUrl}/#/film/${f.id}` });
   app.post("/api/films", filmLimit, wrap(async (req, res) => {
     const brief = String(req.body?.brief || "").slice(0, 400);
     if (!brief.trim()) throw Object.assign(new Error("Say what the film is about"), { status: 400 });
@@ -256,8 +256,8 @@ export async function createApp() {
     res.json(await filmView(await film.save(f)));
   }));
   app.get("/api/films", wrap(async (req, res) => {
-    const all = (await store.list("films")).filter((f) => f.render?.status === "done").sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 12);
-    res.json(all.map((f) => ({ id: f.id, title: f.title, brief: f.brief, seconds: f.seconds, mp4: `/api/films/${f.id}/film.mp4`, licensed: !!f.licence, creators: film.billOf(f).creators.length })));
+    const all = (await store.list("films")).filter((f) => f.render?.status === "done").sort((a, b) => (!!b.licence - !!a.licence) || b.updatedAt.localeCompare(a.updatedAt)).slice(0, 12); // films in colour first
+    res.json(all.map((f) => ({ id: f.id, title: f.title, brief: f.brief, seconds: f.seconds, mp4: `/api/films/${f.id}/film.mp4`, poster: `/api/films/${f.id}/poster.jpg`, licensed: !!f.licence && !/^DEV-/.test(f.licence.orderId || ""), creators: film.billOf(f).creators.length })));
   }));
   app.get("/api/films/:id", wrap(async (req, res) => res.set("Cache-Control", "no-cache").json(await filmView(await mustFilm(req.params.id)))));
   app.post("/api/films/:id/direct", filmLimit, wrap(async (req, res) => {
@@ -273,7 +273,30 @@ export async function createApp() {
     const items = film.billItems(f);
     const mandate = String(req.body?.mandate || (req.get("authorization") || "").replace(/^Bearer\s+/i, ""));
     const o = items.length ? await commerce.buyWithMandate(mandate, items, { agentName: String(req.body?.agent_name || "Oasis Studio").slice(0, 40) }) : null;
-    const licence = { orderId: o?.id || "free", total: o?.total || 0, creators: o ? commerce.saleEvent(o).creators : [], tokens: Object.fromEntries((o?.licenses || []).map((l) => [l.assetId, l.token])), at: new Date().toISOString() };
+    const split = o ? film.payoutsOf(o) : null;
+    const licence = { orderId: o?.id || "free", total: o?.total || 0, creators: split?.creators || [], platformUsd: split?.platformUsd || 0, platformPct: split?.platformPct || 0, tokens: Object.fromEntries((o?.licenses || []).map((l) => [l.assetId, l.token])), at: new Date().toISOString() };
+    res.json(await filmView(await film.save(f, { licence, render: null })));
+  }));
+  // Licensing a film through PayPal Checkout: one Orders v2 order for every paid piece, sign and card, approved by the
+  // person in PayPal's own window. The claim token comes back once, to the browser that started it.
+  app.post("/api/films/:id/checkout", buyLimit, wrap(async (req, res) => {
+    const f = await mustFilm(req.params.id);
+    if (f.licence) throw Object.assign(new Error("This film is already licensed"), { status: 409 });
+    const o = await commerce.createCheckout(film.billItems(f), { returnUrl: `${config.baseUrl}/checkout/return?film=${encodeURIComponent(f.id)}`, cancelUrl: `${config.baseUrl}/#/film/${encodeURIComponent(f.id)}` });
+    res.json({ order_id: o.id, approve_url: o.approveUrl, claim_token: o.claimToken, total_usd: o.total });
+  }));
+  // The order's owner claims the licence once PayPal has the payment: captured here if the return page did not.
+  app.post("/api/films/:id/claim", buyLimit, wrap(async (req, res) => {
+    const f = await mustFilm(req.params.id);
+    if (f.licence) return res.json(await filmView(f));
+    let o = await store.get("orders", String(req.body?.order_id || ""));
+    if (!commerce.ownsOrder(o, String(req.body?.claim_token || ""))) throw Object.assign(new Error("Unknown order, or wrong claim token"), { status: 404 });
+    if (o.status !== "COMPLETED") { try { o = await commerce.capture(o.id); } catch (e) { console.warn("film claim capture", e.message); } }
+    if (o.status !== "COMPLETED") throw Object.assign(new Error(`The PayPal order is ${String(o.status || "not approved").toLowerCase()} yet`), { status: 409 });
+    const paid = new Set(o.items.map((i) => i.assetId));
+    if (!film.billItems(f).every((i) => paid.has(i.assetId))) throw Object.assign(new Error("That order does not cover this film"), { status: 409 });
+    const split = film.payoutsOf(o);
+    const licence = { orderId: o.id, captureId: o.captureId || null, total: o.total, creators: split.creators, platformUsd: split.platformUsd, platformPct: split.platformPct, tokens: Object.fromEntries((o.licenses || []).map((l) => [l.assetId, l.token])), at: new Date().toISOString(), via: "checkout" };
     res.json(await filmView(await film.save(f, { licence, render: null })));
   }));
   app.get("/api/films/:id/music.wav", wrap(async (req, res) => {
@@ -287,12 +310,35 @@ export async function createApp() {
     const next = film.cleanFilm({ ...f, format: String(req.body?.format || "16:9") });
     res.json(await filmView(await film.save({ ...f, ...next, render: null })));
   }));
+  // The same film recut in another edit style (hype, clean, dream): the set, signs and brand stay.
+  app.post("/api/films/:id/style", filmLimit, wrap(async (req, res) => {
+    const f = await mustFilm(req.params.id);
+    const next = film.restyle(f, String(req.body?.style || "hype"));
+    res.json(await filmView(await film.save({ ...f, ...next, render: null })));
+  }));
+  // One shot's edit, as the inspector changes it: its speed ramp, the cut into it, shake and length.
+  const editLimit = rateLimit({ windowMs: 60_000, limit: 120, standardHeaders: "draft-8", legacyHeaders: false });
+  app.post("/api/films/:id/shots/:i", editLimit, wrap(async (req, res) => {
+    const f = await mustFilm(req.params.id);
+    const i = Number(req.params.i);
+    if (!Number.isInteger(i) || !f.shots[i]) throw Object.assign(new Error("No such shot"), { status: 404 });
+    const b = req.body || {}, s = { ...f.shots[i] };
+    for (const k of ["ramp", "cut", "shake", "seconds"]) if (b[k] !== undefined) s[k] = b[k];
+    if (b.cut === "cut") delete s.cut;
+    const next = film.cleanFilm({ ...f, shots: f.shots.map((x, j) => (j === i ? s : x)) });
+    res.json(await filmView(await film.save({ ...f, ...next, render: null })));
+  }));
   app.post("/api/films/:id/render", filmLimit, wrap(async (req, res) => {
     const f = await mustFilm(req.params.id);
     if (!(await filmRender.available())) throw Object.assign(new Error("This server can't render MP4s (needs Playwright and ffmpeg). Use the in-browser export."), { status: 503 });
     if (f.render?.status !== "rendering") await film.save(f, { render: { status: "queued", progress: 0, at: new Date().toISOString() } });
     filmRender.enqueue(f.id);
     res.json({ id: f.id, render: (await film.get(f.id)).render });
+  }));
+  app.get("/api/films/:id/poster.jpg", wrap(async (req, res) => {
+    const f = await mustFilm(req.params.id);
+    if (!fs.existsSync(filmRender.posterPath(f.id))) throw Object.assign(new Error("No poster yet"), { status: 404 });
+    res.set("Cache-Control", "no-cache").sendFile(filmRender.posterPath(f.id));
   }));
   app.get("/api/films/:id/film.mp4", wrap(async (req, res) => {
     const f = await mustFilm(req.params.id);
@@ -308,7 +354,7 @@ export async function createApp() {
     const a = mustAsset(s.asset);
     const { svg } = await catalog.renderAsync(a, { ...s.knobs, brand: f.brand });
     const out = a.price > 0 && !f.licence ? catalog.watermark(svg, catalog.sizeOf(svg, a.size)) : svg;
-    res.set("Content-Type", "image/png").set("Cache-Control", "no-cache").send(catalog.toPng(out, Math.min(1600, Number(req.query.w) || 1024)));
+    res.set("Content-Type", "image/png").set("Cache-Control", "no-cache").send(await catalog.toPng(out, Math.min(1600, Number(req.query.w) || 1024)));
   }));
 
   // The registry: import any 3D asset from a URL; a licence makes it real (see server/registry.js).
@@ -478,7 +524,9 @@ export async function createApp() {
     } catch (e) {
       console.warn("capture on return", e.message);
     }
-    res.redirect(`/#/order/${encodeURIComponent(id)}`);
+    // a film's checkout comes back to its Studio page, which claims the licence with its claim token
+    const filmId = String(req.query.film || "");
+    res.redirect(filmId ? `/#/film/${encodeURIComponent(filmId)}` : `/#/order/${encodeURIComponent(id)}`);
   }));
 
   // Assets published after the build (new forks) have no pre-rendered preview: render them live.

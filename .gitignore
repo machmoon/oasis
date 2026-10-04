@@ -5,3 +5,5 @@ data/
 public/prerender/
 judging/
 .tmp/
+.work/
+renders/

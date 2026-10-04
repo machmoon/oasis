@@ -1,13 +1,13 @@
-// Windmill: a tapered tower mill on its own 4x4 lawn plate, with a gabled entrance porch, a turning cap and four
-// lattice sails. Block asset: build(p) returns parts in metres on the Oasis Town grid (origin at the footprint's
-// corner, y up, street side at z = 0).
+// Town Windmill: a smock mill with a square base, a tapered weatherboard tower, a turning cap and four lattice
+// sails. Block asset: build(p) returns parts in metres on the Oasis Town grid (origin at the footprint's corner,
+// y up, street side at z = 0).
 export const meta = {
   title: "Town Windmill",
   kind: "3d",
   format: "blocks",
   kit: "Oasis Town",
-  description: "A tapered tower windmill on a 4x4 lawn plate, with a porch, flour sacks and four lattice sails that can face the street or the side, a landmark for the edge of a little town.",
-  tags: ["3d", "low poly", "windmill", "mill", "landmark", "farm", "town", "kit", "block"],
+  description: "A smock windmill with a square base, a tapered weatherboard tower, a domed cap and four lattice sails facing the street, a landmark for the edge of a little town.",
+  tags: ["3d", "low poly", "windmill", "mill", "farm", "landmark", "town", "kit", "block"],
   price: 3,
   author: "oasis-factory",
   footprint: [4, 4],
@@ -16,173 +16,196 @@ export const meta = {
 
 export const params = {
   knobs: {
-    tower: { type: "color", role: "surface", label: "Tower", default: "#D8DEE3" },
-    sails: { type: "color", role: "primary", label: "Sail cloth", default: "#F6EEE0" },
-    cap: { type: "color", role: "secondary", label: "Cap & trim", default: "#C8553D" },
-    height: { type: "range", label: "Tower height (m)", default: 7, min: 6.5, max: 10, step: 0.5 },
-    angle: { type: "choice", label: "Sail angle", default: "face street", options: ["face street", "face side"] },
-    capStyle: { type: "choice", label: "Cap", default: "cone", options: ["cone", "dome"] },
+    tower: { type: "color", role: "surface", label: "Tower", default: "#F6EEE0" },
+    sails: { type: "color", role: "primary", label: "Sail cloth", default: "#E5484D" },
+    cap: { type: "color", role: "ink", label: "Cap & hub", default: "#5B6270" },
+    height: { type: "range", label: "Tower height (m)", default: 7.5, min: 6.5, max: 9.5, step: 0.5 },
+    angle: { type: "range", label: "Sail angle (deg)", default: 0, min: 0, max: 45, step: 5 },
+    capStyle: { type: "choice", label: "Cap", default: "dome", options: ["dome", "conical"] },
     lights: { type: "toggle", label: "Lit windows", default: true },
   },
   presets: {
-    Kyoto: { tower: "#F3E3C8", sails: "#E5484D", cap: "#5B6270" },
-    Blossom: { tower: "#F6EEE0", sails: "#F7B8CF", cap: "#2F7A55" },
-    Harbour: { tower: "#F6EEE0", sails: "#3E7BFA", cap: "#3B4A5C" },
+    Polder: { tower: "#D8DEE3", sails: "#F6EEE0", cap: "#2F7A55" },
+    Harvest: { tower: "#F3E3C8", sails: "#F2B33D", cap: "#C8553D" },
+    Blossom: { tower: "#F6EEE0", sails: "#F7B8CF", cap: "#3D2C4A" },
   },
 };
 
-const rgb = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16));
-const hex = (a) => "#" + a.map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, "0")).join("").toUpperCase();
-const mix = (a, b, t) => { const A = rgb(a), B = rgb(b); return hex(A.map((v, i) => v + (B[i] - v) * t)); };
-const lum = (c) => { const [r, g, b] = rgb(c); return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255; };
-const clampLum = (c, lo, hi) => {
-  let out = c;
-  for (let i = 0; i < 14 && lum(out) < lo; i++) out = mix(out, "#FFFFFF", 0.12);
-  for (let i = 0; i < 14 && lum(out) > hi; i++) out = mix(out, "#000000", 0.08);
-  return out;
+// ---- colour helpers: pull brand colours toward the town palette, then clamp them into each slot's tonal band ----
+const toRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
+const toHex = (c) => "#" + c.map((v) => Math.round(Math.max(0, Math.min(1, v)) * 255).toString(16).padStart(2, "0")).join("").toUpperCase();
+const lum = (h) => { const [r, g, b] = toRgb(h); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+const shade = (h, amt) => {
+  const c = toRgb(h);
+  return lum(h) > 0.5 ? toHex(c.map((v) => v * (1 - amt))) : toHex(c.map((v) => v + (1 - v) * amt));
 };
+const pull = (h, list, t) => {
+  const a = toRgb(h);
+  let best = list[0], bd = Infinity;
+  for (const k of list) {
+    const b = toRgb(k);
+    const d = (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2;
+    if (d < bd) { bd = d; best = k; }
+  }
+  const b = toRgb(best);
+  return toHex(a.map((v, i) => v + (b[i] - v) * t));
+};
+const clampHSL = (h, lo, hi, smax) => {
+  const [r, g, b] = toRgb(h);
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  let l = (mx + mn) / 2, s = 0, hue = 0;
+  if (d > 0) {
+    s = d / (1 - Math.abs(2 * l - 1));
+    if (mx === r) hue = ((g - b) / d) % 6; else if (mx === g) hue = (b - r) / d + 2; else hue = (r - g) / d + 4;
+    hue *= 60; if (hue < 0) hue += 360;
+  }
+  l = Math.max(lo, Math.min(hi, l));
+  s = Math.min(smax, s);
+  const C = (1 - Math.abs(2 * l - 1)) * s, X = C * (1 - Math.abs(((hue / 60) % 2) - 1)), m = l - C / 2;
+  const t = [[C, X, 0], [X, C, 0], [0, C, X], [0, X, C], [X, 0, C], [C, 0, X]][Math.floor(hue / 60) % 6];
+  return toHex(t.map((v) => v + m));
+};
+const WALLS = ["#F3E3C8", "#F6EEE0", "#D8DEE3", "#E3F2EA", "#F2E6EE"];
+const CLOTHS = ["#E5484D", "#F2B33D", "#F7B8CF", "#F6EEE0", "#3E7BFA", "#79B86A", "#2F7A55", "#C8553D"];
+const INKS = ["#5B6270", "#2F7A55", "#C8553D", "#3D2C4A", "#3B4A44", "#8A6E52", "#2B4A7A"];
 
 export function build(p) {
   const parts = [];
   const box = (x, y, z, w, h, d, c, e) => parts.push({ t: "box", p: [x, y, z], s: [w, h, d], c, ...(e ? { e: true } : {}) });
   const cyl = (cx, y, cz, r, h, c, n) => parts.push({ t: "cyl", p: [cx, y, cz], r, h, c, n });
+  const cone = (cx, y, cz, r, h, c, n) => parts.push({ t: "cone", p: [cx, y, cz], r, h, c, n });
 
-  // ---- colours: brand inputs keep their roles; lightness is clamped so the form always reads ----
-  const tower = clampLum(p.tower, 0.25, 0.88);
-  const porchWall = mix(tower, "#FFFFFF", 0.25);
-  const plinth = mix(tower, "#5B6270", 0.45);
-  let cap = p.cap;
-  for (let i = 0; i < 10 && Math.abs(lum(cap) - lum(tower)) < 0.18; i++) cap = lum(tower) > 0.5 ? mix(cap, "#000000", 0.12) : mix(cap, "#FFFFFF", 0.12);
-  const collar = mix(cap, "#000000", 0.18);
-  const frame = "#6E5641", darkWood = "#4A3B2C", doorWood = "#8A6E52"; // sail frames are always wood
-  let sail = mix(p.sails, "#F6EEE0", 0.35);                             // tinted canvas, never a raw accent
-  for (let i = 0; i < 12 && lum(sail) < 0.6; i++) sail = mix(sail, "#FFFFFF", 0.1);
-  const kerb = "#D9DCE1", leaf = "#79B86A", sack = "#F6EEE0";
-  const lit = "#FFD58A", glass = mix("#5E7186", tower, 0.15);
-  const win = p.lights ? lit : glass;
+  // colours: light wall tower, mid-tone cloth, dark ink cap, all kept near the town palette
+  const tower = clampHSL(pull(p.tower, WALLS, 0.5), 0.78, 0.95, 0.45);
+  const sail = clampHSL(pull(p.sails, CLOTHS, 0.55), 0.45, 0.85, 0.65);
+  const cap = clampHSL(pull(p.cap, INKS, 0.5), 0.22, 0.45, 0.5);
+  const capLight = shade(cap, 0.24);
+  const baseC = shade(tower, 0.07);
+  const band = shade(tower, 0.16);
+  const trim = shade(tower, 0.3);
+  const wood = "#8A6E52", darkWood = "#6E5640", glass = "#7E93A8", lit = "#FFD58A", stone = "#C9CED6";
+  const frameC = Math.abs(lum(sail) - lum(darkWood)) < 0.14 ? "#3A2E22" : darkWood;
+  const g = p.lights ? lit : glass;
 
-  // ---- ground plate: the 4x4 footprint as a kerbed lawn ----
-  const G = 0.14;
-  box(0, 0, 0, 4, 0.1, 4, kerb);
-  box(0.15, 0.1, 0.15, 3.7, 0.04, 3.7, leaf);
+  const CX = 2, CZ = 2.1, PL = 0.12;
+  const H = p.height;
 
-  // ---- tower: one-colour tapering 12-sided drums on a plinth ----
-  const CX = 2, CZ = 2.3, R0 = 1.6, R1 = 1.05, BASE = 0.2, H = p.height;
-  const S = Math.max(4, Math.round(H / 1.4)), hs = H / S;
-  const rad = (k) => R0 + ((R1 - R0) * k) / (S - 1);
-  cyl(CX, G, CZ, R0 + 0.08, BASE, plinth, 12);
-  for (let k = 0; k < S; k++) cyl(CX, G + BASE + k * hs, CZ, rad(k), hs, tower, 12);
-  const top = G + BASE + H;
+  // ground: paving over the whole plot, flour sacks by the door
+  box(0, 0, 0, 4, PL, 4, "#D9DCE1");
+  box(0.6, PL, 0.1, 0.45, 0.42, 0.42, "#E8DCC2");
+  box(0.66, PL + 0.42, 0.15, 0.34, 0.3, 0.32, "#DCCFB2");
 
-  // ---- entrance porch: closed box sunk into the tower, gable facing the street ----
-  const PZ0 = 0.45, PZ1 = CZ - 0.6, PW = 1.9, PH = 2.55, PR = 0.7;
-  const porchTop = G + PH + PR;
-  box(CX - PW / 2, G, PZ0, PW, PH, PZ1 - PZ0, porchWall);
-  parts.push({ t: "gable", p: [CX - PW / 2 - 0.12, G + PH, PZ0 - 0.15], s: [PW + 0.24, PR, PZ1 - PZ0 + 0.15], c: cap, axis: "z" });
-  box(CX - 0.6, G, 0.15, 1.2, 0.12, PZ0 - 0.15, plinth);                    // doorstep
-  box(CX - 0.57, G + 0.12, PZ0 - 0.04, 1.14, 2.17, 0.04, cap);             // door frame
-  box(CX - 0.45, G + 0.12, PZ0 - 0.07, 0.9, 2.05, 0.03, doorWood);         // door leaf
-  box(CX + 0.25, G + 1.05, PZ0 - 0.1, 0.08, 0.08, 0.03, darkWood);         // handle
-  for (const s of [-1, 1]) {                                               // porch lamps
-    const lx = CX + s * 0.76;
-    box(lx - 0.11, G + 1.5, PZ0 - 0.05, 0.22, 0.4, 0.05, cap);
-    box(lx - 0.07, G + 1.56, PZ0 - 0.08, 0.14, 0.28, 0.03, win, p.lights);
+  // square base storey with corner pilasters and a cornice
+  const BY = 2.6;
+  box(0.5, PL, 0.6, 3.0, BY, 3.0, baseC);
+  for (const [px, pz] of [[0.47, 0.57], [3.33, 0.57], [0.47, 3.23], [3.33, 3.23]]) box(px, PL, pz, 0.2, BY, 0.2, band);
+  box(0.4, PL + BY, 0.5, 3.2, 0.2, 3.2, band);
+
+  // door set between jambs and under a lintel, on a step
+  box(CX - 0.7, PL, 0.2, 1.4, 0.1, 0.4, stone);
+  box(CX - 0.6, PL + 0.1, 0.52, 0.15, 2.0, 0.08, trim);
+  box(CX + 0.45, PL + 0.1, 0.52, 0.15, 2.0, 0.08, trim);
+  box(CX - 0.65, PL + 2.1, 0.52, 1.3, 0.22, 0.08, trim);
+  box(CX - 0.45, PL + 0.1, 0.57, 0.9, 2.0, 0.03, wood);
+  box(CX - 0.45, PL + 1.05, 0.55, 0.9, 0.08, 0.02, darkWood);
+  box(CX + 0.25, PL + 0.85, 0.53, 0.08, 0.08, 0.04, "#3A3F48");
+  // lantern on a bracket beside the door
+  box(CX + 0.78, PL + 2.05, 0.4, 0.06, 0.06, 0.2, darkWood);
+  box(CX + 0.72, PL + 1.72, 0.38, 0.18, 0.33, 0.18, p.lights ? lit : "#D9DCE1", p.lights);
+
+  // base windows: one on the front, two on the -x side; all lit or all dark together
+  box(0.75, PL + 1.15, 0.56, 0.55, 0.85, 0.04, trim);
+  box(0.84, PL + 1.25, 0.53, 0.37, 0.65, 0.04, g, p.lights);
+  box(0.71, PL + 1.1, 0.5, 0.63, 0.06, 0.1, band);
+  for (const zc of [1.4, 2.75]) {
+    box(0.46, PL + 1.15, zc - 0.3, 0.04, 0.85, 0.6, trim);
+    box(0.43, PL + 1.25, zc - 0.2, 0.04, 0.65, 0.4, g, p.lights);
+    box(0.41, PL + 1.1, zc - 0.35, 0.09, 0.06, 0.7, band);
   }
-  // flour sacks beside the porch
-  box(3.1, G, 0.3, 0.5, 0.55, 0.42, sack);
-  box(3.15, G + 0.55, 0.36, 0.4, 0.38, 0.32, sack);
-  box(3.08, G + 0.4, 0.28, 0.54, 0.06, 0.46, doorWood);                    // tie band
 
-  // ---- sail sizing: grows with the tower, lowest sweep always clears the porch ----
-  const COL = 0.5, hubY = top + COL / 2;
-  const reach = hubY - porchTop - 0.6;
-  const R = Math.min(1.2 + 0.3 * H, reach / Math.hypot(1, 0.4));
-  const BW = 0.4 * R, SH = 0.13, FW = 0.2, RIN = 0.7, nS = 0.3;
-  const side = p.angle === "face side";
-  const N0 = side ? CX : CZ;
-  const collarFront = N0 - (R1 + 0.2);
-  const dirs = [
-    { u: [0, 1], v: [1, 0] }, { u: [-1, 0], v: [0, 1] },
-    { u: [0, -1], v: [-1, 0] }, { u: [1, 0], v: [0, -1] },
-  ];
-  // a rectangle in sail-plane coords (u across, v up from the hub), n along the plane normal (toward camera = smaller)
-  const Q = (u0, u1, v0, v1, n, dn, c) => {
-    if (u1 - u0 < 1e-6 || v1 - v0 < 1e-6) return;
-    if (side) box(n, hubY + v0, CZ - u1, dn, v1 - v0, u1 - u0, c);
-    else box(CX + u0, hubY + v0, n, u1 - u0, v1 - v0, dn, c);
-  };
-  // would a facade point be hidden behind the sails from the 45-degree camera?
-  const covered = (x, y, z) => {
-    const t = (side ? x : z) - nS;
-    const u = side ? CZ - (z - t) : x - t - CX, v = y + t - hubY, m = 0.3;
-    if (Math.abs(u) < 0.35 + m && Math.abs(v) < 0.35 + m) return true;
-    for (const d of dirs) {
-      const r = u * d.u[0] + v * d.u[1], o = u * d.v[0] + v * d.v[1];
-      if (r >= 0.3 - m && r <= R + m && o >= -SH - m && o <= BW + m) return true;
+  // tapered weatherboard smock: thin octagonal courses shrinking evenly to the top
+  const yS = PL + BY + 0.2, top = PL + H, len = top - yS;
+  const r0 = 1.42, rTop = 0.9;
+  const N = Math.max(6, Math.round(len / 0.45)), sh = len / N;
+  const rAt = (i) => r0 + ((rTop - r0) * Math.max(0, Math.min(N - 1, i))) / (N - 1);
+  for (let i = 0; i < N; i++) cyl(CX, yS + i * sh, CZ, rAt(i), sh, tower, 8);
+
+  // cap: curb ring, cap house, then a dome or a conical roof, all centred on the tower axis
+  cyl(CX, top, CZ, rTop + 0.1, 0.22, cap, 8);
+  const capY = top + 0.22;
+  cyl(CX, capY, CZ, 0.95, 0.6, capLight, 8);
+  const roofY = capY + 0.6;
+  const roofH = p.capStyle === "dome" ? 0.95 : 1.9;
+  cone(CX, roofY, CZ, 1.08, roofH, cap, p.capStyle === "dome" ? 12 : 8);
+  cyl(CX, roofY + roofH - 0.12, CZ, 0.05, 0.3, capLight, 6);
+  box(CX - 0.1, roofY + roofH + 0.18, CZ - 0.1, 0.2, 0.2, 0.2, capLight);
+  const hubY = capY + 0.3;
+
+  // sail geometry, fixed so every angle stays inside the 4 m plot
+  const R = 1.85, SH = 0.07, CW = 0.6, A0 = 0.4;
+
+  // smock windows: only where they sit fully below the sweep of the sails, front and -x side as a pair
+  const FH = 0.8, FW = 0.6, limit = hubY - R - 1.0;
+  let yW = yS + 0.45;
+  for (let k = 0; k < 2 && yW + FH <= limit; k++, yW += FH + 0.9) {
+    const rMax = rAt(Math.floor((yW - yS) / sh)), rMin = rAt(Math.floor((yW + FH - yS) / sh));
+    const o = rMax + 0.04, in_ = 0.7 * rMin;
+    box(CX - o, yW, CZ - FW / 2, o - in_, FH, FW, trim);
+    box(CX - o - 0.03, yW + 0.1, CZ - FW / 2 + 0.1, 0.06, FH - 0.2, FW - 0.2, g, p.lights);
+    box(CX - FW / 2, yW, CZ - o, FW, FH, o - in_, trim);
+    box(CX - FW / 2 + 0.1, yW + 0.1, CZ - o - 0.03, FW - 0.2, FH - 0.2, 0.06, g, p.lights);
+  }
+
+  // windshaft and hub, the sail plane stands 0.8 m clear of the cap
+  const ZH = 0.02, ZS = 0.12, ZC = 0.16, ZF = 0.21, ZB = 0.29, ZE = 0.33;
+  box(CX - 0.1, hubY - 0.1, ZE, 0.2, 0.2, CZ - 0.6 - ZE, "#8C929C");
+  box(CX - 0.24, hubY - 0.24, ZH, 0.48, 0.48, ZS - ZH, cap);
+
+  // a rectangle in sail-local coords (a along the arm, q across it): one clean box when square to the axes,
+  // otherwise thin slices cut across the arm's length so the edges step in fine increments
+  const PITCH = 0.08;
+  const rect = (c, s, cols, a0, a1, q0, q1, z0, z1, col) => {
+    const pts = [[a0, q0], [a1, q0], [a1, q1], [a0, q1]].map(([a, q]) => [a * c - q * s, a * s + q * c]);
+    if (Math.abs(c) < 1e-9 || Math.abs(s) < 1e-9) {
+      const xs = pts.map((v) => v[0]), ys = pts.map((v) => v[1]);
+      const xa = Math.min(...xs), xb = Math.max(...xs), ya = Math.min(...ys), yb = Math.max(...ys);
+      box(CX + xa, hubY + ya, z0, xb - xa, yb - ya, z1 - z0, col);
+      return;
     }
-    return false;
+    const ax = cols ? 0 : 1;
+    const lo = Math.min(...pts.map((v) => v[ax])), hi = Math.max(...pts.map((v) => v[ax]));
+    const n = Math.max(1, Math.ceil((hi - lo) / PITCH)), w = (hi - lo) / n;
+    for (let k = 0; k < n; k++) {
+      const m = lo + (k + 0.5) * w;
+      let mn = Infinity, mx = -Infinity;
+      for (let e = 0; e < 4; e++) {
+        const P = pts[e], Q = pts[(e + 1) % 4], d = Q[ax] - P[ax];
+        if (Math.abs(d) < 1e-12) continue;
+        const t = (m - P[ax]) / d;
+        if (t < 0 || t > 1) continue;
+        const v = P[1 - ax] + t * (Q[1 - ax] - P[1 - ax]);
+        mn = Math.min(mn, v); mx = Math.max(mx, v);
+      }
+      if (!(mx - mn > 1e-6)) continue;
+      if (cols) box(CX + lo + k * w, hubY + mn, z0, w, mx - mn, z1 - z0, col);
+      else box(CX + mn, hubY + lo + k * w, z0, mx - mn, w, z1 - z0, col);
+    }
   };
 
-  // ---- windows: a staggered spiral, alternating faces, only where the sails never hide them ----
-  const wW = 0.55, wh = Math.min(0.8, hs - 0.45);
-  let count = 0;
-  for (let k = 1; k < S - 1 && count < 4; k++) {
-    const r = rad(k), y = G + BASE + k * hs + (hs - wh) / 2, dep = 0.2;
-    if (k % 2 === 0) {
-      const zf = CZ - r - 0.03;
-      if (y - 0.1 < porchTop + 0.15) continue;
-      const pts = [[CX - wW / 2, y - 0.1], [CX + wW / 2, y - 0.1], [CX - wW / 2, y + wh], [CX + wW / 2, y + wh]];
-      if (pts.some(([x, yy]) => covered(x, yy, zf))) continue;
-      box(CX - wW / 2, y, zf, wW, wh, dep, win, p.lights);
-      box(CX - wW / 2 - 0.08, y - 0.1, zf - 0.04, wW + 0.16, 0.1, dep + 0.04, cap);
-    } else {
-      const xf = CX - r - 0.03;
-      const pts = [[CZ - wW / 2, y - 0.1], [CZ + wW / 2, y - 0.1], [CZ - wW / 2, y + wh], [CZ + wW / 2, y + wh]];
-      if (pts.some(([z, yy]) => covered(xf, yy, z))) continue;
-      box(xf, y, CZ - wW / 2, dep, wh, wW, win, p.lights);
-      box(xf - 0.04, y - 0.1, CZ - wW / 2 - 0.08, dep + 0.04, 0.1, wW + 0.16, cap);
+  // four sails: a stock, a timber frame on the trailing side and three cloth panels showing the lattice between
+  const ang = (p.angle * Math.PI) / 180;
+  const GAP = 0.08, IN = 0.07;
+  for (let a = 0; a < 4; a++) {
+    const c = Math.cos(ang + (a * Math.PI) / 2), s = Math.sin(ang + (a * Math.PI) / 2);
+    const cols = Math.abs(c) >= Math.abs(s);
+    rect(c, s, cols, -0.1, R, -SH, SH, ZS, ZE, darkWood);
+    rect(c, s, cols, A0, R, SH, SH + CW, ZF, ZB, frameC);
+    const ca0 = A0 + IN, ca1 = R - IN, pl = (ca1 - ca0 - 2 * GAP) / 3;
+    for (let k = 0; k < 3; k++) {
+      const p0 = ca0 + k * (pl + GAP);
+      rect(c, s, cols, p0, p0 + pl, SH + IN, SH + CW - IN, ZC, ZF, sail);
     }
-    count++;
   }
 
-  // ---- cap: collar, then a cone or a stepped dome, each with a finial ----
-  const CR = R1 + 0.45;
-  cyl(CX, top, CZ, R1 + 0.2, COL, collar, 12);
-  if (p.capStyle === "dome") {
-    const fr = [1, 0.92, 0.78, 0.56, 0.3], th = 0.34;
-    fr.forEach((f, i) => cyl(CX, top + COL + i * th, CZ, CR * f, th, cap, 12));
-    const fy = top + COL + fr.length * th;
-    cyl(CX, fy, CZ, 0.08, 0.35, frame, 8);
-    cyl(CX, fy + 0.35, CZ, 0.17, 0.2, frame, 8);
-  } else {
-    parts.push({ t: "cone", p: [CX, top + COL, CZ], r: CR, h: 2.2, c: cap, n: 12 });
-    cyl(CX, top + COL + 2.0, CZ, 0.1, 0.45, frame, 8);
-  }
-
-  // ---- hub: shaft from the collar, boss in front of the sail plane ----
-  Q(-0.18, 0.18, -0.18, 0.18, nS, collarFront + 0.2 - nS, frame);
-  Q(-0.35, 0.35, -0.35, 0.35, nS - 0.23, 0.23, frame);
-  Q(-0.15, 0.15, -0.15, 0.15, nS - 0.27, 0.04, darkWood);
-
-  // ---- sails: four axis-aligned blades, each spar + trailing edge + bars framing clean cloth panels ----
-  const nC = Math.max(2, Math.round((R - RIN) / 1.0));
-  const bars = [];
-  for (let i = 1; i <= nC; i++) bars.push(RIN + ((R - RIN) * i) / (nC + 1));
-  const edges = [RIN + FW];
-  for (const b of bars) edges.push(b - FW / 2, b + FW / 2);
-  edges.push(R - FW);
-  for (const d of dirs) {
-    const rect = (r0, r1, o0, o1, n, dn, c) => {
-      const ua = d.u[0] * r0 + d.v[0] * o0, va = d.u[1] * r0 + d.v[1] * o0;
-      const ub = d.u[0] * r1 + d.v[0] * o1, vb = d.u[1] * r1 + d.v[1] * o1;
-      Q(Math.min(ua, ub), Math.max(ua, ub), Math.min(va, vb), Math.max(va, vb), n, dn, c);
-    };
-    rect(0.3, R, -SH, SH, nS - 0.08, 0.16, frame);               // spar
-    rect(RIN, R, BW - FW, BW, nS - 0.03, 0.1, frame);             // trailing edge
-    rect(RIN, RIN + FW, SH, BW - FW, nS - 0.03, 0.1, frame);      // root bar
-    rect(R - FW, R, SH, BW - FW, nS - 0.03, 0.1, frame);          // tip bar
-    for (const b of bars) rect(b - FW / 2, b + FW / 2, SH, BW - FW, nS - 0.03, 0.1, frame);
-    for (let i = 0; i < edges.length; i += 2) rect(edges[i], edges[i + 1], SH, BW - FW, nS, 0.06, sail);
-  }
   return { parts };
 }
