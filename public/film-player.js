@@ -352,6 +352,43 @@ export async function createFilmPlayer(el, film, { api = "", audio = false, reve
     }
   }
 
+  /**
+   * The wordmark's lettering alone: the asset paints its board as one flat colour (with a faint grain), so pixels
+   * near that colour are keyed out and the result is cropped to the letters. Cached per shot; a function of the
+   * image and the knob, never of the clock.
+   */
+  const keyed = {};
+  function keyedCard(id, img, bg) {
+    if (keyed[id] !== undefined) return keyed[id];
+    try {
+      const w = img.naturalWidth, h = img.naturalHeight;
+      const c = document.createElement("canvas"); c.width = w; c.height = h;
+      const g = c.getContext("2d", { willReadFrequently: true });
+      g.drawImage(img, 0, 0);
+      const d = g.getImageData(0, 0, w, h), px = d.data;
+      const n = parseInt(String(bg || "#F2B33D").slice(1), 16), br = (n >> 16) & 255, bgr = (n >> 8) & 255, bb = n & 255;
+      // the crop follows rows and columns with real ink in them; the sparse preview watermark does not move it
+      const rows = new Uint32Array(h), cols = new Uint32Array(w);
+      for (let i = 0; i < px.length; i += 4) {
+        const dist = Math.max(Math.abs(px[i] - br), Math.abs(px[i + 1] - bgr), Math.abs(px[i + 2] - bb));
+        const al = Math.pow(Math.min(1, Math.max(0, (dist - 16) / 30)), 2); // the faint preview watermark mostly keys out too
+        px[i + 3] = Math.round(px[i + 3] * al);
+        if (al > 0.9) { const p = i / 4, x = p % w; rows[(p - x) / w]++; cols[x]++; }
+      }
+      let x0 = 0, x1 = w - 1, y0 = 0, y1 = h - 1;
+      while (y0 < h && rows[y0] < w * 0.01) y0++;
+      while (y1 > y0 && rows[y1] < w * 0.01) y1--;
+      while (x0 < w && cols[x0] < h * 0.02) x0++;
+      while (x1 > x0 && cols[x1] < h * 0.02) x1--;
+      if (x1 <= x0 || y1 <= y0) return (keyed[id] = null);
+      g.putImageData(d, 0, 0);
+      const pad = Math.round(h * 0.03), out = document.createElement("canvas");
+      out.width = Math.min(w, x1 - x0 + 1 + pad * 2); out.height = Math.min(h, y1 - y0 + 1 + pad * 2);
+      out.getContext("2d").drawImage(c, Math.max(0, x0 - pad), Math.max(0, y0 - pad), out.width, out.height, 0, 0, out.width, out.height);
+      return (keyed[id] = out);
+    } catch { return (keyed[id] = null); }
+  }
+
   function drawCard(shot, local) {
     const img = cards[shot.id];
     if (!img || !img.complete || !img.naturalWidth) return; // an art request that failed draws nothing rather than throwing
@@ -360,17 +397,46 @@ export async function createFilmPlayer(el, film, { api = "", audio = false, reve
     if (a <= 0) return;
     const iw = img.naturalWidth || 1, ih = img.naturalHeight || 1;
     if (c.layout === "lower") {
-      const dw = Math.min(W * 0.34, H * 0.5), dh = (dw * ih) / iw, x = W * 0.05, y = H - dh - H * 0.08;
+      // A broadcast lower third, after the HyperFrames registry block lt-accent-underline
+      // (heygen-com/hyperframes, registry/blocks/lt-accent-underline/index.html): the name rises in, an accent rule
+      // draws left to right under it, the place line fades up; on the way out the place fades, the rule retracts,
+      // the name lifts. The name is the licensed wordmark's own lettering, keyed off its board so it sits on the
+      // footage instead of arriving as a yellow sticker. Text gets a soft shadow for legibility, as the block does.
+      const art = keyedCard(shot.id, img, c.knobs?.background);
+      if (!art) return;
+      const S = Math.min(W, H), portrait = H > W;
+      const ts = Math.min(1, shot.seconds / 2.4); // a short shot plays the same choreography faster
+      const o3 = (k) => 1 - Math.pow(1 - k, 3), o4 = (k) => 1 - Math.pow(1 - k, 4), i2 = (k) => k * k;
+      const st = (from, dur) => Math.min(1, Math.max(0, (secs - from * ts) / (dur * ts)));
+      const ex = (from, dur) => Math.min(1, Math.max(0, (secs - (shot.seconds - (0.5 - from) * ts)) / (dur * ts)));
+      const nameIn = o3(st(0.1, 0.55)), ruleIn = o4(st(0.3, 0.5)), subIn = o3(st(0.46, 0.5));
+      const subOut = i2(ex(0.0, 0.3)), ruleOut = i2(ex(0.05, 0.3)), nameOut = i2(ex(0.1, 0.32));
+      const lw = portrait ? W * 0.56 : Math.min(W * 0.3, S * 0.54), lh = (lw * art.height) / art.width;
+      const x = portrait ? W * 0.08 : W * 0.06, rule = Math.max(2, S * 0.005), gap = S * 0.018;
+      const subSize = Math.round(S * 0.026), bottom = H - H * 0.12;
+      const ny = bottom - subSize - gap - rule - gap - lh;
+      const shadow = () => { ctx.shadowColor = "rgba(0, 0, 0, 0.42)"; ctx.shadowBlur = S * 0.018; ctx.shadowOffsetY = S * 0.002; };
+      ctx.save();
+      shadow();
+      ctx.globalAlpha = a * nameIn * (1 - nameOut);
+      ctx.drawImage(art, x, ny + (1 - nameIn) * S * 0.026 - nameOut * S * 0.015, lw, lh);
+      ctx.shadowColor = "transparent";
       ctx.globalAlpha = a;
-      ctx.drawImage(img, x - (1 - ease(a)) * 24, y, dw, dh);
-      if (!film.licensed) {
-        // unlicensed: a PREVIEW tab on the card's corner, clear of the brand's letters
-        const fs = Math.round(dh * 0.17), pw = fs * 5.2, ph = fs * 1.55, px = x + dw - pw * 0.92, py = y - ph * 0.55;
-        ctx.fillStyle = "rgba(19,19,19,0.86)"; ctx.beginPath(); ctx.roundRect?.(px, py, pw, ph, ph / 2); ctx.fill();
-        ctx.fillStyle = "#fff"; ctx.font = `800 ${fs}px "Source Sans 3", sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.letterSpacing = `${Math.round(fs * 0.12)}px`; ctx.fillText("PREVIEW", px + pw / 2, py + ph / 2 + 1); ctx.letterSpacing = "0px"; ctx.textAlign = "start";
+      ctx.fillStyle = c.knobs?.background || film.brand?.highlight || "#F2B33D";
+      ctx.fillRect(x, ny + lh + gap, lw * ruleIn * (1 - ruleOut), rule);
+      if (c.sub) {
+        shadow();
+        ctx.globalAlpha = a * subIn * (1 - subOut);
+        // the place line reads in the brand's paper over dusk and night, and in its ink over a daylit street
+        const lit = shot.time === "day" && (!shot.timeTo || shot.timeTo === "day");
+        ctx.fillStyle = (lit ? film.brand?.ink : film.brand?.background) || (lit ? "#1B1F2A" : "#F6EEE0");
+        ctx.font = `600 ${subSize}px "Source Sans 3", system-ui, sans-serif`;
+        ctx.letterSpacing = `${Math.round(S * 0.006)}px`;
+        ctx.textAlign = "start"; ctx.textBaseline = "top";
+        ctx.fillText(c.sub.toUpperCase(), x, ny + lh + gap + rule + gap + (1 - subIn) * S * 0.015);
       }
-      ctx.globalAlpha = 1;
+      ctx.restore();
+      ctx.letterSpacing = "0px"; ctx.globalAlpha = 1;
       return;
     }
     // the end card: the scene sinks into the brand's dark, the monogram settles, the name rises under it, then a rule
@@ -392,8 +458,16 @@ export async function createFilmPlayer(el, film, { api = "", audio = false, reve
     ctx.drawImage(img, cx - mark / 2, top + (S * 0.2 - mark) / 2, mark, mark * (ih / iw));
     ctx.globalAlpha = a * m2;
     ctx.fillStyle = paper; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-    ctx.font = `800 ${Math.round(S * 0.085)}px "Source Sans 3", system-ui, sans-serif`;
-    ctx.letterSpacing = `${Math.round(S * 0.012)}px`;
+    // the name is set to fit the frame: a long name on a vertical or square film shrinks instead of clipping
+    let nameSize = S * 0.085, nameTrack = S * 0.012;
+    ctx.font = `800 ${Math.round(nameSize)}px "Source Sans 3", system-ui, sans-serif`;
+    ctx.letterSpacing = `${Math.round(nameTrack)}px`;
+    const nameW = ctx.measureText(c.name).width + nameTrack * c.name.length, maxName = W * 0.86;
+    if (nameW > maxName) {
+      const f = maxName / nameW; nameSize *= f; nameTrack *= f;
+      ctx.font = `800 ${Math.round(nameSize)}px "Source Sans 3", system-ui, sans-serif`;
+      ctx.letterSpacing = `${Math.round(nameTrack)}px`;
+    }
     ctx.fillText(c.name, cx, top + S * 0.31 + (1 - m2) * S * 0.02);
     ctx.globalAlpha = a * m3;
     ctx.fillStyle = gold;
@@ -426,7 +500,7 @@ export async function createFilmPlayer(el, film, { api = "", audio = false, reve
     const info = seek(at);
     for (const f of listeners) f(info, playing);
   }
-  const label = film.licensed ? null : "Preview. The street is clay and the signs are watermarked until the film is licensed.";
+  const label = film.licensed ? null : ["PREVIEW", "unlicensed"];
   let building = false; // during the build-in the first frame is drawn without its fade from black
   let samplesCap = 16; // motion-blur samples per frame; the live preview lowers it while playing
 
@@ -531,15 +605,28 @@ export async function createFilmPlayer(el, film, { api = "", audio = false, reve
     const { shot, local } = shotAt(t);
     if (shot.card) drawCard(shot, local);
     if (label) {
-      ctx.font = `500 ${Math.round(Math.min(W, H) / 46)}px "Source Sans 3", system-ui, sans-serif`;
-      const pad = Math.round(Math.min(W, H) / 64), tw = ctx.measureText(label).width;
-      ctx.fillStyle = "rgba(255, 255, 255, 0.86)";
-      ctx.beginPath();
-      ctx.roundRect?.(pad * 1.5, H - pad * 1.5 - pad * 3, Math.min(tw + pad * 2.4, W - pad * 3), pad * 3, pad * 0.5);
-      ctx.fill();
-      ctx.fillStyle = "#292929";
-      ctx.textBaseline = "middle";
-      ctx.fillText(label, pad * 2.7, H - pad * 1.5 - pad * 1.5, W - pad * 5.4);
+      // the unlicensed mark: a small dark pill at the bottom left, two words and a hairline between them
+      const S = Math.min(W, H), fs = Math.round(S / 50), ph = Math.round(S / 28), pad = Math.round(S / 48), ip = Math.round(fs * 0.8);
+      ctx.font = `700 ${fs}px "Source Sans 3", system-ui, sans-serif`;
+      ctx.letterSpacing = `${Math.round(fs * 0.08)}px`;
+      const w1 = ctx.measureText(label[0]).width + fs * 0.08 * label[0].length;
+      ctx.font = `500 ${fs}px "Source Sans 3", system-ui, sans-serif`;
+      ctx.letterSpacing = "0px";
+      const w2 = ctx.measureText(label[1]).width;
+      const pw = ip + w1 + ip + 1 + ip + w2 + ip, x = pad, y = H - pad - ph;
+      ctx.fillStyle = "rgba(10, 12, 16, 0.6)";
+      ctx.beginPath(); ctx.roundRect?.(x, y, pw, ph, ph / 2); ctx.fill();
+      ctx.textBaseline = "middle"; ctx.textAlign = "start";
+      ctx.fillStyle = "rgba(255, 255, 255, 0.94)";
+      ctx.font = `700 ${fs}px "Source Sans 3", system-ui, sans-serif`;
+      ctx.letterSpacing = `${Math.round(fs * 0.08)}px`;
+      ctx.fillText(label[0], x + ip, y + ph / 2 + 1);
+      ctx.letterSpacing = "0px";
+      ctx.fillStyle = "rgba(255, 255, 255, 0.28)";
+      ctx.fillRect(x + ip + w1 + ip, y + ph * 0.28, 1, ph * 0.44);
+      ctx.fillStyle = "rgba(255, 255, 255, 0.78)";
+      ctx.font = `500 ${fs}px "Source Sans 3", system-ui, sans-serif`;
+      ctx.fillText(label[1], x + ip + w1 + ip + 1 + ip, y + ph / 2 + 1);
     }
     return { t, ...shotAt(t) };
   }

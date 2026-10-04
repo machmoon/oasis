@@ -171,14 +171,14 @@ export function shotsFor(style, plan, hero, name, brand) {
   // cards wear the brand: a dark panel in the brand's ink, the name in its paper colour, the accent in its most vivid
   const accent = brand ? [brand.highlight, brand.primary, brand.secondary].find((c) => c && !/^#(1|2|3)/i.test(c)) || brand.primary : undefined;
   const branded = brand ? { background: brand.ink, ink: brand.background, accent, slant: 0, rules: false, style: "stacked shadow" } : {};
-  const PLACE = { kyoto: "Kyoto · Market Street", sf: "Hayes Valley, San Francisco", seaside: "On the Seafront", winter: "Up in the Mountains", autumn: "On the High Street", candy: "Sweet Street", town: "On Main Street" };
+  const PLACE = { kyoto: "Kyoto, Market Street", sf: "Hayes Valley, San Francisco", seaside: "On the Seafront", winter: "Up in the Mountains", autumn: "On the High Street", candy: "Sweet Street", town: "On Main Street" };
   // the lower third is the shop's board (same colours as the roof sign); the end card is the dark brand panel
   const board = brand?.board ? { ...branded, background: brand.board, ink: brand.boardInk, accent: brand.boardInk === brand.ink ? brand.background : brand.ink } : branded;
   // the lower third is the shop's board; the end card is a lockup: the brand's monogram (a licensed 2D mark), the name
   // set large and tracked under it, a rule and one line of place
   const initials = name.split(/\s+/).map((w) => w[0]).join("").slice(0, 3).toUpperCase();
   const card = (layout) => layout === "lower"
-    ? { asset: "wordmark-type", layout, knobs: { ...board, text: word }, scrim: 0, fade: 0.4 }
+    ? { asset: "wordmark-type", layout, knobs: { ...board, text: word }, sub: PLACE[plan.theme] || PLACE.town, scrim: 0, fade: 0.4 }
     : { asset: "monogram-logo", layout, knobs: { letters: initials, transparent: true, container: "circle", font: "sans", style: "solid", primary: brand?.board || brand?.primary, ink: brand?.ink || "#1B1F2A" }, name: word, sub: PLACE[plan.theme] || PLACE.town, scrim: 0.86, fade: 0.5 };
   // the title shot: low in the road, pushing down the street toward the word as it drops in
   const d = tm.dir || 1;
@@ -322,7 +322,7 @@ const DIRECT_TOOL = {
           shake: { type: "number", description: "0-1 handheld shake for the shot" },
           hits: { type: "array", items: { type: "number" }, description: "seconds into the shot where the camera takes an impact" },
           title: { type: "object", properties: { text: { type: "string" }, at: { type: "number" } }, description: "a 3D extruded title that drops into the street in front of the hero and slams down at `at` seconds. One per film; put it on a push toward the hero's kerb." },
-          card: { type: "object", properties: { asset: { type: "string" }, layout: { type: "string", enum: ["full", "lower"], description: "full: centred over a scrim (end card). lower: a lower-third title at the bottom left while the shot plays" }, sub: { type: "string", description: "end card only: one short line under the wordmark, e.g. the place" }, knobs: { type: "object", additionalProperties: true }, scrim: { type: "number" }, fade: { type: "number" } } },
+          card: { type: "object", properties: { asset: { type: "string" }, layout: { type: "string", enum: ["full", "lower"], description: "full: centred over a scrim (end card). lower: a lower-third title at the bottom left while the shot plays" }, sub: { type: "string", description: "one short line under the name, e.g. the place" }, knobs: { type: "object", additionalProperties: true }, scrim: { type: "number" }, fade: { type: "number" } } },
         }, required: ["kind", "seconds"] },
       },
       edit: { type: "object", properties: { style: { type: "string", enum: STYLES } }, description: "the finish: hype (punchy, contrasty, glitch and RGB split on cuts), clean (calm, straight), dream (soft bloom, shallow focus)" },
