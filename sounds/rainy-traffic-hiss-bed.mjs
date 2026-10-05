@@ -34,16 +34,17 @@ export function build(p, c) {
     // samples are bit-identical; lpB's fixed 200 Hz coefficient is computed once.
     let yA = 0, yB = 0, yC = 0, yD = 0, yE = 0, yF = 0, fl = 0, b = 0;
     const kB = kof(200), rumble = p.rumble > 0;
+    let q = 0; // kof() written out inline below (same expression), one closure call less per filter per sample
     for (let i = 0; i < L; i++) {
       const x = (i - L / 2) / hw, e1 = 1 / (1 + x * x), e = e1 * sqrt(e1), win = WIN[i];
       const dop = 1 - 0.2 * v * atan(x) / 1.5708, wn = r() * 2 - 1, ws = r() * 2 - 1;
-      yA += kof(fc * dop) * (wn - yA); yB += kB * (wn - yB);
+      yA += (1 - exp(-TAU * ((q = fc * dop) > hiF ? hiF : q < 5 ? 5 : q) / sr)) * (wn - yA); yB += kB * (wn - yB);
       const hiss = yA - yB;
       if (i % 40 === 0) fl = r() < 0.5 ? 0.4 + r() : 0.12;
-      yC += kof(min(9500 * dop, sr * 0.45)) * (ws - yC); yD += kof(2600 * dop) * (ws - yD);
+      yC += (1 - exp(-TAU * ((q = min(9500 * dop, sr * 0.45)) > hiF ? hiF : q < 5 ? 5 : q) / sr)) * (ws - yC); yD += (1 - exp(-TAU * ((q = 2600 * dop) > hiF ? hiF : q < 5 ? 5 : q) / sr)) * (ws - yD);
       const spr = (yC - yD) * fl * sqrt(e);
       let rum = 0;
-      if (rumble) { b = b * 0.998 + wn * 0.03; yE += kof(110 * dop) * (b - yE); yF += kof(70 * dop) * (yE - yF); rum = yF * 7; }
+      if (rumble) { b = b * 0.998 + wn * 0.03; yE += (1 - exp(-TAU * ((q = 110 * dop) > hiF ? hiF : q < 5 ? 5 : q) / sr)) * (b - yE); yF += (1 - exp(-TAU * ((q = 70 * dop) > hiF ? hiF : q < 5 ? 5 : q) / sr)) * (yE - yF); rum = yF * 7; }
       pbuf[start + i] += amp * e * win * (hiss + 1.6 * sprAmt * spr + 1.8 * p.rumble * rum);
     }
   };

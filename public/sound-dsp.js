@@ -128,10 +128,9 @@ export function ring(modes, dur, decay, sr, amp = 1) {
   // sample instead of Math.sin + Math.exp. Re-anchored from libm every 4096 samples so rounding can't accumulate.
   for (const [f, a] of modes) {
     const w = TAU * f / sr, d = -1 / (decay * sr), g = a * amp, ed = Math.exp(d), cr = ed * Math.cos(w), ci = ed * Math.sin(w);
-    let re = 1, im = 0;
-    for (let i = 0; i < n; i++) {
-      if ((i & 4095) === 0) { const m = Math.exp(d * i); re = m * Math.cos(w * i); im = m * Math.sin(w * i); }
-      out[i] += g * im; const t = re * cr - im * ci; im = re * ci + im * cr; re = t;
+    for (let b = 0; b < n; b += 4096) {
+      const m = Math.exp(d * b), end = b + 4096 < n ? b + 4096 : n; let re = m * Math.cos(w * b), im = m * Math.sin(w * b);
+      for (let i = b; i < end; i++) { out[i] += g * im; const t = re * cr - im * ci; im = re * ci + im * cr; re = t; }
     }
   }
   return out;
@@ -165,7 +164,7 @@ export function burst(r, dur, type, f0, Q, attack, decay, sr) { const n = second
 
 // ---------- combining ----------
 /** Adds src into out at `at` seconds with a gain; the way every layer lands on the timeline. */
-export function mix(out, src, at, gain, sr) { const o = Math.round(at * sr); for (let i = Math.max(0, -o); i < src.length && o + i < out.length; i++) out[o + i] += src[i] * gain; return out; }
+export function mix(out, src, at, gain, sr) { const o = Math.round(at * sr), end = Math.min(src.length, out.length - o); for (let i = Math.max(0, -o); i < end; i++) out[o + i] += src[i] * gain; return out; }
 export function gain(buf, g) { for (let i = 0; i < buf.length; i++) buf[i] *= g; return buf; }
 export function multiply(buf, e) { for (let i = 0; i < buf.length; i++) buf[i] *= e[i] ?? 0; return buf; }
 /** Peak-normalise to `peak`, then a soft tanh ceiling so layers can't clip. */
