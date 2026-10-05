@@ -4,10 +4,12 @@
 // before/after compare over two locked viewers, and the piece shown in its kit's street with one plan call.
 import { createViewer, THREE, partsToGroup } from "/world3d.js";
 import { LOOKS, applyLook } from "/looks.js";
+import { pageSound, KIND_LABEL } from "/sound-page.js";
+import { unlock, loadWav, play } from "/audio.js";
 
-// styles live in kit.css; loaded once, from here, so index.html stays as it is
-if (!document.querySelector('link[href="/kit.css"]')) {
-  const l = document.createElement("link"); l.rel = "stylesheet"; l.href = "/kit.css"; document.head.appendChild(l);
+// styles live in kit.css and sound.css; loaded once, from here, so index.html stays as it is
+for (const href of ["/kit.css", "/sound.css"]) if (!document.querySelector(`link[href="${href}"]`)) {
+  const l = document.createElement("link"); l.rel = "stylesheet"; l.href = href; document.head.appendChild(l);
 }
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -32,11 +34,10 @@ function toast(msg) {
   clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("on"), 2600);
 }
 
-let CATALOG = null;
-async function catalog() {
-  if (!CATALOG) CATALOG = (await api("/api/assets")).filter((a) => a.format === "blocks");
-  return CATALOG;
-}
+let ALL = null;
+const all = async () => (ALL ||= await api("/api/assets"));
+const catalog = async () => (await all()).filter((a) => a.format === "blocks");
+const sounds = async () => (await all()).filter((a) => a.format === "sound");
 const details = new Map();
 async function detail(id) {
   if (!details.has(id)) details.set(id, api(`/api/assets/${encodeURIComponent(id)}`).catch((e) => { details.delete(id); throw e; }));
@@ -124,7 +125,80 @@ function liveCards(root) {
   }, true);
 }
 
-// ---------- the kit ----------
+// ---------- the sounds browser ----------
+// Cards show each sound's sheet (waveform over spectrogram) with a play control; the sheet plays the default take
+// and hovering plays nothing (sound needs a gesture). Filters: kind, kit, price, creator, the way the 3D kit's are.
+const soundThumb = (id, q = {}) => { const u = new URLSearchParams({ w: 400, ...q }); return `/api/assets/${encodeURIComponent(id)}/render.png?${u}`; };
+export function soundCard(a) {
+  return `<div class="s-card" data-id="${esc(a.id)}">
+    <span class="s-sheet"><a href="#/a/${esc(a.id)}" class="s-link" aria-label="${esc(a.title)}"><img src="${soundThumb(a.id)}" alt="${esc(a.title)}: waveform and spectrogram" loading="lazy" width="400" height="400"></a><span class="s-kind">${esc(KIND_LABEL[a.kind] || a.kind)}</span><span class="s-dur">${a.duration} s</span><button class="s-play" data-play="${esc(a.id)}" aria-label="Play ${esc(a.title)}">${icon("play")}</button></span>
+    <a class="s-meta" href="#/a/${esc(a.id)}"><b>${esc(a.title)}</b><em>${price(a.price)}</em><span class="by">${esc(a.author)}${a.kit ? ` · ${esc(a.kit)}` : ""}</span><span class="facts">${a.knobCount} knobs</span></a></div>`;
+}
+export function liveSoundCards(root) {
+  $$(".s-sheet img", root).forEach((img) => { const on = () => img.closest(".s-sheet").classList.add("in"); img.complete && img.naturalWidth ? on() : img.addEventListener("load", on, { once: true }); img.addEventListener("error", on, { once: true }); });
+  if (root.dataset.wired) return; root.dataset.wired = "1";
+  let playing = null;
+  root.addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-play]"); if (!b) return;
+    e.preventDefault();
+    await unlock();
+    if (playing?.b === b) { playing.p.stop(); playing = null; b.classList.remove("on"); b.innerHTML = icon("play"); return; }
+    playing?.p.stop(); playing?.b.classList.remove("on"); if (playing) playing.b.innerHTML = icon("play");
+    b.classList.add("on"); b.innerHTML = icon("stop");
+    try {
+      const buf = await loadWav(`/api/assets/${encodeURIComponent(b.dataset.play)}/render.wav`);
+      const p = play(buf); playing = { b, p };
+      p.done.then(() => { if (playing?.p === p) { playing = null; b.classList.remove("on"); b.innerHTML = icon("play"); } });
+    } catch (err) { toast(err.message); b.classList.remove("on"); b.innerHTML = icon("play"); }
+  });
+}
+export async function pageSounds(app) {
+  const params = new URLSearchParams(location.hash.split("?")[1] || "");
+  app.innerHTML = `<div class="wrap kit-page">
+    <header class="k-head">
+      <div><h1>The sounds.</h1><p class="lede">Every sound is a program with knobs. Press play for the default take; open one to turn its knobs, hear 300 takes, or fork it.</p></div>
+      <dl class="k-facts" id="k-facts"></dl>
+    </header>
+    <div class="k-bar">
+      <div class="k-chips" id="k-kinds" role="group" aria-label="Kind"></div>
+      <div class="k-chips" id="k-price" role="group" aria-label="Price"></div>
+      <label class="k-sort">Sort <select id="k-sort"><option value="name">Name</option><option value="kit">Kit</option><option value="price-asc">Price, low to high</option><option value="price-desc">Price, high to low</option><option value="length">Length</option><option value="knobs">Most knobs</option></select></label>
+    </div>
+    <div class="k-row" id="k-kits"></div>
+    <div class="k-row" id="k-creators"></div>
+    <div class="s-grid" id="k-grid"></div>
+    <div class="k-empty" id="k-empty" hidden><h3>No sounds match.</h3><p>Clear a filter, or ask for a kit and let Claude find the closest.</p></div>
+  </div>`;
+  const list = await sounds();
+  const creators = [...new Set(list.map((a) => a.author))].sort();
+  const kits = [...new Set(list.map((a) => a.kit).filter(Boolean))].sort();
+  $("#k-facts").innerHTML = [[list.length, "sounds"], [kits.length, "kits"], [creators.length, "creators"]].map(([v, k]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("");
+  const state = { kind: "all", price: "all", author: "all", kit: params.get("kit") || "all", sort: "name" };
+  const counts = (key, vals) => vals.map((v) => [v, list.filter((a) => a[key] === v).length]);
+  $("#k-kinds").innerHTML = [["all", "All", list.length], ...counts("kind", [...new Set(list.map((a) => a.kind))].sort()).map(([k, n]) => [k, KIND_LABEL[k] || k, n])].map(([v, l, n]) => `<button class="k-chip${v === "all" ? " on" : ""}" data-f="kind" data-v="${esc(v)}">${esc(l)} <small>${n}</small></button>`).join("");
+  $("#k-price").innerHTML = [["all", "Any price"], ["free", "Free"], ["paid", "Paid"]].map(([v, l]) => `<button class="k-chip${v === "all" ? " on" : ""}" data-f="price" data-v="${v}">${l}</button>`).join("");
+  $("#k-kits").innerHTML = kits.length ? `<span>Kit</span><div class="k-chips">${[["all", "every kit"], ...kits.map((c) => [c, c])].map(([v, l]) => `<button class="k-chip${v === state.kit ? " on" : ""}" data-f="kit" data-v="${esc(v)}">${esc(l)}${v !== "all" ? ` <small>${list.filter((a) => a.kit === v).length}</small>` : ""}</button>`).join("")}</div>` : "";
+  $("#k-creators").innerHTML = `<span>By</span><div class="k-chips">${[["all", "everyone"], ...creators.map((c) => [c, c])].map(([v, l]) => `<button class="k-chip${v === "all" ? " on" : ""}" data-f="author" data-v="${esc(v)}">${esc(l)}</button>`).join("")}</div>`;
+  const grid = $("#k-grid");
+  const draw = () => {
+    let out = list.filter((a) => (state.kind === "all" || a.kind === state.kind) && (state.price === "all" || (state.price === "free") === (a.price === 0)) && (state.author === "all" || a.author === state.author) && (state.kit === "all" || a.kit === state.kit));
+    const by = { name: (x, y) => x.title.localeCompare(y.title), kit: (x, y) => String(x.kit).localeCompare(String(y.kit)) || x.title.localeCompare(y.title), "price-asc": (x, y) => x.price - y.price || x.title.localeCompare(y.title), "price-desc": (x, y) => y.price - x.price || x.title.localeCompare(y.title), length: (x, y) => y.duration - x.duration, knobs: (x, y) => y.knobCount - x.knobCount }[state.sort];
+    out = out.sort(by);
+    grid.innerHTML = out.map(soundCard).join("");
+    $("#k-empty").hidden = out.length > 0;
+    liveSoundCards(grid);
+  };
+  app.addEventListener("click", (e) => {
+    const b = e.target.closest(".k-chip[data-f]"); if (!b) return;
+    state[b.dataset.f] = b.dataset.v;
+    $$(`.k-chip[data-f="${b.dataset.f}"]`, app).forEach((x) => x.classList.toggle("on", x === b));
+    draw();
+  });
+  $("#k-sort").addEventListener("change", (e) => { state.sort = e.target.value; draw(); });
+  draw();
+}
+
+// ---------- the 3D kit (off the nav, still at #/kit) ----------
 export async function pageKit(app) {
   app.innerHTML = `<div class="wrap kit-page">
     <header class="k-head">
@@ -200,8 +274,9 @@ function presetSwatch(vals) {
 
 export async function pageAsset(app, id) {
   let a;
-  try { a = await detail(id); } catch { app.innerHTML = `<div class="wrap split2"><div><h1>That piece doesn't exist.</h1><p class="lede">It may have been removed, or the link has a typo.</p><p style="margin-top:24px"><a class="btn primary" href="#/kit">See the kit</a></p></div></div>`; return; }
-  if (a.format !== "blocks") { location.hash = "#/kit"; return; }
+  try { a = await detail(id); } catch { app.innerHTML = `<div class="wrap split2"><div><h1>That sound doesn't exist.</h1><p class="lede">It may have been removed, or the link has a typo.</p><p style="margin-top:24px"><a class="btn primary" href="#/sounds">Browse sounds</a></p></div></div>`; return; }
+  if (a.format === "sound") return pageSound(app, a, { catalog: sounds, card: soundCard, liveCards: liveSoundCards });
+  if (a.format !== "blocks") { location.hash = "#/sounds"; return; }
   const knobs = a.knobs || {};
   const values = Object.fromEntries(Object.entries(knobs).map(([k, d]) => [k, d.default]));
   const diff = () => Object.fromEntries(Object.entries(values).filter(([k, val]) => val !== knobs[k].default));

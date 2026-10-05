@@ -25,6 +25,8 @@ import * as kits from "./kits.js";
 
 export async function createApp() {
   await catalog.load();
+  // The factory publishes new sound programs while the server runs: pick them up without a restart.
+  if (process.env.OASIS_RELOAD_SECONDS !== "0") setInterval(() => catalog.load().catch((e) => console.warn("catalog reload", e.message)), (Number(process.env.OASIS_RELOAD_SECONDS) || 90) * 1000).unref();
   const app = express();
   app.disable("x-powered-by");
   app.set("trust proxy", 1); // Render terminates TLS in front of us; rate limits key on the client's IP.

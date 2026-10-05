@@ -62,9 +62,12 @@ export async function planKit(vibe) {
 export function cleanKit(vibe, plan, planner = "keywords") {
   let items = (plan.items || []).map((it) => { const a = catalog.getAsset(it.assetId); return a && a.format === "sound" ? { a, it } : null; }).filter(Boolean).slice(0, 10);
   if (items.length < 6) { const fill = planByKeywords(vibe, { count: 10 }).items.filter((f) => !items.some((x) => x.a.id === f.assetId)); for (const f of fill) { if (items.length >= 6) break; items.push({ a: catalog.getAsset(f.assetId), it: f }); } }
+  // A licence is to the program, so a kit charges each program once: a second part on the same program is covered.
+  const seen = new Set();
   const lines = items.map(({ a, it }, i) => {
     const values = catalog.resolveInput(a, it.knobs || {});
-    return { assetId: a.id, title: a.title, kind: a.kind, author: a.author, price: a.price, knobs: diffFromDefaults(a.params, values), values, name: it.name || a.title, reason: it.reason || "", duration: a.duration, idx: i };
+    const covered = seen.has(a.id); seen.add(a.id);
+    return { assetId: a.id, title: a.title, kind: a.kind, author: a.author, price: covered ? 0 : a.price, covered, knobs: diffFromDefaults(a.params, values), values, name: it.name || a.title, reason: it.reason || "", duration: a.duration, idx: i };
   });
   const total = Math.round(lines.reduce((s, l) => s + l.price, 0) * 100) / 100;
   const creators = [...new Set(lines.filter((l) => l.price > 0).map((l) => l.author))];
@@ -94,7 +97,7 @@ export function view(kit) {
     licence: kit.licence ? { orderId: kit.licence.orderId, total: kit.licence.total, creators: kit.licence.creators, at: kit.licence.at, via: kit.licence.via } : null,
     items: kit.items.map((l) => {
       const q = Object.keys(l.knobs).length ? `?p=${encodeURIComponent(JSON.stringify(l.knobs))}` : "";
-      const tok = kit.licence?.tokens?.[l.assetId] || (l.price === 0 ? "free" : null);
+      const tok = kit.licence?.tokens?.[l.assetId] || (l.price === 0 && !l.covered ? "free" : null) || (l.covered && kit.items.find((x) => x.assetId === l.assetId && !x.covered)?.price === 0 ? "free" : null);
       return { ...l, preview: `${b}/api/assets/${l.assetId}/render.wav${q}`, card: `${b}/api/assets/${l.assetId}/render.png${q}`,
         licence: tok && tok !== "free" ? tok : null,
         wav: tok ? (tok === "free" ? `${b}/api/assets/${l.assetId}/download.wav${q}` : `${b}/api/licenses/${tok}/download.wav`) : null,

@@ -1,8 +1,9 @@
-// Oasis: a registry of 3D assets as code. A human approves one PayPal budget; agents license every piece they
-// import and each creator is paid. Pages: home, budget, ledger, kit, asset.
-import { createViewer, THREE } from "/world3d.js";
+// Oasis: a registry of sounds as code. A human approves one PayPal budget; agents license every sound they import
+// and each creator is paid. Pages: home, sounds, sound, kits, kit, budget, ledger. The 3D kit and the film studio
+// stay reachable (#/kit, #/studio) but are off the nav.
 import { pageStudio, leaveStudio } from "/studio.js";
-import { pageKit, pageAsset } from "/kit.js";
+import { pageKit as page3dKit, pageAsset, pageSounds } from "/kit.js";
+import { pageKits, pageKit } from "/kits.js";
 
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -40,7 +41,7 @@ function disposeViewers() { viewers.forEach((v) => v.dispose()); viewers = []; }
 
 let CATALOG = null;
 async function catalog() {
-  if (!CATALOG) CATALOG = (await api("/api/assets")).filter((a) => a.format === "blocks");
+  if (!CATALOG) CATALOG = (await api("/api/assets")).filter((a) => a.format === "sound");
   return CATALOG;
 }
 
@@ -128,7 +129,7 @@ async function pageBudget(id) {
   app.innerHTML = `<div class="wrap split2 pk">
     <div>
       <h1>Give your agent a budget.</h1>
-      <p class="lede">You approve once in PayPal. Your agent can then license 3D pieces up to this amount, and nothing more.</p>
+      <p class="lede">You approve once in PayPal. Your agent can then license sounds and kits up to this amount, and nothing more.</p>
       <dl class="pk-kv">
         <dt>Charged</dt><dd>Only when the agent buys, one PayPal order per scene</dd>
         <dt>Cap</dt><dd>Enforced by Oasis before PayPal is called</dd>
@@ -138,7 +139,7 @@ async function pageBudget(id) {
     </div>
     <form class="pk-panel" id="bform" novalidate>
       <div class="pk-field"><label id="amt-l">Amount</label><div class="pk-seg wide" id="amts" role="group" aria-labelledby="amt-l">${[10, 25, 50, 100].map((n) => `<button type="button" data-v="${n}" class="num">$${n}</button>`).join("")}</div></div>
-      <div class="pk-field"><label for="desc">What is it for?</label><input class="pk-in" type="text" id="desc" maxlength="200" value="3D pieces for a cozy Kyoto street scene"><span class="help">Shown to you in PayPal and on every receipt.</span></div>
+      <div class="pk-field"><label for="desc">What is it for?</label><input class="pk-in" type="text" id="desc" maxlength="200" value="Sounds for a rainy city street scene"><span class="help">Shown to you in PayPal and on every receipt.</span></div>
       <div class="pk-field"><label id="hrs-l">Expires after</label><div class="pk-seg wide" id="hours" role="group" aria-labelledby="hrs-l"><button type="button" data-v="24">24 hours</button><button type="button" data-v="72">3 days</button><button type="button" data-v="168">7 days</button></div></div>
       <div class="pk-err" id="berr" role="alert"></div>
       <button class="pk-pp" id="bgo" type="submit">Approve with <em>Pay<b>Pal</b></em></button>
@@ -218,7 +219,7 @@ async function pageLedger() {
       <div><div class="pk-col-h">Orders <span class="pk-live"><i aria-hidden="true"></i>live</span></div><div class="sales" id="sales"><div class="pk-stack" style="padding:12px 16px"><div class="pk-sk row"></div><div class="pk-sk row"></div><div class="pk-sk row"></div></div></div></div>
       <div><div class="pk-col-h" id="cr-h">Creators <span>earned so far</span></div><div class="creators" id="creators"><div class="pk-stack"><div class="pk-sk row"></div><div class="pk-sk row"></div></div></div></div>
     </div></div>`;
-  const empty = pkNote("empty", "receipt", "Nothing has been paid for yet", "Make a film in the Studio and license it, or give an agent a budget and let it buy. Every order lands here the moment PayPal completes it.", `<a class="pk-b sm" href="#/studio">${icon("film-slate")} Make a film</a><a class="pk-b sm" href="#/budget">${icon("wallet")} Give an agent a budget</a>`);
+  const empty = pkNote("empty", "receipt", "Nothing has been paid for yet", "Make a kit and license it, or give an agent a budget and let it buy. Every order lands here the moment PayPal completes it.", `<a class="pk-b sm" href="#/kits">${icon("sparkle")} Make a kit</a><a class="pk-b sm" href="#/budget">${icon("wallet")} Give an agent a budget</a>`);
   drawSales({ limit: 40, empty, after: (sales, bump) => {
     const paid = sales.reduce((a, s) => a + s.creators.reduce((x, c) => x + c.usd, 0), 0);
     const who = new Set(sales.flatMap((s) => s.creators.map((c) => c.author)));
@@ -229,7 +230,7 @@ async function pageLedger() {
 }
 
 function notFound(msg) {
-  app.innerHTML = `<div class="wrap split2"><div><h1>${esc(msg)}</h1><p class="lede">It may have been removed, or the link has a typo.</p><div class="cta" style="margin-top:24px;display:flex;gap:12px"><a class="btn primary" href="#/kit">See the kit</a><a class="link" href="#/">Home</a></div></div></div>`;
+  app.innerHTML = `<div class="wrap split2"><div><h1>${esc(msg)}</h1><p class="lede">It may have been removed, or the link has a typo.</p><div class="cta" style="margin-top:24px;display:flex;gap:12px"><a class="btn primary" href="#/sounds">Browse sounds</a><a class="link" href="#/">Home</a></div></div></div>`;
 }
 
 // ---------- router ----------
@@ -239,13 +240,17 @@ async function route() {
   source?.close();
   const [path] = location.hash.slice(1).split("?");
   const seg = (path || "/").split("/").filter(Boolean);
-  document.querySelectorAll("[data-nav]").forEach((a) => a.classList.toggle("on", a.dataset.nav === (seg[0] === "film" ? "studio" : seg[0] || "home")));
+  const navKey = seg[0] === "kit" && seg[1] ? "kits" : seg[0] === "a" ? "sounds" : seg[0] || "home";
+  document.querySelectorAll("[data-nav]").forEach((a) => a.classList.toggle("on", a.dataset.nav === navKey));
   window.scrollTo(0, 0);
   try {
     if (!seg.length) await pageHome();
     else if (seg[0] === "budget") await pageBudget(seg[1]);
     else if (seg[0] === "ledger") await pageLedger();
-    else if (seg[0] === "kit") await pageKit(app);
+    else if (seg[0] === "sounds") await pageSounds(app);
+    else if (seg[0] === "kits") await pageKits(app);
+    else if (seg[0] === "kit" && seg[1]) await pageKit(app, seg[1]);
+    else if (seg[0] === "kit") await page3dKit(app);
     else if (seg[0] === "a" && seg[1]) await pageAsset(app, seg[1]);
     else if (seg[0] === "studio") await pageStudio(app, null);
     else if (seg[0] === "film" && seg[1]) await pageStudio(app, seg[1]);
