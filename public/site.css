@@ -18,7 +18,7 @@ code, .mono { font-family: var(--font-mono); font-size: .92em; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--r-sm); }
 .skip { position: absolute; left: -999px; top: 8px; background: var(--ink); color: var(--bg); padding: 8px 12px; border-radius: var(--r); z-index: var(--z-overlay); }
 .skip:focus { left: 8px; }
-.wrap { width: 100%; max-width: var(--measure); margin: 0 auto; padding: 0 var(--gutter); }
+.wrap { width: 100%; max-width: var(--measure); margin: 0 auto; padding: 0 var(--gutter); } /* Pages that set their own vertical rhythm use padding-block so the gutter is never reset. */
 @media (max-width: 767px) { :root { --gutter: 16px; } }
 .muted { color: var(--muted); }
 h1, h2, h3 { margin: 0; color: var(--ink); text-wrap: balance; }
@@ -97,8 +97,8 @@ p { text-wrap: pretty; }
 }
 @media (max-width: 599px) { .hero-readout { max-width: 54%; } .hero .cta .btn { flex: 1; } .hero-pay .pay { height: 40px; padding: 0 16px; } }
 
-section.band { padding: var(--s-9) 0; }
-@media (max-width: 767px) { section.band { padding: var(--s-8) 0; } }
+section.band { padding-block: var(--s-9); }
+@media (max-width: 767px) { section.band { padding-block: var(--s-8); } }
 .head { max-width: 640px; margin-bottom: var(--s-6); }
 .head p { color: var(--ink-2); margin: var(--s-3) 0 0; max-width: 56ch; }
 
@@ -248,7 +248,7 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--accent); ou
 .amounts { display: flex; gap: 8px; flex-wrap: wrap; }
 .amounts button { height: 44px; min-width: 72px; border-radius: var(--r); border: 1px solid var(--line-strong); background: var(--bg); font: var(--w-semibold) 16px var(--font-sans); color: var(--ink); cursor: pointer; font-variant-numeric: tabular-nums; transition: background var(--t), color var(--t); }
 .amounts button.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
-.split2 { display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); gap: var(--s-6); align-items: start; padding: var(--s-7) 0 var(--s-9); }
+.split2 { display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); gap: var(--s-6); align-items: start; padding-block: var(--s-7) var(--s-9); }
 @media (max-width: 899px) { .split2 { grid-template-columns: 1fr; } }
 .secret { display: flex; gap: 8px; align-items: center; background: var(--sunk); border-radius: var(--r); padding: 10px 10px 10px 14px; font: var(--fs-sm) var(--font-mono); overflow-wrap: anywhere; }
 .secret span { flex: 1; min-width: 0; }

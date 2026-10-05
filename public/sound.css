@@ -150,7 +150,7 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
 @media (max-width: 899px) { .sp-fork { grid-template-columns: 1fr; } }
 
 /* ---------- kits ---------- */
-.kt-page { padding: 44px 0 96px; }
+.kt-page { padding-block: 44px 96px; }
 .kt-form { display: grid; gap: 12px; max-width: 760px; margin-top: 24px; }
 .kt-form .row { display: flex; gap: 10px; }
 .kt-form input[type=text] { flex: 1; min-width: 0; height: 52px; padding: 0 18px; border-radius: var(--r-pill); border: 1px solid var(--line); background: var(--surface); font: 17px var(--font-sans); color: var(--ink); box-shadow: var(--shadow-sm); }
@@ -219,7 +219,7 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
 /* ---------- home: the hero is a sound program running ---------- */
 /* The pictures sit in the right part of the band, beside the copy. The waveform is on the surface, the spectrogram on
    its own black, and a knob strip under them. Below the stage: the readout on the left, the bill on the right. */
-.hero-sound { display: grid; grid-template-rows: minmax(0, 1fr) auto; left: 47%; right: var(--gutter); top: clamp(40px, 7vh, 88px); bottom: 100px; inset-inline-start: 47%; border-radius: var(--r-lg); overflow: hidden; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--inset-top), var(--shadow-lg); }
+.hero-sound { display: grid; grid-template-rows: minmax(0, 1fr) auto; grid-template-columns: minmax(0, 1fr); left: 47%; right: var(--gutter); top: clamp(40px, 7vh, 88px); bottom: 100px; inset-inline-start: 47%; border-radius: var(--r-lg); overflow: hidden; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--inset-top), var(--shadow-lg); }
 /* one wavesurfer mount: the waveform on the surface (30px of headroom for the label), the spectrogram on black */
 .hero-sound .hs-pic { position: relative; min-height: 0; padding-top: 30px; background: linear-gradient(var(--surface) 0 var(--wave-h, 45%), #010101 0); }
 .hero-sound .sp-axis { top: 8px; z-index: 3; }

@@ -10,7 +10,7 @@
 }
 
 /* ---------- the kit ---------- */
-.kit-page { padding: 44px 0 96px; }
+.kit-page { padding-block: 44px 96px; }
 .k-head { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 24px 40px; align-items: end; margin-bottom: 28px; }
 .k-head .lede { margin-top: 12px; }
 .k-facts { display: flex; gap: 28px; justify-content: flex-end; margin: 0; padding: 0 0 6px; }
@@ -57,7 +57,7 @@
 @keyframes k-shimmer { to { background-position: -200% 0; } }
 
 /* ---------- the asset page ---------- */
-.a-page { padding: 28px 0 96px; }
+.a-page { padding-block: 28px 96px; }
 .a-crumb { display: flex; gap: 8px; font-size: 14px; color: var(--muted, #5E6573); margin-bottom: 18px; }
 .a-crumb a { color: var(--ink-2, #3A3F4A); text-decoration: none; }
 .a-crumb a:hover { color: var(--ink, #131313); text-decoration: underline; text-underline-offset: 3px; }

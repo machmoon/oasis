@@ -3,7 +3,7 @@
    its segmented control (kit.css .seg); the fields are the pay pages' (.pk-field, .pk-in); the orders list is the
    ledger's (.sales, .sale). PayPal blue appears only beside the payout email. */
 
-.pb-page { padding: 44px 0 96px; }
+.pb-page { padding-block: 44px 96px; }
 .pb-head { max-width: 720px; margin-bottom: var(--s-6); }
 .pb-head .lede { max-width: 60ch; }
 .pb-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: var(--s-5); align-items: start; }

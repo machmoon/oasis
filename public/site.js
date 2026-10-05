@@ -212,7 +212,7 @@ async function pageBudgetView(id) {
 // ---------- ledger ----------
 async function pageLedger() {
   payCss();
-  app.innerHTML = `<div class="wrap pk" style="padding:48px 0 96px">
+  app.innerHTML = `<div class="wrap pk" style="padding-block:48px 96px">
     <div class="head"><h1>The ledger.</h1><p>Every order that paid a creator: kits licensed at checkout, agent purchases on a budget, single sounds. The PayPal order behind each, and what every creator earned. Creator shares are paid out with PayPal Payouts once the 14-day refund window closes.</p></div>
     <div class="pk-stats" id="stats"><div class="pk-stat"><b class="num" id="st-paid">$0.00</b><span>paid to creators</span></div><div class="pk-stat"><b class="num" id="st-orders">0</b><span>PayPal orders</span></div><div class="pk-stat"><b class="num" id="st-creators">0</b><span>creators paid</span></div></div>
     <div class="ledger">
