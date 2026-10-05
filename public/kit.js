@@ -131,9 +131,10 @@ function liveCards(root) {
 const soundThumb = (id, q = {}) => { const u = new URLSearchParams({ w: 400, ...q }); return `/api/assets/${encodeURIComponent(id)}/render.png?${u}`; };
 export function soundCard(a) {
   return `<div class="s-card" data-id="${esc(a.id)}">
-    <span class="s-sheet"><a href="#/a/${esc(a.id)}" class="s-link" aria-label="${esc(a.title)}"><img src="${soundThumb(a.id)}" alt="${esc(a.title)}: waveform and spectrogram" loading="lazy" width="400" height="400"></a><span class="s-kind">${esc(KIND_LABEL[a.kind] || a.kind)}</span><span class="s-dur">${a.duration} s</span><button class="s-play" data-play="${esc(a.id)}" aria-label="Play ${esc(a.title)}">${icon("play")}</button></span>
-    <a class="s-meta" href="#/a/${esc(a.id)}"><b>${esc(a.title)}</b><em>${price(a.price)}</em><span class="by">${esc(a.author)}${a.kit ? ` · ${esc(a.kit)}` : ""}</span><span class="facts">${a.knobCount} knobs</span></a></div>`;
+    <span class="s-sheet"><a href="#/a/${esc(a.id)}" class="s-link" aria-label="${esc(a.title)}"><img src="${soundThumb(a.id)}" alt="${esc(a.title)}: waveform and spectrogram" loading="lazy" width="400" height="400"></a><button class="s-play" data-play="${esc(a.id)}" aria-label="Play ${esc(a.title)}">${icon("play")}</button></span>
+    <a class="s-meta" href="#/a/${esc(a.id)}"><b>${esc(a.title)}</b><em class="num">${price(a.price)}</em><span class="by">${esc(a.author)}${a.kit ? `, ${esc(a.kit)}` : ""}</span><span class="facts">${esc(KIND_LABEL[a.kind] || a.kind)} · ${a.duration} s · ${a.knobCount} knobs</span></a></div>`;
 }
+const soundSkeleton = (n = 10) => Array.from({ length: n }, () => `<div class="s-skel" aria-hidden="true"><div class="skel"></div><div class="skel t"></div><div class="skel t"></div></div>`).join("");
 export function liveSoundCards(root) {
   $$(".s-sheet img", root).forEach((img) => { const on = () => img.closest(".s-sheet").classList.add("in"); img.complete && img.naturalWidth ? on() : img.addEventListener("load", on, { once: true }); img.addEventListener("error", on, { once: true }); });
   if (root.dataset.wired) return; root.dataset.wired = "1";
@@ -162,14 +163,15 @@ export async function pageSounds(app) {
     <div class="k-bar">
       <div class="k-chips" id="k-kinds" role="group" aria-label="Kind"></div>
       <div class="k-chips" id="k-price" role="group" aria-label="Price"></div>
-      <label class="k-sort">Sort <select id="k-sort"><option value="name">Name</option><option value="kit">Kit</option><option value="price-asc">Price, low to high</option><option value="price-desc">Price, high to low</option><option value="length">Length</option><option value="knobs">Most knobs</option></select></label>
+      <div class="k-sort" role="group" aria-label="Sort"><span>Sort</span><div class="k-chips" id="k-sort">${[["name", "Name"], ["kit", "Kit"], ["price-asc", "Price ↑"], ["price-desc", "Price ↓"], ["length", "Length"], ["knobs", "Knobs"]].map(([v, l], i) => `<button class="k-chip${i === 0 ? " on" : ""}" data-f="sort" data-v="${v}" aria-pressed="${i === 0}">${l}</button>`).join("")}</div></div>
     </div>
     <div class="k-row" id="k-kits"></div>
     <div class="k-row" id="k-creators"></div>
-    <div class="s-grid" id="k-grid"></div>
+    <div class="s-grid" id="k-grid">${soundSkeleton()}</div>
     <div class="k-empty" id="k-empty" hidden><h3>No sounds match.</h3><p>Clear a filter, or ask for a kit and let Claude find the closest.</p></div>
   </div>`;
-  const list = await sounds();
+  let list;
+  try { list = await sounds(); } catch (e) { $("#k-grid").innerHTML = ""; $("#k-empty").hidden = false; $("#k-empty").innerHTML = `<h3>The registry could not be loaded.</h3><p>${esc(e.message)}</p><button class="btn small" type="button" onclick="location.reload()">${icon("arrow-clockwise")} Try again</button>`; return; }
   const creators = [...new Set(list.map((a) => a.author))].sort();
   const kits = [...new Set(list.map((a) => a.kit).filter(Boolean))].sort();
   $("#k-facts").innerHTML = [[list.length, "sounds"], [kits.length, "kits"], [creators.length, "creators"]].map(([v, k]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("");
@@ -191,10 +193,9 @@ export async function pageSounds(app) {
   app.addEventListener("click", (e) => {
     const b = e.target.closest(".k-chip[data-f]"); if (!b) return;
     state[b.dataset.f] = b.dataset.v;
-    $$(`.k-chip[data-f="${b.dataset.f}"]`, app).forEach((x) => x.classList.toggle("on", x === b));
+    $$(`.k-chip[data-f="${b.dataset.f}"]`, app).forEach((x) => { x.classList.toggle("on", x === b); if (x.hasAttribute("aria-pressed")) x.setAttribute("aria-pressed", x === b); });
     draw();
   });
-  $("#k-sort").addEventListener("change", (e) => { state.sort = e.target.value; draw(); });
   draw();
 }
 
@@ -273,6 +274,8 @@ function presetSwatch(vals) {
 }
 
 export async function pageAsset(app, id) {
+  // the page's shape while the program loads: crumb, title, a stage and a knob panel
+  app.innerHTML = `<div class="wrap a-page" aria-busy="true"><div class="skel" style="height:14px;width:140px;margin-bottom:18px"></div><div class="skel" style="height:44px;width:min(360px,60%)"></div><div class="skel" style="height:14px;width:min(520px,80%);margin:14px 0 24px"></div><div class="sp-hero"><div class="skel" style="min-height:400px;border-radius:var(--r-lg)"></div><div class="skel" style="min-height:400px;border-radius:var(--r-lg)"></div></div></div>`;
   let a;
   try { a = await detail(id); } catch { app.innerHTML = `<div class="wrap split2"><div><h1>That sound doesn't exist.</h1><p class="lede">It may have been removed, or the link has a typo.</p><p style="margin-top:24px"><a class="btn primary" href="#/sounds">Browse sounds</a></p></div></div>`; return; }
   if (a.format === "sound") return pageSound(app, a, { catalog: sounds, card: soundCard, liveCards: liveSoundCards });

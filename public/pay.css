@@ -111,6 +111,7 @@
 @keyframes pk-bump { 30% { transform: scale(1.06); color: var(--accent); } }
 .pk-col-h { display: flex; align-items: baseline; justify-content: space-between; margin: 0 0 10px; font-size: 14px; font-weight: 600; color: var(--ink); }
 .pk-col-h span { font-weight: 500; color: var(--muted); font-size: 13px; }
+.pk-col-h[hidden] { display: none; }
 .pk-live { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
 .pk-live i { width: 8px; height: 8px; border-radius: 50%; background: var(--pk-ok); box-shadow: 0 0 0 3px var(--pk-ok-soft); }
 
