@@ -35,14 +35,16 @@ export async function pageKits(app) {
     const go = $("#kt-go"); go.disabled = true; go.innerHTML = `${icon("circle-notch")} Choosing sounds…`;
     const st = $("#kt-status"); st.hidden = false; st.className = "kt-status"; st.innerHTML = `<i></i><span>Claude is reading the registry and tuning knobs for "${esc(vibe)}"</span>`;
     try { const k = await api("/api/kits", { method: "POST", body: { vibe } }); location.hash = `#/kit/${k.id}`; }
-    catch (err) { st.innerHTML = `<span>${esc(err.message)}</span>`; go.disabled = false; go.innerHTML = `${icon("sparkle")} Make a kit`; }
+    catch (err) { st.className = "kt-status err"; st.innerHTML = `<span>${esc(err.message)}</span>`; go.disabled = false; go.innerHTML = `${icon("sparkle")} Make a kit`; }
   });
   api("/api/kits").then((list) => {
     $("#kt-list").innerHTML = list.length ? list.map((k) => `<a class="kt-tile" href="#/kit/${esc(k.id)}"><b>${esc(k.title)}</b><span>"${esc(k.vibe)}"</span><span>${k.parts} sounds · ${k.creators} creators · ${usd(k.total)} ${k.licensed ? '· <em class="paid">paid</em>' : ""}</span></a>`).join("") : `<p class="muted">No kits yet. Yours will be the first.</p>`;
-  }).catch(() => { $("#kt-list").innerHTML = ""; });
+  }).catch((e) => { $("#kt-list").innerHTML = `<p class="muted">Recent kits could not be loaded: ${esc(e.message)}</p>`; });
 }
 
 export async function pageKit(app, id) {
+  // the page's shape while the kit loads: a title, a list of parts, a bill
+  app.innerHTML = `<div class="wrap a-page kv-skel" aria-busy="true"><div class="skel" style="height:14px;width:120px;margin-bottom:18px"></div><div class="skel" style="height:44px;width:min(420px,70%);margin-bottom:28px"></div><div class="kv-body"><div class="kv-parts">${Array.from({ length: 6 }, () => `<div class="kv-part"><span class="skel" style="width:36px;height:36px;border-radius:50%"></span><span class="skel" style="height:48px"></span><span><span class="skel" style="width:50%"></span><span class="skel" style="width:80%;margin-top:8px"></span></span><span class="skel" style="width:48px"></span></div>`).join("")}</div><div class="skel" style="height:320px;border-radius:var(--r-lg)"></div></div></div>`;
   let k;
   try { k = await api(`/api/kits/${encodeURIComponent(id)}`); } catch { app.innerHTML = `<div class="wrap split2"><div><h1>That kit doesn't exist.</h1><p class="lede">It may have been removed, or the link has a typo.</p><p style="margin-top:24px"><a class="btn primary" href="#/kits">Make a kit</a></p></div></div>`; return; }
   // back from PayPal: the browser that started the order claims the licence with its claim token
@@ -86,9 +88,10 @@ export async function pageKit(app, id) {
     return `<div class="kv-part" data-i="${i}">
       <button class="s-play" data-play="${i}" aria-label="Play ${esc(it.name)}">${icon("play")}</button>
       <div class="pic"><canvas data-wave="${i}"></canvas></div>
-      <div class="who"><b>${esc(it.name)}</b><span>${esc(it.title)} · ${esc(KIND_LABEL[it.kind] || it.kind)} · by ${esc(it.author)}${it.reason ? ` · ${esc(it.reason)}` : ""}</span>${knobs.length ? `<span class="knobs">${knobs.map(([k, v]) => `${k}=${esc(JSON.stringify(v))}`).join("  ")}</span>` : ""}</div>
-      <div class="amt">${it.covered ? "covered" : price(it.price)}<small>${it.covered ? "same program" : paid || it.price === 0 ? "clean" : "preview"}</small></div>
-      ${it.wav ? `<div class="links"><a href="${esc(it.wav)}">${icon("download-simple")} WAV</a><a href="#/a/${esc(it.assetId)}${it.licence ? `?lic=${esc(it.licence)}` : ""}">${icon("sliders-horizontal")} Open with knobs</a><code>import { play } from "${esc(it.module)}"</code></div>` : `<div class="links"><a href="#/a/${esc(it.assetId)}">${icon("sliders-horizontal")} Open with knobs</a></div>`}
+      <div class="who"><b>${esc(it.name)}</b><span>${esc(it.title)}, ${esc(KIND_LABEL[it.kind] || it.kind)} by ${esc(it.author)}${it.reason ? `. ${esc(it.reason[0].toUpperCase() + it.reason.slice(1))}.` : ""}</span>${knobs.length ? `<span class="knobs">${knobs.map(([k, v]) => `<span>${esc(k)} ${esc(String(v))}</span>`).join("")}</span>` : ""}
+        <span class="acts"><a href="#/a/${esc(it.assetId)}${it.licence ? `?lic=${esc(it.licence)}` : ""}">${icon("sliders-horizontal")} Open with knobs</a>${it.wav ? `<a href="${esc(it.wav)}">${icon("download-simple")} WAV, 44.1 kHz</a>` : ""}</span></div>
+      <div class="amt num${paid || it.price === 0 ? " clean" : ""}">${it.covered ? "covered" : price(it.price)}<small>${it.covered ? "same program" : paid || it.price === 0 ? "clean" : "preview"}</small></div>
+      ${it.wav ? `<div class="links"><code>import { play } from "${esc(it.module)}"</code></div>` : ""}
     </div>`;
   }
   function wire(paid) {
@@ -101,10 +104,13 @@ export async function pageKit(app, id) {
     let playingAll = false;
     const playOne = async (i) => {
       await unlock();
-      const b = $(`[data-play="${i}"]`); b.classList.add("on"); b.innerHTML = icon("stop");
-      const buf = await bufFor(i); const p = play(buf);
-      const c = $(`canvas[data-wave="${i}"]`); if (c && k.items[i].wave) playhead(buf, p.startedAt, (at) => drawWave(c, k.items[i].wave, { at, dim: !paid && k.items[i].price > 0 }));
-      await p.done; b.classList.remove("on"); b.innerHTML = icon("play");
+      const b = $(`[data-play="${i}"]`); b.classList.add("on"); b.innerHTML = icon("stop"); b.closest(".kv-part")?.classList.add("on");
+      try {
+        const buf = await bufFor(i); const p = play(buf);
+        const c = $(`canvas[data-wave="${i}"]`); if (c && k.items[i].wave) playhead(buf, p.startedAt, (at) => drawWave(c, k.items[i].wave, { at, dim: !paid && k.items[i].price > 0 }));
+        await p.done;
+      } catch (e) { toast(e.message); }
+      b.classList.remove("on"); b.innerHTML = icon("play"); b.closest(".kv-part")?.classList.remove("on");
     };
     app.addEventListener("click", (e) => { const b = e.target.closest("[data-play]"); if (b) playOne(Number(b.dataset.play)); });
     $("#kv-all").addEventListener("click", async () => {
