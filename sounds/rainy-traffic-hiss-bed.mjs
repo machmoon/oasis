@@ -21,20 +21,29 @@ export function build(p, c) {
     avenue: { L: 2.2, d: [0.4, 1.0], wash: [250, 1500], rv: { size: 0.85, decay: 1.7, mixAmt: 0.28 } },
   }[p.road];
   const L = c.seconds(W.L, sr), pbuf = new Float32Array(n + L);
+  const hiF = sr * 0.49, TAU = c.TAU, exp = Math.exp, sqrt = Math.sqrt, atan = Math.atan, min = Math.min;
+  const kof = (f0) => 1 - exp(-TAU * (f0 > hiF ? hiF : f0 < 5 ? 5 : f0) / sr);
+  // The pass window sin(PI·i/L) is the same for every pass: computed once (as doubles, the same values).
+  const WIN = new Float64Array(L); for (let i = 0; i < L; i++) WIN[i] = Math.sin(Math.PI * i / L);
   const pass = (tc, d, v, amp) => {
     let start = Math.round(tc - L / 2);
     if (p.loop) { if (start < 0) start += n; } else start = Math.max(0, Math.min(n - L, start));
     const hw = (0.06 + 0.28 * d) / v * sr, fc = (700 + 3200 * (1 - d)) * c.between(r, 0.85, 1.15), sprAmt = p.spray * (1.5 - d);
-    const lpA = c.onepole(sr), lpB = c.onepole(sr), lpC = c.onepole(sr), lpD = c.onepole(sr), lpE = c.onepole(sr), lpF = c.onepole(sr);
-    let fl = 0, b = 0;
+    // The six one-pole filters run inline with their state in locals (no closure call per filter per sample). Each
+    // coefficient is the kit's onepole formula verbatim, 1 - exp(-TAU * clamp(f0, 5, 0.49 sr) / sr), so the
+    // samples are bit-identical; lpB's fixed 200 Hz coefficient is computed once.
+    let yA = 0, yB = 0, yC = 0, yD = 0, yE = 0, yF = 0, fl = 0, b = 0;
+    const kB = kof(200), rumble = p.rumble > 0;
     for (let i = 0; i < L; i++) {
-      const x = (i - L / 2) / hw, e1 = 1 / (1 + x * x), e = e1 * Math.sqrt(e1), win = Math.sin(Math.PI * i / L);
-      const dop = 1 - 0.2 * v * Math.atan(x) / 1.5708, wn = r() * 2 - 1, ws = r() * 2 - 1;
-      const hiss = lpA(wn, fc * dop) - lpB(wn, 200);
+      const x = (i - L / 2) / hw, e1 = 1 / (1 + x * x), e = e1 * sqrt(e1), win = WIN[i];
+      const dop = 1 - 0.2 * v * atan(x) / 1.5708, wn = r() * 2 - 1, ws = r() * 2 - 1;
+      yA += kof(fc * dop) * (wn - yA); yB += kB * (wn - yB);
+      const hiss = yA - yB;
       if (i % 40 === 0) fl = r() < 0.5 ? 0.4 + r() : 0.12;
-      const spr = (lpC(ws, Math.min(9500 * dop, sr * 0.45)) - lpD(ws, 2600 * dop)) * fl * Math.sqrt(e);
+      yC += kof(min(9500 * dop, sr * 0.45)) * (ws - yC); yD += kof(2600 * dop) * (ws - yD);
+      const spr = (yC - yD) * fl * sqrt(e);
       let rum = 0;
-      if (p.rumble > 0) { b = b * 0.998 + wn * 0.03; rum = lpF(lpE(b, 110 * dop), 70 * dop) * 7; }
+      if (rumble) { b = b * 0.998 + wn * 0.03; yE += kof(110 * dop) * (b - yE); yF += kof(70 * dop) * (yE - yF); rum = yF * 7; }
       pbuf[start + i] += amp * e * win * (hiss + 1.6 * sprAmt * spr + 1.8 * p.rumble * rum);
     }
   };
@@ -50,11 +59,13 @@ export function build(p, c) {
   const hp = c.biquad("hp", W.wash[0], 0.7, sr), lp = c.biquad("lp", W.wash[1] + 2800 * p.density, 0.7, sr);
   const ph1 = r() * c.TAU, ph2 = r() * c.TAU, lowLp = c.onepole(sr), lowLp2 = c.onepole(sr);
   let bb = 0;
+  // hp then lp over the whole bed as blocks on doubles (the kit's biquad .process): the same values lp(hp(x)) gave.
+  const B = lp.process(hp.process(Float64Array.from(bed)));
   for (let i = 0; i < n + X; i++) {
     const m = 0.75 + 0.15 * Math.sin(c.TAU * 2 * i / n + ph1) + 0.1 * Math.sin(c.TAU * 5 * i / n + ph2);
     let low = 0;
     if (p.rumble > 0) { bb = bb * 0.998 + (r() * 2 - 1) * 0.03; low = lowLp2(lowLp(bb, 90), 60) * 6; }
-    bed[i] = lp(hp(bed[i])) * m * (0.28 + 0.5 * p.density) + p.rumble * (0.3 + 0.5 * p.density) * low;
+    bed[i] = B[i] * m * (0.28 + 0.5 * p.density) + p.rumble * (0.3 + 0.5 * p.density) * low;
   }
   const out = new Float32Array(n);
   for (let i = 0; i < n; i++) out[i] = pbuf[i] + bed[i];

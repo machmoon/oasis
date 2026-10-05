@@ -20,6 +20,9 @@ export function build(p, c) {
   const f0 = p.startPitch, d = p.dissonance, climb = 1 + 0.4 + 1.6 * p.rise;
   const pal = p.palette, nh = pal === "reverse" ? 4 : pal === "synth" ? 9 : 14;
   const body = new Float32Array(n);
+  // Harmonic weights per palette, computed once instead of per harmonic per sample.
+  const hwt = new Float64Array(nh + 1);
+  for (let h = 1; h <= nh; h++) hwt[h] = pal === "synth" ? (h % 2 ? 1 / h : 0.05 / h) : pal === "strings" ? 1 / h : (h === 1 ? 1 : 0.3 / (h * h));
   const voices = [1, 1.5, 2 + 0.12 * d, 2.5 + 0.5 * d, 3.02 + 0.3 * d * (r() < 0.5 ? 1 : -0.5)];
   voices.forEach((q, k) => {
     const det = 1 + (r() - 0.5) * 0.012 * (1 + 4 * d), vib = 4.5 + r() * 2, ph = r() * 6.28, amp = 1 / (1 + k * 0.5);
@@ -30,9 +33,15 @@ export function build(p, c) {
       phase += f / sr; if (phase > 1e4) phase -= 1e4;
       let s = 0;
       const top = Math.max(2, Math.min(nh, Math.floor(sr * 0.45 / f)));
-      for (let h = 1; h <= top; h++) {
-        const hw = pal === "synth" ? (h % 2 ? 1 / h : 0.05 / h) : pal === "strings" ? 1 / h : (h === 1 ? 1 : 0.3 / (h * h));
-        s += hw * Math.sin(c.TAU * phase * h * (pal === "reverse" ? 1 + 0.0007 * h * h : 1));
+      if (pal === "reverse") {
+        for (let h = 1; h <= top; h++) s += hwt[h] * Math.sin(c.TAU * phase * h * (1 + 0.0007 * h * h));
+      } else {
+        // Integer harmonics: sin(h·θ) by the recurrence s(h+1) = 2cosθ·s(h) − s(h−1), two libm calls per sample
+        // instead of one per harmonic. It is the recursion of Faust's biquad oscillator (faustlibraries
+        // oscillators.lib `oscb`: 1 − 2cos(w)z⁻¹ + z⁻², impulse response sin(n·w)), stepped over h instead of time.
+        const th = c.TAU * phase, k2 = 2 * Math.cos(th);
+        let s0 = 0, s1 = Math.sin(th);
+        for (let h = 1; h <= top; h++) { s += hwt[h] * s1; const s2 = k2 * s1 - s0; s0 = s1; s1 = s2; }
       }
       body[i] += s * amp;
     }

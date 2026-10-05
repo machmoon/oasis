@@ -20,12 +20,17 @@ export function build(p, c) {
     const m = c.seconds(dur, sr), s = new Float32Array(m), lp = c.onepole(sr);
     const b1 = c.biquad("bp", v[0], 3, sr), b2 = c.biquad("bp", v[1], 5, sr), b3 = c.biquad("bp", v[2] || 2500, 6, sr);
     const a = Math.min(m * 0.3, 0.012 * sr), rl = 0.35 * m; let ph = 0;
+    // Source first (same r() order: the filters draw nothing), then the formant bank as blocks over doubles.
+    const X = new Float64Array(m);
     for (let i = 0; i < m; i++) {
       const u = i / m; ph += (f0 + (f1 - f0) * u) / sr; ph -= Math.floor(ph);
       let x = 2 * ph - 1; if (breath > 0 && u < 0.5) x += breath * (1 - 2 * u) * (r() * 2 - 1);
-      const e = Math.min(1, i / a) * Math.min(1, (m - i) / rl);
-      s[i] = lp(2.5 * (b1(x) + 0.6 * b2(x) + 0.25 * b3(x)), cut) * e * e;
+      X[i] = x;
     }
+    const X1 = b1.process(X.slice()), X2 = b2.process(X.slice()), X3 = b3.process(X);
+    for (let i = 0; i < m; i++) X3[i] = 2.5 * (X1[i] + 0.6 * X2[i] + 0.25 * X3[i]);
+    lp.process(X3, cut);
+    for (let i = 0; i < m; i++) { const e = Math.min(1, i / a) * Math.min(1, (m - i) / rl); s[i] = X3[i] * e * e; }
     put(s, t, amp);
   };
   const K = [4, 9, 16][ci], hop = Math.max(1, Math.round(0.01 * sr)), F = Math.ceil(n / hop), streams = [];
@@ -41,15 +46,25 @@ export function build(p, c) {
     streams.push({ G, f: r() < 0.55 ? c.between(r, 95, 135) : c.between(r, 175, 235), k: 1 + Math.floor(r() * 3 * L), q: r() * c.TAU, ph: r() });
   }
   const bed = c.pink(r, n), fA = c.biquad("bp", 520, 1.4, sr), fB = c.biquad("bp", 1450, 2, sr), fC = c.biquad("bp", 2500, 3, sr), lpB = c.biquad("lp", 1600 + 800 * ci, 0.7, sr);
-  for (let i = 0; i < n; i++) {
-    const fi = Math.floor(i / hop), fr = i / hop - fi, f2 = (fi + 1) % F; let x = 0;
-    for (const s of streams) {
-      s.ph += s.f * (1 + 0.1 * Math.sin(c.TAU * s.k * i / n + s.q)) / sr; s.ph -= Math.floor(s.ph);
-      x += (2 * s.ph - 1) * (s.G[fi] + (s.G[f2] - s.G[fi]) * fr);
+  // Loop interchange: each stream runs over the whole buffer with its state in locals, adding into a double
+  // accumulator in the same stream order as before, then each formant filter runs as a block over double buffers
+  // (the kit's biquad .process, Chromium Biquad::Process style). Same expressions, same order: bit-identical.
+  const TAU = c.TAU, sin = Math.sin, floor = Math.floor, X = new Float64Array(n), FI = new Int32Array(n), FR = new Float64Array(n), F2 = new Int32Array(n);
+  for (let i = 0; i < n; i++) { const fi = floor(i / hop); FI[i] = fi; FR[i] = i / hop - fi; F2[i] = (fi + 1) % F; }
+  for (const st of streams) {
+    const G = st.G, f = st.f, tk = TAU * st.k, q = st.q; let ph = st.ph;
+    for (let i = 0; i < n; i++) {
+      ph += f * (1 + 0.1 * sin(tk * i / n + q)) / sr; ph -= floor(ph);
+      const fi = FI[i], g0 = G[fi];
+      X[i] += (2 * ph - 1) * (g0 + (G[F2[i]] - g0) * FR[i]);
     }
-    x = x / Math.sqrt(K) + 0.15 * bed[i];
-    bed[i] = lpB(fA(x) + 0.7 * fB(x) + 0.3 * fC(x));
   }
+  const sK = Math.sqrt(K);
+  for (let i = 0; i < n; i++) X[i] = X[i] / sK + 0.15 * bed[i];
+  const XA = fA.process(X.slice()), XB = fB.process(X.slice()), XC = fC.process(X);
+  for (let i = 0; i < n; i++) XC[i] = XA[i] + 0.7 * XB[i] + 0.3 * XC[i];
+  lpB.process(XC);
+  for (let i = 0; i < n; i++) bed[i] = XC[i];
   c.mix(out, bed, 0, (0.35 + 0.45 * p.chatter) * [0.6, 1, 1.4][ci], sr);
   const nv = 1 + Math.round((1 + 5 * p.chatter) * crowd), talk = 0.35 + 0.55 * p.chatter;
   for (let v = 0; v < nv; v++) {
