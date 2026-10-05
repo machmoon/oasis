@@ -173,7 +173,9 @@ export function build(p, ctx) { … return { samples }; }"></textarea>
   });
 
   // the listing form
-  const kind = segment($("#pb-kind"), KINDS.map((k) => ({ id: k, label: KIND_LABEL[k] || k })), "sfx", () => {});
+  let kindValue = "sfx";
+  const kindSeg = segment($("#pb-kind"), KINDS.map((k) => ({ id: k, label: KIND_LABEL[k] || k })), "sfx", (v) => { kindValue = v; });
+  const kind = Object.assign(() => kindValue, { set(v) { kindValue = v; kindSeg.set(v); } });
   const priceIn = $("#pb-price"), priceOut = $("#pb-price-o");
   const setPrice = (v) => { priceIn.value = v; priceIn.style.setProperty("--p", `${(v / 50) * 100}%`); priceOut.textContent = price(v); $("#pb-email").required = v > 0; };
   priceIn.addEventListener("input", () => setPrice(Number(priceIn.value)));

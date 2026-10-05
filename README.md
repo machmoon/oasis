@@ -61,6 +61,17 @@ Measured in the sandbox (QuickJS, Apple Silicon): footstep 20-35 ms, UI click 13
 a 3 s rain bed 280-350 ms at 22.05 kHz. V8 does the same work in a few ms, which is why the sound page renders free
 programs in a Worker and only asks the server for paid ones.
 
+## For creators
+
+`/#/publish`: paste or upload a program written to the contract (or start from the Soft Click template), and **Check**
+runs it through the server sandbox and the same harness the factory passes (`factory/harness-sound.mjs`: length,
+peak, RMS, silence, clipping, every knob audible, seed distinctness, render time), shows the waveform, the
+spectrogram and a play button per knob, and only then **Publish** lists it with a title, kind, tags, a price ($0 to
+$50) and the PayPal email every sale pays. The flow is `npm publish`'s (`lib/commands/publish.js`: pack with
+`dryRun`, show the contents, then send; `server/publish.js` names the files). `/#/creator/<name>` is what the ledger
+says a creator earned: every order that paid them, forks of their programs and the royalty those paid, and the
+payout email on file, masked. No accounts: a name is taken by publishing, and cannot be re-used with another email.
+
 ## The factory
 
 `factory/factory-sound.mjs` plans kits (one Claude call per kit: Rainy City Street, Wooden Tavern, Sci-fi Console,
