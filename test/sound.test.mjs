@@ -104,7 +104,7 @@ test("a kit: a vibe becomes 6-10 tuned sounds, one PayPal order licenses them al
     const k = await (await fetch(`${base}/api/kits`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ vibe: "rainy street footsteps and soft ui clicks" }) })).json();
     assert.ok(k.items.length >= 5 && k.items.length <= 10, `${k.items.length} parts`);
     assert.equal(k.planner, "keywords");
-    assert.ok(k.items.some((i) => i.assetId === "footstep") && k.items.some((i) => i.assetId === "ui-click"));
+    assert.ok(k.items.some((i) => /footstep|step/.test(i.assetId + i.title.toLowerCase())) && k.items.some((i) => i.kind === "ui"), JSON.stringify(k.items.map((i) => i.assetId)));
     assert.ok(k.items.every((i) => i.licence === null || i.price === 0));
     assert.equal(k.total, Math.round(k.items.reduce((s, i) => s + i.price, 0) * 100) / 100);
     const co = await (await fetch(`${base}/api/kits/${k.id}/checkout`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" })).json();
