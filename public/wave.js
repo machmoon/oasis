@@ -148,6 +148,40 @@ function morphRenderer(state, { barWidth, barGap, barRadius, scale = 0.94, floor
   };
 }
 
+// ---------- the spectrogram follows every take ----------
+// The vendored 7.12.12 plugin keeps cachedFrequencies keyed by cachedBuffer, but its throttledRender takes the
+// fastRender path (redraw cachedFrequencies) whenever the zoom has not moved, without checking that the decoded data
+// is still the buffer the cache came from, and a redraw that lands while render() is computing is dropped
+// (`if (this.isRendering) return`). A rebuild here keeps the zoom, so every take after the first redrew the first
+// take's picture. Upstream fixed both in v8: dist/plugins/spectrogram.esm.js (wavesurfer.js 8.0.1, function ze, the
+// throttledRender successor) takes the fast path only when `getDecodedData() === cachedBuffer`, and a redraw that
+// arrives mid-render sets a pending flag that Fe() replays once the render finishes. This patches the 7.x instance
+// the same way rather than taking a major-version upgrade.
+function followTakes(spec) {
+  let pending = false;
+  const stale = () => !!spec.cachedBuffer && spec.cachedBuffer !== spec.wavesurfer?.getDecodedData();
+  const throttled = spec.throttledRender.bind(spec), render = spec.render.bind(spec);
+  spec.throttledRender = () => {
+    if (spec.isRendering) { pending = true; return; }
+    if (stale()) spec.clearCache();
+    throttled();
+  };
+  spec.render = async () => {
+    try { await render(); } finally { if (pending || stale()) { pending = false; spec.throttledRender(); } }
+  };
+  return spec;
+}
+/** A still copy of the spectrogram's canvases laid over it, faded out once the next take's picture is drawn. */
+function specGhost(spec) {
+  const wrap = spec.wrapper, src = spec.canvases || [];
+  if (!wrap || !src.length) return null;
+  const g = document.createElement("div"); g.setAttribute("part", "spec-ghost");
+  Object.assign(g.style, { position: "absolute", left: 0, top: 0, width: "100%", height: "100%", zIndex: 5, pointerEvents: "none" });
+  for (const c of src) { const k = document.createElement("canvas"); k.width = c.width; k.height = c.height; k.style.cssText = c.style.cssText; k.getContext("2d").drawImage(c, 0, 0); g.appendChild(k); }
+  wrap.appendChild(g);
+  return g;
+}
+
 // ---------- hover readout: time and level ----------
 const fmtTime = (s) => (s < 1 ? `${Math.round(s * 1000)} ms` : `${s.toFixed(2)} s`);
 function levelAt(buffer, sec, win = 0.01) {
@@ -172,7 +206,8 @@ export function mountWave(container, opts = {}) {
   const { height = 160, spectrogram = 0, timeline = null, hover = true, barWidth = 2, barGap = 1, barRadius = 2, compact = false, onState = () => {}, specLabels = true, wsOptions = {}, extraPlugins = [] } = opts;
   const media = new BufferMedia();
   const state = { k: 1, from: null, shown: null };
-  let dim = false, buffer = null, anim = null, tl = null, tlDur = 0;
+  let dim = false, buffer = null, anim = null, tl = null, tlDur = 0, ghost = null, ghostAnim = null, offGhost = null;
+  const dropGhost = () => { ghostAnim?.stop(); offGhost?.(); offGhost = null; ghost?.remove(); ghost = null; };
   const colors = () => {
     const ink = tok("--ink", "#15171C"), muted = tok("--muted", "#6B7280");
     return { waveColor: dim ? muted : ink, progressColor: tok("--accent", "#E08A1E"), cursorColor: tok("--accent", "#E08A1E") };
@@ -180,7 +215,8 @@ export function mountWave(container, opts = {}) {
   const plugins = [];
   if (hover && !compact) plugins.push(Hover.create({ lineColor: tok("--accent", "#E08A1E"), lineWidth: 1, labelBackground: tok("--ink", "#15171C"), labelColor: tok("--bg", "#F6F7F9"), labelSize: "11px",
     formatTimeCallback: (s) => { const db = levelAt(buffer, s); return `${fmtTime(s)} · ${db === null ? "" : db === -Infinity ? "silence" : `${db.toFixed(1)} dB`}`; } }));
-  if (spectrogram) plugins.push(Spectrogram.create({ height: spectrogram, labels: specLabels, labelsColor: "rgb(255 255 255 / .62)", labelsHzColor: "rgb(255 255 255 / .45)", labelsBackground: "rgb(1 1 1 / .0)", colorMap: "roseus", scale: "mel", fftSamples: 512, windowFunc: "hann", gainDB: 24, rangeDB: 84 }));
+  const spec = spectrogram ? followTakes(Spectrogram.create({ height: spectrogram, labels: specLabels, labelsColor: "rgb(255 255 255 / .62)", labelsHzColor: "rgb(255 255 255 / .45)", labelsBackground: "rgb(1 1 1 / .0)", colorMap: "roseus", scale: "mel", fftSamples: 512, windowFunc: "hann", gainDB: 24, rangeDB: 84 })) : null;
+  if (spec) plugins.push(spec);
   plugins.push(...extraPlugins);
   const ws = WaveSurfer.create({
     container, media, height, ...colors(), cursorWidth: compact ? 0 : 2, interact: !compact, dragToSeek: !compact, normalize: false, hideScrollbar: true, autoScroll: false,
@@ -210,6 +246,16 @@ export function mountWave(container, opts = {}) {
       anim?.stop();
       const glide = morph && !reduced && !!state.shown;
       state.from = glide ? state.shown : null; state.k = glide ? 0 : 1;
+      // the spectrogram cross-fades with the bar morph: the old picture is held over the new one and fades out once
+      // the plugin has drawn the new take (it emits "ready" at the end of drawSpectrogram)
+      dropGhost();
+      if (spec && glide) {
+        ghost = specGhost(spec);
+        if (ghost) offGhost = spec.once("ready", () => {
+          offGhost = null; const g = ghost;
+          requestAnimationFrame(() => { if (g !== ghost) return; ghostAnim = animate(g, { opacity: [1, 0] }, { duration: 0.34, ease: "easeOut" }); ghostAnim.then(() => { if (g === ghost) dropGhost(); }); });
+        });
+      }
       media.setBuffer(buf);
       ws.setOptions(colors());
       await ws.load("", [buf.getChannelData(0).slice()], buf.duration);
@@ -219,7 +265,7 @@ export function mountWave(container, opts = {}) {
     async play() { if (!buffer) return; ws.setTime(0); await ws.play(); },
     stop() { ws.pause(); ws.setTime(0); },
     async toggle() { if (!media.paused) api.stop(); else await api.play(); },
-    destroy() { anim?.stop(); offTheme(); ws.destroy(); media.gainNode.disconnect(); },
+    destroy() { anim?.stop(); dropGhost(); offTheme(); ws.destroy(); media.gainNode.disconnect(); },
   };
   return api;
 }
