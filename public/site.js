@@ -2,6 +2,7 @@
 // import and each creator is paid. Pages: home, budget, ledger, kit, asset.
 import { createViewer, THREE } from "/world3d.js";
 import { pageStudio, leaveStudio } from "/studio.js";
+import { pageKit, pageAsset } from "/kit.js";
 
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -309,72 +310,6 @@ async function pageLedger() {
   drawSales({ limit: 40 });
 }
 
-// ---------- kit ----------
-async function pageKit() {
-  app.innerHTML = `<div class="wrap" style="padding:48px 0 96px">
-    <div class="head"><h1>The kit.</h1><p>Every piece is a program on one 6 m grid. Open one to turn its knobs and watch it rebuild.</p></div>
-    <div class="kit" id="kit"></div></div>`;
-  drawKit($("#kit"), { limit: 100 });
-}
-
-// ---------- asset ----------
-async function pageAsset(id) {
-  let a;
-  try { a = await api(`/api/assets/${encodeURIComponent(id)}`); } catch { return notFound("That asset doesn't exist."); }
-  const knobs = a.knobs || {};
-  const values = Object.fromEntries(Object.entries(knobs).map(([k, d]) => [k, d.default]));
-  const control = (k, d) => {
-    if (d.type === "range") return `<div class="knob"><label for="k-${k}">${esc(d.label || k)}</label><input type="range" id="k-${k}" data-k="${k}" min="${d.min}" max="${d.max}" step="${d.step || 1}" value="${d.default}"><output id="o-${k}">${d.default}</output></div>`;
-    if (d.type === "toggle") return `<div class="knob"><label for="k-${k}">${esc(d.label || k)}</label><input type="checkbox" id="k-${k}" data-k="${k}" ${d.default ? "checked" : ""}><output id="o-${k}">${d.default ? "on" : "off"}</output></div>`;
-    if (d.type === "color") return `<div class="knob"><label for="k-${k}">${esc(d.label || k)}</label><input type="color" id="k-${k}" data-k="${k}" value="${esc(d.default)}"><output id="o-${k}">${esc(d.default)}</output></div>`;
-    if (d.type === "choice") return `<div class="knob"><label for="k-${k}">${esc(d.label || k)}</label><select id="k-${k}" data-k="${k}">${d.options.map((o) => `<option ${o === d.default ? "selected" : ""}>${esc(o)}</option>`).join("")}</select><output></output></div>`;
-    return "";
-  };
-  app.innerHTML = `<div class="wrap asset">
-    <div>
-      <div class="stage" id="a-stage" role="img" aria-label="${esc(a.title)}, live 3D"></div>
-      <div class="toolbar" id="times">${["day", "dusk", "night"].map((t) => `<button class="btn small${t === "day" ? " on" : ""}" data-t="${t}">${t[0].toUpperCase() + t.slice(1)}</button>`).join("")}<span class="readout" id="readout" style="margin-left:auto;align-self:center"></span></div>
-    </div>
-    <aside>
-      <div class="panel">
-        <h1 style="font-size:36px">${esc(a.title)}</h1>
-        <p class="muted" style="margin:8px 0 0">by <b style="color:var(--ink)">${esc(a.author)}</b>${a.footprint ? `, ${a.footprint[0]} by ${a.footprint[1]} m` : ""}</p>
-        <p style="margin:14px 0 0;color:var(--ink-2)">${esc(a.description)}</p>
-        <div style="display:flex;align-items:baseline;gap:10px;margin-top:18px"><span class="big">${price(a.price)}</span><span class="muted">per licence</span></div>
-      </div>
-      <div class="panel" style="padding:22px"><div class="knobs" style="padding:0" id="knobs">${Object.entries(knobs).map(([k, d]) => control(k, d)).join("")}</div></div>
-      <div class="panel" style="padding:22px">
-        <h3>Import it</h3>
-        <div class="code" style="margin-top:12px;font-size:12.5px;white-space:pre-wrap" id="imp"></div>
-      </div>
-    </aside></div>`;
-  const v = createViewer($("#a-stage"), { time: "day" });
-  viewers.push(v);
-  $("#times").addEventListener("click", (e) => { const b = e.target.closest("[data-t]"); if (!b) return; v.setTime(b.dataset.t); $("#times").querySelectorAll("[data-t]").forEach((x) => x.classList.toggle("on", x === b)); });
-  const diff = () => Object.fromEntries(Object.entries(values).filter(([k, val]) => val !== knobs[k].default));
-  let n = 0;
-  const rebuild = async () => {
-    const run = ++n;
-    const { parts } = await api(`/api/assets/${a.id}/parts.json?p=${encodeURIComponent(JSON.stringify(diff()))}`);
-    if (run !== n) return;
-    v.setParts(parts);
-    const s = v.stats();
-    $("#readout").innerHTML = `<b>${parts.length}</b> parts, <b>${s.tris.toLocaleString()}</b> triangles`;
-    const d = diff();
-    $("#imp").textContent = `import { createAsset } from "${location.origin}/cdn/${a.id}.mjs?lic=…";\nscene.add(createAsset(${Object.keys(d).length ? JSON.stringify(d) : ""}));`;
-  };
-  $("#knobs").addEventListener("input", (e) => {
-    const k = e.target.dataset.k;
-    if (!k) return;
-    values[k] = e.target.type === "checkbox" ? e.target.checked : e.target.type === "range" ? Number(e.target.value) : e.target.value;
-    const o = $(`#o-${k}`);
-    if (o) o.textContent = e.target.type === "checkbox" ? (e.target.checked ? "on" : "off") : e.target.value;
-    clearTimeout(rebuild.t);
-    rebuild.t = setTimeout(rebuild, 50);
-  });
-  rebuild();
-}
-
 function notFound(msg) {
   app.innerHTML = `<div class="wrap split2"><div><h1>${esc(msg)}</h1><p class="lede">It may have been removed, or the link has a typo.</p><div class="cta" style="margin-top:24px;display:flex;gap:12px"><a class="btn primary" href="#/kit">See the kit</a><a class="link" href="#/">Home</a></div></div></div>`;
 }
@@ -392,8 +327,8 @@ async function route() {
     if (!seg.length) await pageHome();
     else if (seg[0] === "budget") await pageBudget(seg[1]);
     else if (seg[0] === "ledger") await pageLedger();
-    else if (seg[0] === "kit") await pageKit();
-    else if (seg[0] === "a" && seg[1]) await pageAsset(seg[1]);
+    else if (seg[0] === "kit") await pageKit(app);
+    else if (seg[0] === "a" && seg[1]) await pageAsset(app, seg[1]);
     else if (seg[0] === "studio") await pageStudio(app, null);
     else if (seg[0] === "film" && seg[1]) await pageStudio(app, seg[1]);
     else notFound("That page doesn't exist.");
