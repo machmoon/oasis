@@ -8,11 +8,20 @@ import { royaltySplit } from "../server/commerce.js";
 
 await catalog.load();
 
-test("every catalogue asset loads and renders at defaults", () => {
-  for (const a of catalog.allAssets()) {
-    if (a.format === "sound") assert.ok(catalog.sound(a, {}).samples.length > 100, a.id);
-    else assert.match(catalog.render(a, {}).svg, /^<svg/, a.id);
-  }
+// Sounds render across the worker pool with a test-only time budget and one retry on a timeout (see test/corpus.mjs);
+// a sound that still times out is a timing failure, reported apart from a wrong render.
+// Started by the first test that needs it, not at import, so the pool test below doesn't queue behind 241 renders.
+let corpusRender;
+const renderAll = () => (corpusRender ||= import("./corpus.mjs").then(({ renderCorpus }) =>
+  renderCorpus(catalog.allAssets().filter((a) => a.format === "sound"), (a) => catalog.resolveInput(a, {}), (a, s) => (s.length > 100 ? null : `only ${s.length} samples`))));
+
+test("every catalogue asset loads and renders at defaults", async () => {
+  for (const a of catalog.allAssets()) if (a.format !== "sound") assert.match(catalog.render(a, {}).svg, /^<svg/, a.id);
+  assert.deepEqual((await renderAll()).failures, []);
+});
+
+test("every catalogue sound renders at defaults within the sandbox's (test) time budget", async () => {
+  assert.deepEqual((await renderAll()).timing, []);
 });
 
 test("knob values are clamped, snapped and validated against the schema", () => {

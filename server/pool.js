@@ -42,7 +42,7 @@ function pump() {
     const job = queue.shift();
     w.busy = true;
     pending.set(job.id, job);
-    const deadline = job.op === "harness" ? HARNESS_DEADLINE_MS : job.op === "sound" ? SOUND_DEADLINE_MS : DEADLINE_MS;
+    const deadline = job.deadline || (job.op === "harness" ? HARNESS_DEADLINE_MS : job.op === "sound" ? SOUND_DEADLINE_MS : DEADLINE_MS);
     // QuickJS's own interrupt can't fire while a program thrashes the allocator, so the wall clock is
     // enforced from outside: a render that overruns gets its whole worker terminated and replaced.
     job.timer = setTimeout(() => {
@@ -58,6 +58,9 @@ function pump() {
     w.postMessage({ id: job.id, op: job.op, source: job.source, values: job.values, opts: job.opts });
   }
 }
+
+/** Number of render workers, so callers can size their own fan-out. */
+export const POOL_SIZE = SIZE;
 
 export function renderInPool(source, values, opts = {}) {
   if (!workers.length) for (let i = 0; i < SIZE; i++) workers.push(spawn());
@@ -77,19 +80,21 @@ export function inspectInPool(source) {
 }
 
 /** Sound programs: build(values, dsp) off the main thread. Resolves to Float32Array samples. */
-export function soundInPool(source, values, sr) {
+// `timeLimit` (the sandbox's interrupt) and `deadline` (this pool's wall clock) are for the corpus tests only, which
+// run every catalogue sound at once on a loaded machine; production callers leave them out and get the limits above.
+export function soundInPool(source, values, sr, { timeLimit, deadline } = {}) {
   if (!workers.length) for (let i = 0; i < SIZE; i++) workers.push(spawn());
   return new Promise((resolve, reject) => {
-    queue.push({ id: ++seq, op: "sound", source, values, opts: { sr }, resolve, reject });
+    queue.push({ id: ++seq, op: "sound", source, values, opts: { sr, timeLimit }, deadline, resolve, reject });
     pump();
   });
 }
 
 /** The sound harness (factory/harness-sound.mjs measure) on a worker: the publish page's dry run. */
-export function harnessInPool(source) {
+export function harnessInPool(source, { timeLimit, deadline } = {}) {
   if (!workers.length) for (let i = 0; i < SIZE; i++) workers.push(spawn());
   return new Promise((resolve, reject) => {
-    queue.push({ id: ++seq, op: "harness", source, resolve, reject });
+    queue.push({ id: ++seq, op: "harness", source, opts: { timeLimit }, deadline, resolve, reject });
     pump();
   });
 }

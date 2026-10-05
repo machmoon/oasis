@@ -22,7 +22,10 @@ function distance(x, y) {
   return d + shape / n * 4;
 }
 
-export function measure(src, { sr = SOUND_SR } = {}) {
+/** The publish gate: a worst render slower than this (wall clock, in the sandbox) is an error. */
+export const SLOW_RENDER_MS = 2500;
+
+export function measure(src, { sr = SOUND_SR, timeLimit } = {}) {
   // knobEffects: one row per knob with the loudest-changing extreme and how far it moved, so the publish page can
   // offer a play button per knob and say what the harness heard.
   const report = { errors: [], warnings: [], renders: 0, slowestMs: 0, knobs: 0, deadKnobs: [], subtleKnobs: [], knobEffects: [], seedSimilarity: null, defaults: null };
@@ -37,7 +40,7 @@ export function measure(src, { sr = SOUND_SR } = {}) {
     const values = resolveKnobs(params, input);
     const t = performance.now();
     let s;
-    try { s = renderSound(src, values, { sr }); } catch (e) { report.errors.push(`${label}: ${e.message}`); return null; }
+    try { s = renderSound(src, values, timeLimit ? { sr, timeLimit } : { sr }); } catch (e) { report.errors.push(`${label}: ${e.message}`); return null; }
     const ms = performance.now() - t;
     report.renders++;
     report.slowestMs = Math.max(report.slowestMs, Math.round(ms));
@@ -91,7 +94,7 @@ export function measure(src, { sr = SOUND_SR } = {}) {
     }
     run(inp, `random combination ${i + 1}`);
   }
-  if (report.slowestMs > 2500) report.errors.push(`too slow: ${report.slowestMs} ms worst render in the sandbox`);
+  if (report.slowestMs > SLOW_RENDER_MS) report.errors.push(`too slow: ${report.slowestMs} ms worst render in the sandbox`);
   else if (report.slowestMs > 1000) report.warnings.push(`slow: ${report.slowestMs} ms worst render`);
   if (report.deadKnobs.length) report.errors.push(`knobs with no audible effect: ${report.deadKnobs.join(", ")}`);
   if (report.subtleKnobs.length) report.warnings.push(`knobs with a subtle effect: ${report.subtleKnobs.join(", ")}`);
