@@ -30,7 +30,8 @@ export function loadDisplayFont() {
 }
 const DISPLAY = '"Anton", "Source Sans 3", system-ui, sans-serif';
 const TEXT = '"Source Sans 3", system-ui, sans-serif';
-const GROUND = { kyoto: "#9FBE84", seaside: "#E6D8B4", winter: "#EEF2F6", autumn: "#C9B58E", candy: "#BFD9A8", sf: "#A9C48A", town: "#A9C48A" };
+// the kit's own lawn colours (town-plaza's grass by season), so the ground and the lawns are one green
+const GROUND = { kyoto: "#AFC793", seaside: "#E6D8B4", winter: "#EEF2F6", autumn: "#C9B58E", candy: "#BFD9A8", sf: "#AFC793", town: "#AFC793" };
 
 // Unlicensed paid pieces render in clay, the way a 3D tool shows a model before its materials: the set reads as a
 // set, and licensing the film is what paints it.

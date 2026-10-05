@@ -157,7 +157,7 @@ const EditShader = {
 //   clip-space grid after projection, "not in world space, which gives a permanently mangled model".
 export const LOOKS = {
   none: {},
-  toon: { bands: 4, outline: 1.6 },
+  toon: { bands: 5, outline: 1.6 },
   pixel: { pixel: 6 },
   dither: { pixel: 2, levels: 5, dither: 1 },
   ps1: { snap: 160, pixel: 3, levels: 12, dither: 0.6 },
@@ -173,7 +173,8 @@ const ToonShader = {
     void main() {
       vec4 c = texture2D(tDiffuse, vUv);
       float l = dot(c.rgb, vec3(0.2126, 0.7152, 0.0722));
-      if (l > 1e-4) { float q = (floor(pow(l, 0.6) * uBands) + 0.5) / uBands; c.rgb *= pow(q, 1.0 / 0.6) / l; }
+      // bands on a gamma'd luminance, never darker than four fifths of the lit value, so shade stays readable
+      if (l > 1e-4) { float q = (floor(pow(l, 0.55) * uBands) + 0.5) / uBands; c.rgb *= clamp(pow(q, 1.0 / 0.55) / l, 0.8, 1.35); }
       vec2 px = uOutline / uRes;
       float z = lin(vUv);
       float e = abs(lin(vUv + vec2(px.x, 0.0)) - z) + abs(lin(vUv - vec2(px.x, 0.0)) - z) + abs(lin(vUv + vec2(0.0, px.y)) - z) + abs(lin(vUv - vec2(0.0, px.y)) - z);
