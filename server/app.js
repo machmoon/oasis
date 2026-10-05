@@ -295,8 +295,9 @@ export async function createApp() {
     const ping = setInterval(() => res.write(": ping\n\n"), 20000);
     req.on("close", () => { clearInterval(ping); commerce.events.off("sale", send); });
   });
+  // Every captured order with royalties: kit checkouts, agent orders on a budget, single-asset licences.
   app.get("/api/sales", wrap(async (req, res) => {
-    const orders = (await store.list("orders")).filter((o) => o.status === "COMPLETED" && o.royalties && o.funded).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+    const orders = (await store.list("orders")).filter((o) => o.status === "COMPLETED" && o.royalties?.length).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
     res.json(orders.slice(0, 40).map(commerce.saleEvent).map((e, i) => ({ ...e, at: orders[i].createdAt })));
   }));
 

@@ -126,3 +126,19 @@ test("a kit: a vibe becomes 6-10 tuned sounds, one PayPal order licenses them al
     assert.match(mod, /export function build/);
   } finally { commerce.setPaypalClient(null); }
 });
+
+test("the ledger lists a kit checkout order, not only agent orders on a budget", async () => {
+  const sales = await (await fetch(`${base}/api/sales`)).json();
+  const sale = sales.find((s) => s.orderId === "KITORDER1");
+  assert.ok(sale, "the kit order paid through PayPal Checkout is in /api/sales");
+  assert.equal(sale.agent, null);
+  assert.equal(sale.funded, false);
+  const order = await store.get("orders", "KITORDER1");
+  assert.equal(sale.total, order.total);
+  assert.ok(sale.creators.length >= 2 && sale.creators.every((c) => c.usd > 0));
+  const creatorUsd = sale.creators.reduce((s, c) => s + c.usd, 0);
+  assert.ok(creatorUsd > 0 && creatorUsd < sale.total, "creators get their shares; the platform keeps the rest");
+  const ledger = await (await fetch(`${base}/api/ledger`)).json();
+  assert.ok(ledger.recent.some((r) => r.orderId === "KITORDER1"));
+  for (const c of sale.creators) assert.ok(ledger.authors.find((a) => a.author === c.author)?.cents >= Math.round(c.usd * 100), c.author);
+});

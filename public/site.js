@@ -62,7 +62,7 @@ async function drawKit(el, { limit = 12 } = {}) {
 
 // ---------- sales and creators (shared by home and ledger) ----------
 function saleRow(s, fresh = false) {
-  const who = (s.agent || "?").replace(/^an? /i, "").slice(0, 1).toUpperCase();
+  const who = (s.agent || "Buyer").replace(/^an? /i, "").slice(0, 1).toUpperCase();
   const names = s.items.map((i) => i.title);
   const list = names.length > 3 ? `${names.slice(0, 3).join(", ")} and ${names.length - 3} more` : names.join(", ");
   return `<div class="sale${fresh ? " new" : ""}">
@@ -213,7 +213,7 @@ async function pageBudgetView(id) {
 async function pageLedger() {
   payCss();
   app.innerHTML = `<div class="wrap pk" style="padding:48px 0 96px">
-    <div class="head"><h1>The ledger.</h1><p>Every licence an agent bought, the PayPal order behind it, and what each creator earned. Creator shares are paid out with PayPal Payouts once the 14-day refund window closes.</p></div>
+    <div class="head"><h1>The ledger.</h1><p>Every order that paid a creator: kits licensed at checkout, agent purchases on a budget, single sounds. The PayPal order behind each, and what every creator earned. Creator shares are paid out with PayPal Payouts once the 14-day refund window closes.</p></div>
     <div class="pk-stats" id="stats"><div class="pk-stat"><b class="num" id="st-paid">$0.00</b><span>paid to creators</span></div><div class="pk-stat"><b class="num" id="st-orders">0</b><span>PayPal orders</span></div><div class="pk-stat"><b class="num" id="st-creators">0</b><span>creators paid</span></div></div>
     <div class="ledger">
       <div><div class="pk-col-h">Orders <span class="pk-live"><i aria-hidden="true"></i>live</span></div><div class="sales" id="sales"><div class="pk-stack" style="padding:12px 16px"><div class="pk-sk row"></div><div class="pk-sk row"></div><div class="pk-sk row"></div></div></div></div>
