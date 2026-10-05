@@ -33,6 +33,12 @@ well than Polyfork does. This table is the lane: showing and rebuilding assets.
   `#/a/:id` to it.
 - `public/looks.js`: the seven looks, as functions over a `createViewer` instance.
 - `render.png?night=1`: the isometric sheet at night, for the grid's hover.
+- `public/world3d.js`: one fix. `frame({ keepAngle })` overwrote the camera position before reading its direction, so
+  every reframe after a knob change (a taller building, a shorter fence) looked straight down at the roof.
+
+Screenshots: `docs/gallery/assets-before/` (kit, asset, kit-dark) and `docs/gallery/assets-after/` (kit, kit-dark,
+kit-hover-1/2, kit-filter-parkline, kit-phone, asset-1-defaults, asset-2-rebuild-flash, asset-3-remixed,
+asset-4-compare, asset-5-street, asset-dark, asset-phone, look-clay/ink/dither/pixel/ps1/night).
 
 ## Borrowed
 
