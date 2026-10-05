@@ -1,0 +1,2508 @@
+[
+ {
+  "slug": "rainy-street-bed-steady",
+  "kind": "ambience",
+  "brief": "Loopable 3 s steady downpour on asphalt and parked cars; knobs: surface (asphalt|concrete|mixed), rain density 0..1, drip detail 0..1, distance 0..1, loop crossfade toggle",
+  "price": 4,
+  "kit": "rainy-city-street"
+ },
+ {
+  "slug": "rainy-traffic-hiss-bed",
+  "kind": "ambience",
+  "brief": "Loopable 4 s wet tire hiss from passing traffic; knobs: road width (alley|street|avenue), traffic density 0..1, tire spray 0..1, low rumble 0..1, pass rate, loop crossfade toggle",
+  "price": 5,
+  "kit": "rainy-city-street"
+ },
+ {
+  "slug": "rainy-awning-shelter-bed",
+  "kind": "ambience",
+  "brief": "Loopable 3 s view from under a shop awning, rain drumming overhead; knobs: awning material (canvas|vinyl|metal), drum intensity 0..1, runoff stream 0..1, muffled street 0..1, loop crossfade toggle",
+  "price": 4,
+  "kit": "rainy-city-street"
+ },
+ {
+  "slug": "rainy-alley-drip-bed",
+  "kind": "ambience",
+  "brief": "Loopable 2 s quiet back-alley drips and gutter trickle; knobs: container (bucket|dumpster|pipe), drip density 0..1, echo amount 0..1, distant city 0..1, drip rate, loop crossfade toggle",
+  "price": 3,
+  "kit": "rainy-city-street"
+ },
+ {
+  "slug": "rainy-neon-buzz",
+  "kind": "sfx",
+  "brief": "Neon sign hum with occasional flicker; knobs: tube size (small|medium|large), buzz intensity 0..1, flicker amount 0..1, rain spatter on glass 0..1, hum pitch, tail toggle",
+  "price": 2,
+  "kit": "rainy-city-street"
+ },
+ {
+  "slug": "rainy-neon-flicker-out",
+  "kind": "sfx",
+  "brief": "Neon tube sputters and dies with a crackle; knobs: tube size (small|medium|large), crackle 0..1, stutter count 0..1, zap brightness 0..1, decay tail toggle",
+  "price": 2,
+  "kit": "rainy-city-street"
+ },
+ {
+  "slug": "rainy-car-pass-wet",
+  "kind": "sfx",
+  "brief": "Single car passing over wet road left-to-right; knobs: vehicle (compact|sedan|truck|bus), speed 0..1, spray amount 0..1, engine presence 0..1, doppler pitch, tail toggle",
+  "price": 3,
+  "kit": "rainy-city-street"
+ },
+ {
+  "slug": "rainy-puddle-splash-car",
+  "kind": "sfx",
+  "brief": "Car tire hits a deep puddle and throws a sheet of water; knobs: puddle size (small|medium|large), speed 0..1, curb slap 0..1, spray scatter 0..1, tail toggle",
+  "price": 3,
+  "kit": "rainy-city-street"
+ },
+ {
+  "slug": "rainy-distant-siren",
+  "kind": "sfx",
+  "brief": "Distant emergency siren drifting across the skyline; knobs: siren type (police|ambulance|fire), distance 0..1, building reflections 0..1, rain masking 0..1, wail rate, fade tail toggle",
+  "price": 3,
+  "kit": "rainy-city-street"
+ },
+ {
+  "slug": "rainy-car-horn-distant",
+  "kind": "sfx",
+  "brief": "Short honk echoing down a wet block; knobs: horn type (compact|sedan|truck), length 0..1, distance 0..1, street echo 0..1, pitch, tail toggle",
+  "price": 2,
+  "kit": "rainy-city-street"
+ },
+ {
+  "slug": "rainy-storm-drain-gurgle",
+  "kind": "sfx",
+  "brief": "Water rushing into a curbside storm drain; knobs: grate size (small|medium|large), flow 0..1, gurgle 0..1, sewer echo 0..1, gulp rate, tail toggle",
+  "price": 2,
+  "kit": "rainy-city-street"
+ },
+ {
+  "slug": "rainy-gutter-downspout",
+  "kind": "sfx",
+  "brief": "Downspout overflow pouring onto pavement; knobs: pipe material (tin|plastic|iron), pour volume 0..1, splash spread 0..1, metallic ring 0..1, tail toggle",
+  "price": 2,
+  "kit": "rainy-city-street"
+ },
+ {
+  "slug": "rainy-thunder-rumble-far",
+  "kind": "sfx",
+  "brief": "Far thunder roll muffled by rain and buildings; knobs: size (small|medium|large), rumble depth 0..1, crack amount 0..1, roll length 0..1, pitch, tail toggle",
+  "price": 3,
+  "kit": "rainy-city-street"
+ },
+ {
+  "slug": "rainy-bus-stop-brakes",
+  "kind": "sfx",
+  "brief": "City bus pulls in with wet brakes and air hiss; knobs: bus size (mini|standard|articulated), brake squeal 0..1, air release 0..1, splash 0..1, tail toggle",
+  "price": 3,
+  "kit": "rainy-city-street"
+ },
+ {
+  "slug": "rainy-footsteps-puddle",
+  "kind": "foley",
+  "brief": "Single footstep into a shallow puddle; knobs: shoe (sneaker|boot|heel|leather), splash depth 0..1, weight 0..1, grit 0..1, pitch, tail toggle",
+  "price": 1,
+  "kit": "rainy-city-street"
+ },
+ {
+  "slug": "rainy-footsteps-wet-pavement",
+  "kind": "foley",
+  "brief": "Footstep on rain-slick sidewalk; knobs: shoe (sneaker|boot|heel|leather), weight 0..1, squelch 0..1, scuff 0..1, step rate, tail toggle",
+  "price": 1,
+  "kit": "rainy-city-street"
+ },
+ {
+  "slug": "rainy-umbrella-open",
+  "kind": "foley",
+  "brief": "Umbrella snapping open with water shake; knobs: umbrella type (compact|golf|clear dome), snap force 0..1, fabric rustle 0..1, droplet shake 0..1, tail toggle",
+  "price": 2,
+  "kit": "rainy-city-street"
+ },
+ {
+  "slug": "rainy-umbrella-close-shake",
+  "kind": "foley",
+  "brief": "Umbrella collapsed and shaken out under shelter; knobs: umbrella type (compact|golf|clear dome), shake count 0..1, spray 0..1, strap click 0..1, tail toggle",
+  "price": 2,
+  "kit": "rainy-city-street"
+ },
+ {
+  "slug": "rainy-rain-on-umbrella",
+  "kind": "foley",
+  "brief": "Rain pattering on an umbrella from the holder's ear; knobs: canopy (nylon|vinyl|paper), rain density 0..1, drop size 0..1, drip-off edge 0..1, tail toggle",
+  "price": 2,
+  "kit": "rainy-city-street"
+ },
+ {
+  "slug": "rainy-coat-rustle-wet",
+  "kind": "foley",
+  "brief": "Wet raincoat movement and zipper; knobs: fabric (vinyl|nylon|wool), movement 0..1, water squeak 0..1, zipper presence 0..1, speed, tail toggle",
+  "price": 1,
+  "kit": "rainy-city-street"
+ },
+ {
+  "slug": "rainy-car-door-wet",
+  "kind": "foley",
+  "brief": "Car door opening and shutting in rain; knobs: vehicle (compact|sedan|taxi|van), slam force 0..1, seal squelch 0..1, rain inside 0..1, tail toggle",
+  "price": 2,
+  "kit": "rainy-city-street"
+ },
+ {
+  "slug": "rainy-shop-door-bell",
+  "kind": "foley",
+  "brief": "Café door opens, bell jingles, rain swells in then muffles; knobs: bell (brass|tin|chime), door force 0..1, rain swell 0..1, interior warmth 0..1, tail toggle",
+  "price": 2,
+  "kit": "rainy-city-street"
+ },
+ {
+  "slug": "rainy-trash-can-impact",
+  "kind": "impact",
+  "brief": "Wet metal trash can knocked over on pavement; knobs: can material (steel|plastic|dumpster lid), force 0..1, rattle 0..1, water slosh 0..1, pitch, reverb tail toggle",
+  "price": 3,
+  "kit": "rainy-city-street"
+ },
+ {
+  "slug": "rainy-body-fall-puddle",
+  "kind": "impact",
+  "brief": "Body drop into street water; knobs: surface (puddle|wet asphalt|gutter), weight 0..1, splash 0..1, cloth slap 0..1, tail toggle",
+  "price": 3,
+  "kit": "rainy-city-street"
+ },
+ {
+  "slug": "rainy-car-hood-slam",
+  "kind": "impact",
+  "brief": "Hand or object slamming a wet car hood; knobs: panel (hood|roof|trunk), force 0..1, metal ring 0..1, water spray 0..1, pitch, tail toggle",
+  "price": 3,
+  "kit": "rainy-city-street"
+ },
+ {
+  "slug": "rainy-crosswalk-signal",
+  "kind": "ui",
+  "brief": "Pedestrian crossing chirp/tick signal; knobs: tone (chirp|tick|beep), pitch, rate, brightness 0..1, rain wash 0..1, tail toggle",
+  "price": 1,
+  "kit": "rainy-city-street"
+ },
+ {
+  "slug": "rainy-crosswalk-button",
+  "kind": "ui",
+  "brief": "Crosswalk push-button press with confirm tone; knobs: button (metal|plastic), click weight 0..1, confirm tone 0..1, wetness 0..1, pitch, tail toggle",
+  "price": 1,
+  "kit": "rainy-city-street"
+ },
+ {
+  "slug": "rainy-neon-menu-blip",
+  "kind": "ui",
+  "brief": "Interface blip styled as a neon buzz pop for menus; knobs: variant (select|back|error), buzz 0..1, brightness 0..1, drip accent 0..1, pitch, tail toggle",
+  "price": 1,
+  "kit": "rainy-city-street"
+ },
+ {
+  "slug": "rainy-noir-sax-sting",
+  "kind": "music-loop",
+  "brief": "Short noir saxophone phrase with rain-room reverb as a one-shot sting; knobs: mood (melancholy|tense|smoky), phrase length 0..1, breathiness 0..1, rain bed 0..1, key pitch, reverb tail toggle",
+  "price": 4,
+  "kit": "rainy-city-street"
+ },
+ {
+  "slug": "rainy-lofi-rain-loop",
+  "kind": "music-loop",
+  "brief": "Loopable 4-bar lo-fi electric piano loop under rain; knobs: chord color (minor|major7|sus), tape wobble 0..1, vinyl crackle 0..1, rain mix 0..1, tempo, loop crossfade toggle",
+  "price": 5,
+  "kit": "rainy-city-street"
+ },
+ {
+  "slug": "wooden-mug-clink-toast",
+  "kind": "foley",
+  "brief": "Two mugs clinking in a toast; knobs: material (pewter|ceramic|wood), force 0..1, liquid slosh 0..1, pitch, room tail toggle",
+  "price": 2,
+  "kit": "wooden-tavern"
+ },
+ {
+  "slug": "wooden-mug-slam-table",
+  "kind": "impact",
+  "brief": "Heavy mug slammed down on an oak table; knobs: mug material (pewter|ceramic|wood), force 0..1, table resonance 0..1, liquid splash 0..1, tail toggle",
+  "price": 3,
+  "kit": "wooden-tavern"
+ },
+ {
+  "slug": "wooden-ale-pour-tap",
+  "kind": "sfx",
+  "brief": "Ale poured from a barrel tap into a mug; knobs: vessel size (small|tankard|pitcher), flow rate 0..1, foam fizz 0..1, fill duration, tail toggle",
+  "price": 2,
+  "kit": "wooden-tavern"
+ },
+ {
+  "slug": "wooden-barrel-tap-knock",
+  "kind": "sfx",
+  "brief": "Mallet driving a spigot into a barrel bung; knobs: barrel size (keg|hogshead|tun), strike force 0..1, liquid fullness 0..1, hit count, tail toggle",
+  "price": 3,
+  "kit": "wooden-tavern"
+ },
+ {
+  "slug": "wooden-barrel-roll-boards",
+  "kind": "foley",
+  "brief": "Barrel rolled across floorboards; knobs: barrel size (keg|hogshead), fullness 0..1, floor creak 0..1, roll speed, tail toggle",
+  "price": 3,
+  "kit": "wooden-tavern"
+ },
+ {
+  "slug": "wooden-barrel-drop-impact",
+  "kind": "impact",
+  "brief": "Barrel dropped upright onto planks; knobs: barrel size (keg|hogshead|tun), drop height 0..1, fullness slosh 0..1, hoop rattle 0..1, tail toggle",
+  "price": 3,
+  "kit": "wooden-tavern"
+ },
+ {
+  "slug": "wooden-bench-scrape",
+  "kind": "foley",
+  "brief": "Bench dragged back from a table; knobs: bench length (stool|short|long), drag speed 0..1, floor grit 0..1, weight 0..1, tail toggle",
+  "price": 2,
+  "kit": "wooden-tavern"
+ },
+ {
+  "slug": "wooden-bench-sit-creak",
+  "kind": "foley",
+  "brief": "Someone sitting heavily on a wooden bench; knobs: bench age (new|worn|rickety), body weight 0..1, creak amount 0..1, settle duration, tail toggle",
+  "price": 2,
+  "kit": "wooden-tavern"
+ },
+ {
+  "slug": "wooden-boots-on-boards",
+  "kind": "foley",
+  "brief": "Boot footsteps across creaky floorboards; knobs: boot type (soft leather|hobnail|heavy), pace rate, weight 0..1, board creak 0..1, step count, tail toggle",
+  "price": 3,
+  "kit": "wooden-tavern"
+ },
+ {
+  "slug": "wooden-boots-stairs-creak",
+  "kind": "foley",
+  "brief": "Boots climbing a narrow wooden staircase; knobs: direction (up|down), pace rate, weight 0..1, stair groan 0..1, tail toggle",
+  "price": 3,
+  "kit": "wooden-tavern"
+ },
+ {
+  "slug": "wooden-door-creak-open",
+  "kind": "sfx",
+  "brief": "Old tavern door creaking open on iron hinges; knobs: door weight (light|heavy|oak slab), open speed 0..1, hinge rust 0..1, pitch, tail toggle",
+  "price": 3,
+  "kit": "wooden-tavern"
+ },
+ {
+  "slug": "wooden-door-slam-shut",
+  "kind": "impact",
+  "brief": "Tavern door slammed shut with latch rattle; knobs: door weight (light|heavy|oak slab), force 0..1, latch rattle 0..1, frame rattle 0..1, tail toggle",
+  "price": 3,
+  "kit": "wooden-tavern"
+ },
+ {
+  "slug": "wooden-door-latch-bolt",
+  "kind": "foley",
+  "brief": "Iron latch lifted or bolt slid on a wooden door; knobs: action (latch|bolt|bar), force 0..1, rust grind 0..1, speed, tail toggle",
+  "price": 2,
+  "kit": "wooden-tavern"
+ },
+ {
+  "slug": "wooden-coin-drop-table",
+  "kind": "foley",
+  "brief": "Coins tossed onto a wooden table; knobs: metal (copper|silver|gold), coin count 0..1, toss force 0..1, spin-out length 0..1, tail toggle",
+  "price": 2,
+  "kit": "wooden-tavern"
+ },
+ {
+  "slug": "wooden-coin-purse-jingle",
+  "kind": "foley",
+  "brief": "Leather coin purse jingled or set down; knobs: purse size (small|medium|fat), fullness 0..1, shake energy 0..1, leather creak 0..1, tail toggle",
+  "price": 2,
+  "kit": "wooden-tavern"
+ },
+ {
+  "slug": "wooden-fire-log-add",
+  "kind": "sfx",
+  "brief": "Log tossed onto the hearth with ember burst; knobs: log size (kindling|split|heavy), throw force 0..1, spark crackle 0..1, flare intensity 0..1, tail toggle",
+  "price": 3,
+  "kit": "wooden-tavern"
+ },
+ {
+  "slug": "wooden-fire-poker-stir",
+  "kind": "foley",
+  "brief": "Iron poker stirring coals in a hearth; knobs: poker type (light|heavy), stir rate, ember crackle 0..1, metal scrape 0..1, tail toggle",
+  "price": 2,
+  "kit": "wooden-tavern"
+ },
+ {
+  "slug": "wooden-plate-cutlery-set",
+  "kind": "foley",
+  "brief": "Wooden trencher and cutlery set on a table; knobs: plate material (wood|pewter|clay), force 0..1, cutlery rattle 0..1, item count, tail toggle",
+  "price": 2,
+  "kit": "wooden-tavern"
+ },
+ {
+  "slug": "wooden-chair-tip-crash",
+  "kind": "impact",
+  "brief": "Chair knocked over onto boards in a scuffle; knobs: chair type (stool|chair|bench), fall force 0..1, bounce rattle 0..1, splinter 0..1, tail toggle",
+  "price": 3,
+  "kit": "wooden-tavern"
+ },
+ {
+  "slug": "wooden-dice-cup-roll",
+  "kind": "sfx",
+  "brief": "Bone dice shaken in a leather cup and rolled on wood; knobs: dice count (1|2|5), shake duration, roll energy 0..1, cup material 0..1 leather-to-wood, tail toggle",
+  "price": 2,
+  "kit": "wooden-tavern"
+ },
+ {
+  "slug": "wooden-beam-settle-creak",
+  "kind": "sfx",
+  "brief": "Low ceiling beam groaning as the building settles; knobs: beam size (joist|main beam), creak length, stress 0..1, pitch, dust trickle 0..1, tail toggle",
+  "price": 2,
+  "kit": "wooden-tavern"
+ },
+ {
+  "slug": "wooden-ambience-quiet-hearth",
+  "kind": "ambience",
+  "brief": "Loopable 2-4s bed of an empty tavern with crackling fire; knobs: room size (snug|hall), fire intensity 0..1, beam creaks 0..1, wind outside 0..1, loop length",
+  "price": 4,
+  "kit": "wooden-tavern"
+ },
+ {
+  "slug": "wooden-ambience-busy-crowd",
+  "kind": "ambience",
+  "brief": "Loopable 2-4s bed of a crowded tavern with murmur and mugs; knobs: crowd size (few|full|packed), chatter density 0..1, mug clatter 0..1, laughter 0..1, loop length",
+  "price": 5,
+  "kit": "wooden-tavern"
+ },
+ {
+  "slug": "wooden-ambience-rainy-night",
+  "kind": "ambience",
+  "brief": "Loopable 2-4s bed of rain on shutters with low hearth inside; knobs: rain type (drizzle|steady|storm), rain intensity 0..1, shutter rattle 0..1, fire level 0..1, loop length",
+  "price": 4,
+  "kit": "wooden-tavern"
+ },
+ {
+  "slug": "wooden-ambience-cellar-barrels",
+  "kind": "ambience",
+  "brief": "Loopable 2-4s bed of the barrel cellar below with drips and muffled floor above; knobs: cellar size (small|vault), drip rate, muffled footsteps 0..1, damp hum 0..1, loop length",
+  "price": 3,
+  "kit": "wooden-tavern"
+ },
+ {
+  "slug": "wooden-ui-coin-purchase",
+  "kind": "ui",
+  "brief": "Short coin-clink confirm for buying a drink or room; knobs: metal (copper|silver|gold), coin count 1-3, brightness 0..1, pitch, wood tap tail toggle",
+  "price": 1,
+  "kit": "wooden-tavern"
+ },
+ {
+  "slug": "wooden-ui-menu-tap",
+  "kind": "ui",
+  "brief": "Soft knuckle tap on wood for menu select/hover; knobs: wood type (pine|oak), hardness 0..1, pitch, click variance 0..1, tail toggle",
+  "price": 1,
+  "kit": "wooden-tavern"
+ },
+ {
+  "slug": "wooden-ui-parchment-open",
+  "kind": "ui",
+  "brief": "Parchment notice unrolled for quest board or menu open; knobs: paper weight (thin|vellum), unroll speed 0..1, crinkle 0..1, pitch, tail toggle",
+  "price": 1,
+  "kit": "wooden-tavern"
+ },
+ {
+  "slug": "wooden-music-lute-jig-loop",
+  "kind": "music-loop",
+  "brief": "Short loopable lute and hand-drum jig played in the corner; knobs: mode (major|dorian), tempo rate, drum presence 0..1, room distance 0..1, loop bars (2|4)",
+  "price": 5,
+  "kit": "wooden-tavern"
+ },
+ {
+  "slug": "wooden-music-fiddle-sting",
+  "kind": "music-loop",
+  "brief": "Short fiddle flourish one-shot for entering the tavern; knobs: mood (cheerful|wistful), length 0..1, ornament density 0..1, pitch, room tail toggle",
+  "price": 4,
+  "kit": "wooden-tavern"
+ },
+ {
+  "slug": "sci-console-beep",
+  "kind": "sfx",
+  "brief": "Short console beep; knobs: tone (sine|square|glass), pitch, brightness 0..1, decay 0..1, tail on/off",
+  "price": 1,
+  "kit": "sci-fi-console"
+ },
+ {
+  "slug": "sci-console-beep-sequence",
+  "kind": "sfx",
+  "brief": "Rapid multi-note data-entry beep run; knobs: scale (major|minor|random), note rate, note count, randomness 0..1, echo 0..1",
+  "price": 2,
+  "kit": "sci-fi-console"
+ },
+ {
+  "slug": "sci-ui-confirm",
+  "kind": "ui",
+  "brief": "Rising two-tone acknowledge chirp; knobs: timbre (soft|chime|digital), pitch, interval spread 0..1, sparkle 0..1, tail on/off",
+  "price": 1,
+  "kit": "sci-fi-console"
+ },
+ {
+  "slug": "sci-ui-deny",
+  "kind": "ui",
+  "brief": "Falling buzzy reject tone; knobs: timbre (buzz|square|nasal), pitch, harshness 0..1, repeat count, tail on/off",
+  "price": 1,
+  "kit": "sci-fi-console"
+ },
+ {
+  "slug": "sci-ui-hover-tick",
+  "kind": "ui",
+  "brief": "Tiny high selection tick for menu focus; knobs: material (glass|plastic|digital), pitch, click sharpness 0..1, shimmer 0..1",
+  "price": 1,
+  "kit": "sci-fi-console"
+ },
+ {
+  "slug": "sci-hologram-materialize",
+  "kind": "sfx",
+  "brief": "Shimmering hologram build-up with granular sparkle; knobs: size (small|medium|room), duration, shimmer 0..1, glitch 0..1, tail on/off",
+  "price": 3,
+  "kit": "sci-fi-console"
+ },
+ {
+  "slug": "sci-hologram-dissolve",
+  "kind": "sfx",
+  "brief": "Hologram fading out into scattered digital grains; knobs: size (small|medium|room), duration, scatter 0..1, pitch drop 0..1, tail on/off",
+  "price": 3,
+  "kit": "sci-fi-console"
+ },
+ {
+  "slug": "sci-hologram-glitch",
+  "kind": "sfx",
+  "brief": "Unstable flickering hologram stutter; knobs: severity 0..1, stutter rate, bitcrush 0..1, pitch, tail on/off",
+  "price": 2,
+  "kit": "sci-fi-console"
+ },
+ {
+  "slug": "sci-servo-door-open",
+  "kind": "sfx",
+  "brief": "Pneumatic sliding bridge door opening with servo whine; knobs: size (hatch|door|blast-door), speed, hiss 0..1, servo whine 0..1, tail on/off",
+  "price": 3,
+  "kit": "sci-fi-console"
+ },
+ {
+  "slug": "sci-servo-door-close",
+  "kind": "sfx",
+  "brief": "Sliding door closing with seal thunk; knobs: size (hatch|door|blast-door), speed, hiss 0..1, seal weight 0..1, tail on/off",
+  "price": 3,
+  "kit": "sci-fi-console"
+ },
+ {
+  "slug": "sci-scanner-sweep",
+  "kind": "sfx",
+  "brief": "Rotating sensor sweep pass with doppler tone; knobs: range (short|medium|long), sweep rate, resonance 0..1, noise bed 0..1, tail on/off",
+  "price": 2,
+  "kit": "sci-fi-console"
+ },
+ {
+  "slug": "sci-scanner-ping",
+  "kind": "sfx",
+  "brief": "Sonar-like contact ping with reflections; knobs: medium (space|hull|fluid), pitch, return count, distance 0..1, tail on/off",
+  "price": 2,
+  "kit": "sci-fi-console"
+ },
+ {
+  "slug": "sci-red-alert-klaxon",
+  "kind": "sfx",
+  "brief": "Classic whooping red alert siren cycle; knobs: voice (whoop|square|horn), cycle rate, pitch, grit 0..1, room reverb 0..1",
+  "price": 3,
+  "kit": "sci-fi-console"
+ },
+ {
+  "slug": "sci-warning-alarm-pulse",
+  "kind": "sfx",
+  "brief": "Repeating urgent warning pulse tone; knobs: tone (sine|saw|chime), pulse rate, pitch, urgency 0..1, tail on/off",
+  "price": 2,
+  "kit": "sci-fi-console"
+ },
+ {
+  "slug": "sci-system-power-up",
+  "kind": "sfx",
+  "brief": "Console bank powering on with rising hum and relay clicks; knobs: size (panel|station|bridge), duration, hum level 0..1, relay density 0..1, tail on/off",
+  "price": 3,
+  "kit": "sci-fi-console"
+ },
+ {
+  "slug": "sci-system-power-down",
+  "kind": "sfx",
+  "brief": "Systems shutting down with falling whine and dying hum; knobs: size (panel|station|bridge), duration, pitch drop 0..1, sputter 0..1, tail on/off",
+  "price": 3,
+  "kit": "sci-fi-console"
+ },
+ {
+  "slug": "sci-teleport-beam",
+  "kind": "sfx",
+  "brief": "Transporter beam shimmer with chorus sparkle; knobs: direction (in|out), duration, sparkle 0..1, harmonic swell 0..1, tail on/off",
+  "price": 4,
+  "kit": "sci-fi-console"
+ },
+ {
+  "slug": "sci-data-transfer-chatter",
+  "kind": "sfx",
+  "brief": "Burbling computer data stream chatter; knobs: style (modem|bleeps|granular), density 0..1, pitch, filter sweep 0..1, duration",
+  "price": 2,
+  "kit": "sci-fi-console"
+ },
+ {
+  "slug": "sci-console-button-press",
+  "kind": "foley",
+  "brief": "Physical console key or touch-panel press; knobs: material (rubber|metal|glass), force 0..1, click brightness 0..1, latch on/off",
+  "price": 1,
+  "kit": "sci-fi-console"
+ },
+ {
+  "slug": "sci-lever-throttle-pull",
+  "kind": "foley",
+  "brief": "Helm throttle lever pushed through detents; knobs: material (alloy|composite), detent count, weight 0..1, friction 0..1, tail on/off",
+  "price": 2,
+  "kit": "sci-fi-console"
+ },
+ {
+  "slug": "sci-captain-chair-swivel",
+  "kind": "foley",
+  "brief": "Command chair rotation with padded creak and bearing; knobs: material (leather|vinyl|alloy), speed, creak 0..1, bearing whir 0..1",
+  "price": 2,
+  "kit": "sci-fi-console"
+ },
+ {
+  "slug": "sci-boots-deck-plating",
+  "kind": "foley",
+  "brief": "Footsteps on metal deck grating; knobs: surface (grate|plate|carpet), pace rate, weight 0..1, ring 0..1, step count",
+  "price": 2,
+  "kit": "sci-fi-console"
+ },
+ {
+  "slug": "sci-panel-hatch-access",
+  "kind": "foley",
+  "brief": "Maintenance panel unlatched and swung open; knobs: material (thin-metal|heavy-alloy), size (small|large), latch snap 0..1, rattle 0..1, tail on/off",
+  "price": 2,
+  "kit": "sci-fi-console"
+ },
+ {
+  "slug": "sci-console-spark-burst",
+  "kind": "impact",
+  "brief": "Console overload explosion with electrical crackle and debris; knobs: size (small|medium|large), crackle 0..1, debris 0..1, low punch 0..1, tail on/off",
+  "price": 4,
+  "kit": "sci-fi-console"
+ },
+ {
+  "slug": "sci-hull-impact-hit",
+  "kind": "impact",
+  "brief": "Weapon hit shuddering through the hull; knobs: size (graze|hit|heavy), low boom 0..1, metal groan 0..1, rattle 0..1, tail on/off",
+  "price": 4,
+  "kit": "sci-fi-console"
+ },
+ {
+  "slug": "sci-docking-clamp-clunk",
+  "kind": "impact",
+  "brief": "Heavy docking clamp engaging with servo lock; knobs: size (small|medium|massive), weight 0..1, hydraulic hiss 0..1, resonance 0..1, tail on/off",
+  "price": 3,
+  "kit": "sci-fi-console"
+ },
+ {
+  "slug": "sci-reactor-hum-bed",
+  "kind": "ambience",
+  "brief": "Loopable 4 s deep reactor core hum; knobs: size (small|ship|capital), pitch, throb rate, harmonic richness 0..1, grit 0..1",
+  "price": 4,
+  "kit": "sci-fi-console"
+ },
+ {
+  "slug": "sci-bridge-room-tone",
+  "kind": "ambience",
+  "brief": "Loopable 3 s quiet bridge air with distant console chirps; knobs: activity 0..1, air hiss 0..1, chirp density 0..1, room size (small|large)",
+  "price": 4,
+  "kit": "sci-fi-console"
+ },
+ {
+  "slug": "sci-bridge-red-alert-bed",
+  "kind": "ambience",
+  "brief": "Loopable 4 s tense bridge bed with distant alarms and system stress; knobs: intensity 0..1, alarm level 0..1, rumble 0..1, alarm rate",
+  "price": 5,
+  "kit": "sci-fi-console"
+ },
+ {
+  "slug": "sci-computer-arpeggio-loop",
+  "kind": "music-loop",
+  "brief": "Short loopable retro computer arpeggio motif; knobs: scale (major|minor|whole-tone), tempo, wave (sine|square|fm), brightness 0..1, echo 0..1",
+  "price": 3,
+  "kit": "sci-fi-console"
+ },
+ {
+  "slug": "forest-night-crickets-bed",
+  "kind": "ambience",
+  "brief": "Loopable 3 s bed of layered field crickets; knobs: species (field|tree|katydid), density 0..1, distance 0..1, chirp rate Hz, temperature drift 0..1",
+  "price": 4,
+  "kit": "forest-at-night"
+ },
+ {
+  "slug": "forest-stream-bed",
+  "kind": "ambience",
+  "brief": "Loopable 4 s babbling brook bed; knobs: stream size (trickle|creek|brook), flow 0..1, pebble chatter 0..1, stereo width 0..1, low-end rumble 0..1",
+  "price": 4,
+  "kit": "forest-at-night"
+ },
+ {
+  "slug": "forest-wind-leaves-bed",
+  "kind": "ambience",
+  "brief": "Loopable 3 s wind through deciduous canopy; knobs: foliage (oak|birch|pine), wind strength 0..1, gustiness 0..1, rustle brightness 0..1, gust rate",
+  "price": 4,
+  "kit": "forest-at-night"
+ },
+ {
+  "slug": "forest-distant-storm-bed",
+  "kind": "ambience",
+  "brief": "Loopable 4 s far-off storm bed with rolling thunder murmur and light wind; knobs: distance (near|mid|far), rumble 0..1, rain hiss 0..1, flicker rate, tail toggle",
+  "price": 5,
+  "kit": "forest-at-night"
+ },
+ {
+  "slug": "forest-owl-hoot",
+  "kind": "sfx",
+  "brief": "Great horned owl hoot phrase; knobs: species (great-horned|tawny|barred), pitch, call length 0..1, distance 0..1, breathiness 0..1, reverb tail toggle",
+  "price": 2,
+  "kit": "forest-at-night"
+ },
+ {
+  "slug": "forest-owl-screech",
+  "kind": "sfx",
+  "brief": "Barn owl screech; knobs: size (small|medium|large), harshness 0..1, duration 0..1, distance 0..1, pitch, tail toggle",
+  "price": 2,
+  "kit": "forest-at-night"
+ },
+ {
+  "slug": "forest-owl-wingbeat",
+  "kind": "foley",
+  "brief": "Near-silent owl wing flaps passing overhead; knobs: wingspan (small|large), flap count, softness 0..1, pan sweep 0..1, proximity 0..1",
+  "price": 2,
+  "kit": "forest-at-night"
+ },
+ {
+  "slug": "forest-cricket-chirp-single",
+  "kind": "sfx",
+  "brief": "Single isolated cricket chirp for spot placement; knobs: species (field|tree|mole), pitch, pulse count, roughness 0..1, distance 0..1",
+  "price": 1,
+  "kit": "forest-at-night"
+ },
+ {
+  "slug": "forest-frog-croak",
+  "kind": "sfx",
+  "brief": "Streamside frog croak; knobs: frog size (peeper|green|bullfrog), pitch, croak repeats, throatiness 0..1, wetness 0..1, tail toggle",
+  "price": 2,
+  "kit": "forest-at-night"
+ },
+ {
+  "slug": "forest-thunder-roll-distant",
+  "kind": "sfx",
+  "brief": "Long distant thunder roll; knobs: distance (near|mid|far), length 0..1, rumble depth 0..1, crackle 0..1, terrain echo 0..1, tail toggle",
+  "price": 3,
+  "kit": "forest-at-night"
+ },
+ {
+  "slug": "forest-wind-gust",
+  "kind": "sfx",
+  "brief": "Single wind gust sweeping through trees; knobs: foliage (bare|leafy|conifer), strength 0..1, duration 0..1, whistle 0..1, pan motion 0..1",
+  "price": 2,
+  "kit": "forest-at-night"
+ },
+ {
+  "slug": "forest-leaf-fall",
+  "kind": "sfx",
+  "brief": "A few dry leaves drifting down and landing; knobs: leaf type (oak|maple|birch), count, dryness 0..1, landing surface softness 0..1, proximity 0..1",
+  "price": 1,
+  "kit": "forest-at-night"
+ },
+ {
+  "slug": "forest-stream-plop",
+  "kind": "sfx",
+  "brief": "Small object or fish breaking stream surface; knobs: object size (pebble|stone|fish), splash 0..1, water depth 0..1, bubble tail 0..1, pitch",
+  "price": 2,
+  "kit": "forest-at-night"
+ },
+ {
+  "slug": "forest-bat-flutter",
+  "kind": "sfx",
+  "brief": "Bat flitting past with leathery wing flutter; knobs: count (one|few|swarm), speed 0..1, flutter rate, proximity 0..1, doppler 0..1",
+  "price": 2,
+  "kit": "forest-at-night"
+ },
+ {
+  "slug": "forest-fox-bark-distant",
+  "kind": "sfx",
+  "brief": "Red fox bark or scream in the distance; knobs: call type (bark|scream|yip), pitch, repetitions, distance 0..1, raspiness 0..1, tail toggle",
+  "price": 2,
+  "kit": "forest-at-night"
+ },
+ {
+  "slug": "forest-rain-onset",
+  "kind": "sfx",
+  "brief": "First rain drops pattering onto leaves before a storm; knobs: surface (leaves|ground|puddle), density 0..1, drop size 0..1, build-up 0..1, duration",
+  "price": 2,
+  "kit": "forest-at-night"
+ },
+ {
+  "slug": "forest-twig-snap",
+  "kind": "foley",
+  "brief": "Twig snapping underfoot; knobs: twig thickness (thin|medium|thick), dryness 0..1, force 0..1, splinter crackle 0..1, distance 0..1, tail toggle",
+  "price": 1,
+  "kit": "forest-at-night"
+ },
+ {
+  "slug": "forest-footsteps-leaf-litter",
+  "kind": "foley",
+  "brief": "Single footstep on leaf litter; knobs: shoe (bare|boot|paw), weight 0..1, leaf dryness 0..1, crunch depth 0..1, pace rate",
+  "price": 1,
+  "kit": "forest-at-night"
+ },
+ {
+  "slug": "forest-footsteps-streambank-mud",
+  "kind": "foley",
+  "brief": "Footstep in wet mud by the stream; knobs: shoe (boot|sneaker|bare), weight 0..1, suction 0..1, water splash 0..1, release length",
+  "price": 1,
+  "kit": "forest-at-night"
+ },
+ {
+  "slug": "forest-brush-push",
+  "kind": "foley",
+  "brief": "Pushing through undergrowth and branches; knobs: plant (fern|bramble|sapling), push force 0..1, leaf rustle 0..1, scrape 0..1, duration",
+  "price": 2,
+  "kit": "forest-at-night"
+ },
+ {
+  "slug": "forest-pinecone-drop",
+  "kind": "foley",
+  "brief": "Pinecone falling and bouncing on forest floor; knobs: cone size (small|large), drop height 0..1, bounce count, floor softness 0..1, pitch",
+  "price": 1,
+  "kit": "forest-at-night"
+ },
+ {
+  "slug": "forest-lantern-creak",
+  "kind": "foley",
+  "brief": "Hand lantern swinging with handle creak and glass rattle; knobs: lantern (tin|brass|glass), swing 0..1, creak 0..1, rattle 0..1, swing rate",
+  "price": 2,
+  "kit": "forest-at-night"
+ },
+ {
+  "slug": "forest-thunder-crack-close",
+  "kind": "impact",
+  "brief": "Sharp close lightning strike crack into roll; knobs: proximity (overhead|near|mid), crack intensity 0..1, sub boom 0..1, crackle 0..1, pitch, tail toggle",
+  "price": 4,
+  "kit": "forest-at-night"
+ },
+ {
+  "slug": "forest-branch-fall-impact",
+  "kind": "impact",
+  "brief": "Heavy branch breaking off and hitting the ground; knobs: branch size (limb|bough|trunk-section), crack 0..1, thud weight 0..1, leaf debris 0..1, tail toggle",
+  "price": 3,
+  "kit": "forest-at-night"
+ },
+ {
+  "slug": "forest-log-drop-impact",
+  "kind": "impact",
+  "brief": "Dead log dropped onto soft forest floor; knobs: wood (rotten|dry|wet), mass 0..1, hollowness 0..1, debris scatter 0..1, pitch",
+  "price": 3,
+  "kit": "forest-at-night"
+ },
+ {
+  "slug": "forest-ui-firefly-select",
+  "kind": "ui",
+  "brief": "Soft glowing firefly chime for menu select; knobs: timbre (glass|bell|wood), pitch, sparkle 0..1, brightness 0..1, tail toggle",
+  "price": 1,
+  "kit": "forest-at-night"
+ },
+ {
+  "slug": "forest-ui-leaf-hover",
+  "kind": "ui",
+  "brief": "Tiny leaf rustle tick for UI hover; knobs: leaf (dry|fresh), length 0..1, crispness 0..1, pitch, stereo 0..1",
+  "price": 1,
+  "kit": "forest-at-night"
+ },
+ {
+  "slug": "forest-ui-owl-notify",
+  "kind": "ui",
+  "brief": "Short stylized owl-hoot notification tone; knobs: voice (wooden flute|ocarina|synth), pitch, two-note interval, softness 0..1, tail toggle",
+  "price": 1,
+  "kit": "forest-at-night"
+ },
+ {
+  "slug": "forest-music-nocturne-pad-loop",
+  "kind": "music-loop",
+  "brief": "Short loopable dark nocturnal pad with faint cricket pulse; knobs: key (A-minor|D-minor|E-minor), warmth 0..1, motion 0..1, pulse rate, shimmer 0..1",
+  "price": 5,
+  "kit": "forest-at-night"
+ },
+ {
+  "slug": "forest-music-moonlit-motif",
+  "kind": "music-loop",
+  "brief": "Gentle one-shot moonlit motif on plucked strings; knobs: instrument (harp|kalimba|nylon-guitar), tempo, mystery 0..1, echo 0..1, tail toggle",
+  "price": 4,
+  "kit": "forest-at-night"
+ },
+ {
+  "slug": "kitchen-knife-chop-board",
+  "kind": "foley",
+  "brief": "Single knife chop on cutting board; knobs: board material (wood/plastic/bamboo), blade weight 0..1, ingredient crunch 0..1, board resonance 0..1, tail toggle",
+  "price": 2,
+  "kit": "kitchen"
+ },
+ {
+  "slug": "kitchen-knife-dice-run",
+  "kind": "foley",
+  "brief": "Rapid dicing run of knife strikes; knobs: board material (wood/plastic), chop rate (2-10 Hz), timing looseness 0..1, ingredient wetness 0..1, run length, tail toggle",
+  "price": 3,
+  "kit": "kitchen"
+ },
+ {
+  "slug": "kitchen-knife-sharpen-steel",
+  "kind": "foley",
+  "brief": "Knife drawn across honing steel; knobs: steel type (honing rod/ceramic/whetstone), stroke speed rate, pressure 0..1, metallic ring 0..1, stroke count, tail toggle",
+  "price": 2,
+  "kit": "kitchen"
+ },
+ {
+  "slug": "kitchen-knife-block-draw",
+  "kind": "foley",
+  "brief": "Knife pulled from or slid into wooden block; knobs: direction (draw/insert), blade size (paring/chef/cleaver), friction 0..1, speed 0..1, tail toggle",
+  "price": 2,
+  "kit": "kitchen"
+ },
+ {
+  "slug": "kitchen-pan-set-on-hob",
+  "kind": "foley",
+  "brief": "Pan placed on stovetop; knobs: pan material (cast iron/steel/nonstick), pan size, hob type (gas grate/ceramic glass), placement force 0..1, scrape 0..1, tail toggle",
+  "price": 2,
+  "kit": "kitchen"
+ },
+ {
+  "slug": "kitchen-pan-drop-floor",
+  "kind": "impact",
+  "brief": "Pan dropped on tile floor with bounce and clatter; knobs: pan material (cast iron/aluminium/steel), size, drop height 0..1, bounce count 0..1, ring decay 0..1, tail toggle",
+  "price": 3,
+  "kit": "kitchen"
+ },
+ {
+  "slug": "kitchen-lid-clang",
+  "kind": "impact",
+  "brief": "Pot lid clanging onto pot or counter, wobble settle; knobs: lid material (steel/glass), diameter, impact force 0..1, wobble duration 0..1, pitch, tail toggle",
+  "price": 2,
+  "kit": "kitchen"
+ },
+ {
+  "slug": "kitchen-cleaver-strike",
+  "kind": "impact",
+  "brief": "Heavy cleaver chop through bone into thick block; knobs: block material (end-grain wood/plastic), force 0..1, bone crack 0..1, low thud 0..1, tail toggle",
+  "price": 3,
+  "kit": "kitchen"
+ },
+ {
+  "slug": "kitchen-sizzle-drop-in",
+  "kind": "sfx",
+  "brief": "Food hitting hot oil with burst then settle; knobs: food type (meat/veg/egg), oil heat 0..1, moisture 0..1, pan size, settle length, tail toggle",
+  "price": 3,
+  "kit": "kitchen"
+ },
+ {
+  "slug": "kitchen-sizzle-steady",
+  "kind": "ambience",
+  "brief": "Loopable 3 s bed of steady pan sizzle; knobs: fat type (butter/oil/bacon), intensity 0..1, pop density 0..1, crackle brightness 0..1, loop length 2-4 s",
+  "price": 4,
+  "kit": "kitchen"
+ },
+ {
+  "slug": "kitchen-oil-spatter-pops",
+  "kind": "sfx",
+  "brief": "Sporadic hot-oil spits and pops; knobs: pop rate, pop size 0..1, randomness 0..1, sharpness 0..1, tail toggle",
+  "price": 2,
+  "kit": "kitchen"
+ },
+ {
+  "slug": "kitchen-kettle-boil-whistle",
+  "kind": "sfx",
+  "brief": "Stovetop kettle rumble rising to whistle; knobs: kettle type (stovetop whistle/electric click), boil stage 0..1, whistle pitch, steam hiss 0..1, duration, tail toggle",
+  "price": 3,
+  "kit": "kitchen"
+ },
+ {
+  "slug": "kitchen-kettle-electric-click",
+  "kind": "ui",
+  "brief": "Electric kettle switch-on/off click with plastic thunk; knobs: state (on/off), click sharpness 0..1, body thunk 0..1, pitch, tail toggle",
+  "price": 1,
+  "kit": "kitchen"
+ },
+ {
+  "slug": "kitchen-kettle-pour",
+  "kind": "foley",
+  "brief": "Hot water poured into mug with steam; knobs: vessel (ceramic mug/glass/teapot), pour rate 0..1, fill progress 0..1, steam 0..1, tail toggle",
+  "price": 2,
+  "kit": "kitchen"
+ },
+ {
+  "slug": "kitchen-fridge-door-open",
+  "kind": "foley",
+  "brief": "Fridge door unsealing open with gasket suck and bottle rattle; knobs: fridge size (compact/full/double), seal suction 0..1, shelf rattle 0..1, swing speed 0..1, tail toggle",
+  "price": 2,
+  "kit": "kitchen"
+ },
+ {
+  "slug": "kitchen-fridge-door-close",
+  "kind": "impact",
+  "brief": "Fridge door shut with gasket thump and jar clink; knobs: fridge size, slam force 0..1, contents clink 0..1, magnet seal 0..1, tail toggle",
+  "price": 2,
+  "kit": "kitchen"
+ },
+ {
+  "slug": "kitchen-fridge-hum",
+  "kind": "ambience",
+  "brief": "Loopable fridge compressor hum bed; knobs: compressor type (old/modern), hum pitch, motor rattle 0..1, coolant gurgle 0..1, loop length 2-4 s",
+  "price": 3,
+  "kit": "kitchen"
+ },
+ {
+  "slug": "kitchen-tap-run",
+  "kind": "sfx",
+  "brief": "Kitchen tap running into steel sink; knobs: sink material (steel/ceramic/granite), flow 0..1, splash 0..1, dishes in sink 0..1, duration, tail toggle",
+  "price": 2,
+  "kit": "kitchen"
+ },
+ {
+  "slug": "kitchen-tap-turn-handle",
+  "kind": "foley",
+  "brief": "Tap handle turned on/off with pipe knock; knobs: handle type (lever/twist), direction (on/off), squeak 0..1, pipe thunk 0..1, tail toggle",
+  "price": 1,
+  "kit": "kitchen"
+ },
+ {
+  "slug": "kitchen-tap-drip",
+  "kind": "sfx",
+  "brief": "Slow drips from tap into sink or water; knobs: target (steel sink/standing water/dish), drip rate, drop size 0..1, irregularity 0..1, tail toggle",
+  "price": 1,
+  "kit": "kitchen"
+ },
+ {
+  "slug": "kitchen-cutlery-drawer",
+  "kind": "foley",
+  "brief": "Cutlery drawer pulled open with rattle; knobs: direction (open/close), runner type (wood/ball-bearing), cutlery load 0..1, force 0..1, tail toggle",
+  "price": 2,
+  "kit": "kitchen"
+ },
+ {
+  "slug": "kitchen-cutlery-handful-drop",
+  "kind": "impact",
+  "brief": "Handful of cutlery dropped on counter or into sink; knobs: surface (stone/steel sink/wood), piece count 0..1, drop height 0..1, scatter 0..1, tail toggle",
+  "price": 2,
+  "kit": "kitchen"
+ },
+ {
+  "slug": "kitchen-spoon-stir-mug",
+  "kind": "foley",
+  "brief": "Spoon stirring and tapping a mug rim; knobs: mug material (ceramic/glass/enamel), stir rate, clink intensity 0..1, liquid level 0..1, final tap toggle",
+  "price": 1,
+  "kit": "kitchen"
+ },
+ {
+  "slug": "kitchen-microwave-run",
+  "kind": "ambience",
+  "brief": "Loopable microwave running bed with hum and turntable rumble; knobs: unit age (new/old), hum pitch, turntable rattle 0..1, food pop density 0..1, loop length 2-4 s",
+  "price": 3,
+  "kit": "kitchen"
+ },
+ {
+  "slug": "kitchen-microwave-keypad",
+  "kind": "ui",
+  "brief": "Microwave keypad button beep; knobs: button type (membrane/tactile), beep pitch, beep length 0..1, click amount 0..1, tail toggle",
+  "price": 1,
+  "kit": "kitchen"
+ },
+ {
+  "slug": "kitchen-microwave-done-ding",
+  "kind": "ui",
+  "brief": "Microwave finished signal; knobs: style (bell ding/triple beep), pitch, repeat count, brightness 0..1, tail toggle",
+  "price": 1,
+  "kit": "kitchen"
+ },
+ {
+  "slug": "kitchen-microwave-door",
+  "kind": "foley",
+  "brief": "Microwave door pop open or latch shut; knobs: action (open/close), latch type (button/handle), spring 0..1, plastic rattle 0..1, tail toggle",
+  "price": 2,
+  "kit": "kitchen"
+ },
+ {
+  "slug": "kitchen-room-tone-busy",
+  "kind": "ambience",
+  "brief": "Loopable busy home kitchen bed with distant hob, clinks, hum; knobs: room size (galley/open-plan), activity 0..1, clink density 0..1, extractor fan 0..1, loop length 2-4 s",
+  "price": 5,
+  "kit": "kitchen"
+ },
+ {
+  "slug": "kitchen-cooking-groove",
+  "kind": "music-loop",
+  "brief": "Short percussive loop built from kitchen hits (pans, knives, spoons); knobs: kit (metal/wood/mixed), tempo rate, swing 0..1, density 0..1, pitch, tail toggle",
+  "price": 4,
+  "kit": "kitchen"
+ },
+ {
+  "slug": "retro-coin-pickup",
+  "kind": "sfx",
+  "brief": "Two-note square-wave coin chime; knobs: waveform (square|pulse25|triangle), pitch, brightness 0..1, interval-jump 0..1, echo tail toggle",
+  "price": 2,
+  "kit": "retro-arcade"
+ },
+ {
+  "slug": "retro-coin-insert",
+  "kind": "foley",
+  "brief": "Metal coin dropping into cabinet slot and rattling down chute; knobs: coin size (small|medium|large), rattle 0..1, chute depth 0..1, mech-click 0..1, reverb tail toggle",
+  "price": 3,
+  "kit": "retro-arcade"
+ },
+ {
+  "slug": "retro-jump",
+  "kind": "sfx",
+  "brief": "Rising pitch-sweep jump blip; knobs: waveform (square|pulse12|triangle), start pitch, sweep amount 0..1, duty wobble 0..1, sweep speed rate, decay tail toggle",
+  "price": 2,
+  "kit": "retro-arcade"
+ },
+ {
+  "slug": "retro-double-jump",
+  "kind": "sfx",
+  "brief": "Stacked second-stage jump with arpeggiated flutter; knobs: waveform (square|pulse25), pitch, flutter 0..1, height 0..1, arp rate, tail toggle",
+  "price": 2,
+  "kit": "retro-arcade"
+ },
+ {
+  "slug": "retro-land",
+  "kind": "foley",
+  "brief": "Short noise-burst landing thud; knobs: surface (brick|grass|metal), weight 0..1, noise color 0..1, pitch drop 0..1, tail toggle",
+  "price": 1,
+  "kit": "retro-arcade"
+ },
+ {
+  "slug": "retro-laser-shot",
+  "kind": "sfx",
+  "brief": "Falling-pitch zap laser; knobs: waveform (square|saw|pulse12), start pitch, sweep depth 0..1, grit 0..1, sweep rate, echo tail toggle",
+  "price": 2,
+  "kit": "retro-arcade"
+ },
+ {
+  "slug": "retro-laser-charge",
+  "kind": "sfx",
+  "brief": "Rising charge-up hum before a big shot; knobs: waveform (pulse|square|triangle), charge length rate, intensity 0..1, vibrato 0..1, release-zap tail toggle",
+  "price": 3,
+  "kit": "retro-arcade"
+ },
+ {
+  "slug": "retro-enemy-hit",
+  "kind": "sfx",
+  "brief": "Crunchy noise-plus-tone hit on enemy; knobs: enemy size (small|medium|boss), crunch 0..1, pitch, bitcrush 0..1, tail toggle",
+  "price": 2,
+  "kit": "retro-arcade"
+ },
+ {
+  "slug": "retro-player-hurt",
+  "kind": "sfx",
+  "brief": "Descending wobbly damage sting; knobs: waveform (square|triangle), pitch, wobble 0..1, severity 0..1, wobble rate, tail toggle",
+  "price": 2,
+  "kit": "retro-arcade"
+ },
+ {
+  "slug": "retro-power-up",
+  "kind": "sfx",
+  "brief": "Fast ascending arpeggio power-up; knobs: scale (major|pentatonic|whole-tone), pitch, brightness 0..1, length 0..1, arp rate, shimmer tail toggle",
+  "price": 3,
+  "kit": "retro-arcade"
+ },
+ {
+  "slug": "retro-power-down",
+  "kind": "sfx",
+  "brief": "Descending deflating arpeggio when losing a power; knobs: scale (minor|chromatic|major), pitch, droop 0..1, length 0..1, arp rate, tail toggle",
+  "price": 2,
+  "kit": "retro-arcade"
+ },
+ {
+  "slug": "retro-one-up",
+  "kind": "sfx",
+  "brief": "Cheerful six-note extra-life jingle; knobs: waveform (square|pulse25|triangle), key pitch, tempo rate, sparkle 0..1, volume swell 0..1, echo tail toggle",
+  "price": 3,
+  "kit": "retro-arcade"
+ },
+ {
+  "slug": "retro-star-invincible",
+  "kind": "sfx",
+  "brief": "Shimmering invincibility trill one-shot; knobs: waveform (pulse12|square), pitch, trill depth 0..1, sparkle noise 0..1, trill rate, tail toggle",
+  "price": 3,
+  "kit": "retro-arcade"
+ },
+ {
+  "slug": "retro-explosion-small",
+  "kind": "impact",
+  "brief": "Short noise-channel pop explosion; knobs: size (tiny|small|medium), noise color 0..1, punch 0..1, pitch drop 0..1, rumble tail toggle",
+  "price": 2,
+  "kit": "retro-arcade"
+ },
+ {
+  "slug": "retro-explosion-big",
+  "kind": "impact",
+  "brief": "Long crumbling 8-bit boss explosion with staggered bursts; knobs: size (large|huge|screen-clear), burst density 0..1, low rumble 0..1, crunch 0..1, burst rate, tail toggle",
+  "price": 4,
+  "kit": "retro-arcade"
+ },
+ {
+  "slug": "retro-block-break",
+  "kind": "impact",
+  "brief": "Brick shatter with tumbling debris blips; knobs: material (brick|ice|stone), debris count 0..1, crunch 0..1, pitch, scatter tail toggle",
+  "price": 2,
+  "kit": "retro-arcade"
+ },
+ {
+  "slug": "retro-boss-stomp",
+  "kind": "impact",
+  "brief": "Heavy low triangle-wave stomp with screen-shake rumble; knobs: weight (heavy|giant|titan), punch 0..1, rumble 0..1, pitch, shake rate, tail toggle",
+  "price": 3,
+  "kit": "retro-arcade"
+ },
+ {
+  "slug": "retro-game-over",
+  "kind": "music-loop",
+  "brief": "Slow descending minor game-over jingle; knobs: waveform (square|triangle|pulse25), key pitch, tempo rate, sadness detune 0..1, harmony 0..1, fade tail toggle",
+  "price": 4,
+  "kit": "retro-arcade"
+ },
+ {
+  "slug": "retro-chiptune-bass-loop",
+  "kind": "music-loop",
+  "brief": "Looping driving chiptune bassline 2 bars; knobs: pattern (octave-bounce|walking|arp), key pitch, tempo rate, duty sweep 0..1, swing 0..1, loop-seam tail toggle",
+  "price": 5,
+  "kit": "retro-arcade"
+ },
+ {
+  "slug": "retro-menu-move",
+  "kind": "ui",
+  "brief": "Tiny cursor tick for menu navigation; knobs: waveform (square|pulse12|triangle), pitch, click 0..1, length 0..1, tail toggle",
+  "price": 1,
+  "kit": "retro-arcade"
+ },
+ {
+  "slug": "retro-menu-select",
+  "kind": "ui",
+  "brief": "Confirm blip two-tone select; knobs: waveform (square|pulse25), pitch, interval 0..1, brightness 0..1, echo tail toggle",
+  "price": 1,
+  "kit": "retro-arcade"
+ },
+ {
+  "slug": "retro-press-start",
+  "kind": "ui",
+  "brief": "Bright start-button fanfare blip with flash feel; knobs: waveform (square|pulse12|saw), pitch, flourish 0..1, sparkle 0..1, tempo rate, tail toggle",
+  "price": 2,
+  "kit": "retro-arcade"
+ },
+ {
+  "slug": "retro-joystick-buttons",
+  "kind": "foley",
+  "brief": "Cabinet joystick clacks and arcade button mashes; knobs: hardware (microswitch|leaf-switch|worn), mash density 0..1, force 0..1, rattle 0..1, press rate, room tail toggle",
+  "price": 3,
+  "kit": "retro-arcade"
+ },
+ {
+  "slug": "retro-cabinet-power-on",
+  "kind": "foley",
+  "brief": "CRT degauss thunk and tube whine as cabinet boots; knobs: monitor size (small|standard|deluxe), thunk 0..1, whine pitch, hum 0..1, settle tail toggle",
+  "price": 3,
+  "kit": "retro-arcade"
+ },
+ {
+  "slug": "retro-ticket-dispense",
+  "kind": "foley",
+  "brief": "Ticket dispenser motor and paper feed; knobs: ticket count (few|stack|jackpot), motor whir 0..1, paper rustle 0..1, feed rate, tail toggle",
+  "price": 2,
+  "kit": "retro-arcade"
+ },
+ {
+  "slug": "retro-arcade-hall-amb",
+  "kind": "ambience",
+  "brief": "Loopable 3 s busy arcade hall bed of distant cabinets bleeping; knobs: crowd size (empty|moderate|packed), bleep density 0..1, chatter 0..1, carpet reverb 0..1, loop crossfade toggle",
+  "price": 5,
+  "kit": "retro-arcade"
+ },
+ {
+  "slug": "retro-cabinet-idle-amb",
+  "kind": "ambience",
+  "brief": "Loopable 2 s single cabinet idle: CRT hum, fan, attract-mode chirps; knobs: cabinet type (upright|cocktail|sit-down), hum 0..1, fan noise 0..1, chirp rate, loop toggle",
+  "price": 4,
+  "kit": "retro-arcade"
+ },
+ {
+  "slug": "retro-dungeon-level-amb",
+  "kind": "ambience",
+  "brief": "Loopable 4 s 8-bit dungeon level drone with drips; knobs: mood (eerie|cave|castle), drone depth 0..1, drip density 0..1, noise wind 0..1, drip rate, loop toggle",
+  "price": 4,
+  "kit": "retro-arcade"
+ },
+ {
+  "slug": "retro-space-stage-amb",
+  "kind": "ambience",
+  "brief": "Loopable 3 s chiptune starfield bed with pulsing engine and twinkles; knobs: ship (fighter|cruiser|mothership), engine pulse 0..1, twinkle density 0..1, detune 0..1, pulse rate, loop toggle",
+  "price": 4,
+  "kit": "retro-arcade"
+ },
+ {
+  "slug": "office-keyboard-typing-burst",
+  "kind": "foley",
+  "brief": "Burst of continuous typing on a desk keyboard; knobs: switch type (membrane/mechanical/laptop), typing rate, intensity 0..1, spacebar-and-enter amount 0..1, desk resonance 0..1, room tail toggle",
+  "price": 3,
+  "kit": "office"
+ },
+ {
+  "slug": "office-keyboard-single-key",
+  "kind": "foley",
+  "brief": "Single isolated keystroke with press and release; knobs: switch type (membrane/mechanical/laptop), key size (letter/space/enter), force 0..1, rattle 0..1, pitch, room tail toggle",
+  "price": 1,
+  "kit": "office"
+ },
+ {
+  "slug": "office-mouse-click",
+  "kind": "foley",
+  "brief": "Mouse button click, single or double; knobs: mouse build (cheap plastic/gaming/silent), click count (single/double), sharpness 0..1, release level 0..1, pitch, tail toggle",
+  "price": 1,
+  "kit": "office"
+ },
+ {
+  "slug": "office-mouse-scroll-wheel",
+  "kind": "foley",
+  "brief": "Notched mouse scroll wheel spin; knobs: wheel type (notched/free-spin), scroll rate, detent clarity 0..1, spin length 0..1, pitch, tail toggle",
+  "price": 1,
+  "kit": "office"
+ },
+ {
+  "slug": "office-mouse-drag-desk",
+  "kind": "foley",
+  "brief": "Mouse sliding across a desk surface; knobs: surface (mouse pad/laminate/glass), speed rate, friction grit 0..1, cable drag 0..1, tail toggle",
+  "price": 1,
+  "kit": "office"
+ },
+ {
+  "slug": "office-printer-print-job",
+  "kind": "sfx",
+  "brief": "Laser printer warming up, feeding and ejecting pages; knobs: printer size (desktop/workgroup/floor), page count rate, motor whine 0..1, paper feed rustle 0..1, fan level 0..1, tail toggle",
+  "price": 4,
+  "kit": "office"
+ },
+ {
+  "slug": "office-printer-paper-jam",
+  "kind": "sfx",
+  "brief": "Printer grinding to a halt on a jam with error beeps; knobs: printer size (desktop/workgroup), grind severity 0..1, crumple amount 0..1, beep count rate, beep pitch, tail toggle",
+  "price": 3,
+  "kit": "office"
+ },
+ {
+  "slug": "office-copier-scan-pass",
+  "kind": "sfx",
+  "brief": "Photocopier lid close and scan-bar sweep with light hum; knobs: copier size (compact/full), sweep speed rate, lid slam 0..1, motor hum 0..1, carriage return amount 0..1, tail toggle",
+  "price": 3,
+  "kit": "office"
+ },
+ {
+  "slug": "office-desk-phone-ring",
+  "kind": "sfx",
+  "brief": "Desk telephone ringing pattern; knobs: phone type (digital VoIP/analog bell/conference speaker), ring pitch, ring count rate, volume 0..1, distance 0..1, room tail toggle",
+  "price": 2,
+  "kit": "office"
+ },
+ {
+  "slug": "office-phone-handset-pickup",
+  "kind": "foley",
+  "brief": "Handset lifted off or set back on cradle with hook-switch clack; knobs: action (pickup/hangup/slam), plastic weight (light/heavy), force 0..1, cord rattle 0..1, dial tone amount 0..1, tail toggle",
+  "price": 2,
+  "kit": "office"
+ },
+ {
+  "slug": "office-mobile-vibrate-desk",
+  "kind": "sfx",
+  "brief": "Smartphone buzzing against a desk; knobs: surface (wood/laminate/metal), buzz pattern rate, rattle amount 0..1, drift slide 0..1, pitch, tail toggle",
+  "price": 2,
+  "kit": "office"
+ },
+ {
+  "slug": "office-chair-roll",
+  "kind": "foley",
+  "brief": "Office chair rolling across the floor on casters; knobs: floor (carpet/hard floor/chair mat), roll speed rate, caster rattle 0..1, creak amount 0..1, distance 0..1, tail toggle",
+  "price": 2,
+  "kit": "office"
+ },
+ {
+  "slug": "office-chair-creak-recline",
+  "kind": "foley",
+  "brief": "Chair tilting back and creaking under weight; knobs: chair build (mesh/leather/cheap plastic), recline depth 0..1, creak density 0..1, spring twang 0..1, pitch, tail toggle",
+  "price": 2,
+  "kit": "office"
+ },
+ {
+  "slug": "office-chair-gas-lift",
+  "kind": "sfx",
+  "brief": "Pneumatic chair height lever hiss and drop; knobs: direction (drop/rise), cylinder size (small/large), hiss amount 0..1, clunk at end 0..1, duration rate, tail toggle",
+  "price": 2,
+  "kit": "office"
+ },
+ {
+  "slug": "office-paper-shuffle",
+  "kind": "foley",
+  "brief": "Stack of paper squared up and shuffled on a desk; knobs: stack size (few sheets/ream), handling energy 0..1, tap-to-square amount 0..1, crispness 0..1, tail toggle",
+  "price": 2,
+  "kit": "office"
+ },
+ {
+  "slug": "office-paper-crumple",
+  "kind": "foley",
+  "brief": "Sheet crumpled into a ball and optionally tossed; knobs: paper type (printer/glossy/tissue), crumple speed rate, crackle density 0..1, toss-and-land amount 0..1, tail toggle",
+  "price": 2,
+  "kit": "office"
+ },
+ {
+  "slug": "office-paper-tear",
+  "kind": "foley",
+  "brief": "Paper torn in a single rip or slow peel; knobs: paper type (printer/cardstock/notepad perforation), tear speed rate, fiber grit 0..1, sheet count 0..1, tail toggle",
+  "price": 1,
+  "kit": "office"
+ },
+ {
+  "slug": "office-page-flip",
+  "kind": "foley",
+  "brief": "Pages flipped in a document, notebook, or binder; knobs: binding (stapled/spiral/ring binder), flip rate, page count 0..1, snap 0..1, tail toggle",
+  "price": 1,
+  "kit": "office"
+ },
+ {
+  "slug": "office-stapler-slam",
+  "kind": "impact",
+  "brief": "Desk stapler punched hard through a stack; knobs: stapler size (mini/desk/heavy-duty), force 0..1, paper thickness 0..1, metal ring 0..1, desk thump toggle, room tail toggle",
+  "price": 2,
+  "kit": "office"
+ },
+ {
+  "slug": "office-drawer-slam",
+  "kind": "impact",
+  "brief": "Filing cabinet or desk drawer shut hard; knobs: material (steel cabinet/wood desk/plastic pedestal), drawer size (small/file), force 0..1, contents rattle 0..1, latch click 0..1, room tail toggle",
+  "price": 3,
+  "kit": "office"
+ },
+ {
+  "slug": "office-binder-drop",
+  "kind": "impact",
+  "brief": "Heavy binder or stack of documents dropped flat on a desk; knobs: object (binder/ream/folder stack), weight size (light/heavy), drop height 0..1, slap brightness 0..1, desk boom 0..1, room tail toggle",
+  "price": 2,
+  "kit": "office"
+ },
+ {
+  "slug": "office-water-cooler-glug",
+  "kind": "sfx",
+  "brief": "Water cooler dispense with bottle glug bubbles; knobs: cooler type (bottle top/plumbed), pour duration rate, glug intensity 0..1, cup fill pitch, bubble density 0..1, tail toggle",
+  "price": 2,
+  "kit": "office"
+ },
+ {
+  "slug": "office-ambience-aircon-bed",
+  "kind": "ambience",
+  "brief": "Loopable 2-4 s HVAC air-conditioner bed for an open-plan floor; knobs: system size (ceiling vents/rooftop unit), airflow 0..1, low rumble 0..1, vent rattle 0..1, filter tone pitch, loop crossfade toggle",
+  "price": 4,
+  "kit": "office"
+ },
+ {
+  "slug": "office-ambience-open-plan-murmur",
+  "kind": "ambience",
+  "brief": "Loopable 2-4 s busy open-plan bed with distant typing, murmur and occasional phones; knobs: occupancy (quiet/busy/crunch), chatter level 0..1, keyboard density 0..1, phone ring chance 0..1, HVAC under-bed 0..1, loop crossfade toggle",
+  "price": 5,
+  "kit": "office"
+ },
+ {
+  "slug": "office-ambience-after-hours",
+  "kind": "ambience",
+  "brief": "Loopable 2-4 s empty office at night with fluorescent buzz and idle machines; knobs: lighting (fluorescent/LED), light buzz 0..1, computer fan hum 0..1, distant vacuum or elevator 0..1, hum pitch, loop crossfade toggle",
+  "price": 4,
+  "kit": "office"
+ },
+ {
+  "slug": "office-ambience-server-closet",
+  "kind": "ambience",
+  "brief": "Loopable 2-4 s small server room behind a door with rack fans and drive chatter; knobs: room size (closet/server room), fan roar 0..1, drive chatter 0..1, door occlusion 0..1, fan pitch, loop crossfade toggle",
+  "price": 3,
+  "kit": "office"
+ },
+ {
+  "slug": "office-ui-email-notification",
+  "kind": "ui",
+  "brief": "Desktop new-email notification chime; knobs: style (soft chime/corporate ding/retro beep), pitch, brightness 0..1, note count (1-3), reverb amount 0..1, tail toggle",
+  "price": 1,
+  "kit": "office"
+ },
+ {
+  "slug": "office-ui-chat-ping",
+  "kind": "ui",
+  "brief": "Workplace chat message ping or knock; knobs: style (pop/knock/blip), pitch, urgency 0..1, softness 0..1, repeat rate, tail toggle",
+  "price": 1,
+  "kit": "office"
+ },
+ {
+  "slug": "office-ui-meeting-join",
+  "kind": "ui",
+  "brief": "Video-call join or leave tone; knobs: direction (join/leave), timbre (sine/marimba/synth), pitch, interval spread 0..1, brightness 0..1, tail toggle",
+  "price": 1,
+  "kit": "office"
+ },
+ {
+  "slug": "office-music-loop-hold-music",
+  "kind": "music-loop",
+  "brief": "Short loopable phone hold-music bar heard through a handset; knobs: style (smooth jazz/light classical/corporate pop), tempo rate, phone bandpass amount 0..1, line crackle 0..1, key pitch, loop seam toggle",
+  "price": 4,
+  "kit": "office"
+ },
+ {
+  "slug": "car-indicator-tick",
+  "kind": "sfx",
+  "brief": "Turn-signal relay tick-tock pair; knobs: relay type (mechanical/digital), click sharpness 0..1, tock body 0..1, rate in Hz, cabin reverb tail toggle",
+  "price": 2,
+  "kit": "car-interior"
+ },
+ {
+  "slug": "car-hazard-tick-fast",
+  "kind": "sfx",
+  "brief": "Hazard-light ticking at doubled cadence; knobs: relay type (mechanical/digital), brightness 0..1, dashboard resonance 0..1, rate, tail toggle",
+  "price": 2,
+  "kit": "car-interior"
+ },
+ {
+  "slug": "car-door-close-thunk",
+  "kind": "foley",
+  "brief": "Driver door shut with solid seal thunk; knobs: door size (compact/sedan/SUV), force 0..1, seal suction 0..1, latch click level 0..1, cabin tail toggle",
+  "price": 3,
+  "kit": "car-interior"
+ },
+ {
+  "slug": "car-door-open-unlatch",
+  "kind": "foley",
+  "brief": "Inner handle pull, latch release and seal peel; knobs: handle material (plastic/chrome), pull speed 0..1, seal peel amount 0..1, hinge creak 0..1, tail toggle",
+  "price": 2,
+  "kit": "car-interior"
+ },
+ {
+  "slug": "car-door-slam-hard",
+  "kind": "impact",
+  "brief": "Aggressive door slam shaking the cabin; knobs: door size (compact/sedan/SUV), force 0..1, panel rattle 0..1, low-end weight 0..1, pitch, boom tail toggle",
+  "price": 3,
+  "kit": "car-interior"
+ },
+ {
+  "slug": "car-seatbelt-buckle",
+  "kind": "foley",
+  "brief": "Seatbelt tongue clicking into buckle; knobs: buckle material (plastic/metal), insertion speed 0..1, click brightness 0..1, webbing rustle 0..1, tail toggle",
+  "price": 2,
+  "kit": "car-interior"
+ },
+ {
+  "slug": "car-seatbelt-retract",
+  "kind": "foley",
+  "brief": "Belt release and webbing retracting into spool ending in a thud; knobs: retract speed 0..1, webbing friction 0..1, end-stop thud 0..1, pitch, tail toggle",
+  "price": 2,
+  "kit": "car-interior"
+ },
+ {
+  "slug": "car-seat-sit-down",
+  "kind": "foley",
+  "brief": "Body settling into seat with springs and upholstery creak; knobs: upholstery (fabric/leather), weight 0..1, spring squeak 0..1, creak amount 0..1, tail toggle",
+  "price": 2,
+  "kit": "car-interior"
+ },
+ {
+  "slug": "car-key-fob-unlock",
+  "kind": "ui",
+  "brief": "Remote unlock chirp with central-lock actuator clunks; knobs: chirp style (beep/double-beep/none), actuator thump 0..1, distance 0..1, pitch, tail toggle",
+  "price": 2,
+  "kit": "car-interior"
+ },
+ {
+  "slug": "car-push-start-button",
+  "kind": "ui",
+  "brief": "Engine start button press with soft click and confirmation beep; knobs: button feel (soft/clicky), click level 0..1, beep amount 0..1, beep pitch, tail toggle",
+  "price": 2,
+  "kit": "car-interior"
+ },
+ {
+  "slug": "car-engine-start",
+  "kind": "sfx",
+  "brief": "Starter motor crank catching into engine fire and settling; knobs: engine size (4cyl/V6/V8), crank length 0..1, catch roughness 0..1, rev flare 0..1, pitch, tail toggle",
+  "price": 4,
+  "kit": "car-interior"
+ },
+ {
+  "slug": "car-engine-idle-cabin",
+  "kind": "ambience",
+  "brief": "Loopable 3s engine idle heard from inside sealed cabin; knobs: engine size (4cyl/V6/V8), rpm wobble 0..1, firewall muffling 0..1, seat vibration rumble 0..1, pitch",
+  "price": 4,
+  "kit": "car-interior"
+ },
+ {
+  "slug": "car-engine-shutoff",
+  "kind": "sfx",
+  "brief": "Engine cutting off with shudder and cooling ticks; knobs: engine size (4cyl/V6/V8), shudder 0..1, tick density 0..1, fan run-on 0..1, ticking tail toggle",
+  "price": 3,
+  "kit": "car-interior"
+ },
+ {
+  "slug": "car-ev-startup-tone",
+  "kind": "ui",
+  "brief": "Electric car ready-to-drive swell tone with inverter whine; knobs: tone style (warm/futuristic), whine amount 0..1, swell length 0..1, pitch, tail toggle",
+  "price": 3,
+  "kit": "car-interior"
+ },
+ {
+  "slug": "car-door-ajar-chime",
+  "kind": "sfx",
+  "brief": "Classic dashboard warning chime ding pattern; knobs: chime type (gong/beep/bell), repeat count 0..1, brightness 0..1, rate, decay tail toggle",
+  "price": 2,
+  "kit": "car-interior"
+ },
+ {
+  "slug": "car-seatbelt-warning-chime",
+  "kind": "sfx",
+  "brief": "Insistent unbuckled-belt reminder beeps escalating; knobs: tone (soft/harsh), urgency 0..1, volume ramp 0..1, rate, pitch, tail toggle",
+  "price": 2,
+  "kit": "car-interior"
+ },
+ {
+  "slug": "car-wiper-single-sweep",
+  "kind": "sfx",
+  "brief": "Single wiper pass with motor whir and rubber squeak; knobs: blade condition (new/worn), glass wetness 0..1, squeak amount 0..1, motor whine 0..1, sweep speed",
+  "price": 3,
+  "kit": "car-interior"
+ },
+ {
+  "slug": "car-wiper-loop-rain",
+  "kind": "ambience",
+  "brief": "Loopable 4s wipers swishing over rain drumming on roof; knobs: rain intensity 0..1, wiper rate, squeak 0..1, roof patter density 0..1, blade type (new/worn)",
+  "price": 5,
+  "kit": "car-interior"
+ },
+ {
+  "slug": "car-washer-fluid-spray",
+  "kind": "sfx",
+  "brief": "Washer pump whine and fluid spritz on windscreen; knobs: pump strength 0..1, spray hiss 0..1, glass splatter 0..1, pitch, tail toggle",
+  "price": 2,
+  "kit": "car-interior"
+ },
+ {
+  "slug": "car-road-noise-highway",
+  "kind": "ambience",
+  "brief": "Loopable 4s highway tire roar and wind inside cabin; knobs: road surface (asphalt/concrete/gravel), speed 0..1, wind hiss 0..1, insulation 0..1, low rumble 0..1",
+  "price": 5,
+  "kit": "car-interior"
+ },
+ {
+  "slug": "car-city-idle-traffic",
+  "kind": "ambience",
+  "brief": "Loopable 3s stopped-at-lights bed with muffled outside traffic and HVAC; knobs: traffic density 0..1, HVAC fan level 0..1, window (closed/cracked), distant horns 0..1",
+  "price": 4,
+  "kit": "car-interior"
+ },
+ {
+  "slug": "car-window-power-down",
+  "kind": "foley",
+  "brief": "Power window motor lowering glass with seal squeal and wind rush; knobs: motor strain 0..1, seal squeal 0..1, outside wind 0..1, travel speed, end-stop thunk tail toggle",
+  "price": 3,
+  "kit": "car-interior"
+ },
+ {
+  "slug": "car-gear-shift-auto",
+  "kind": "foley",
+  "brief": "Automatic selector moved through P-R-N-D detents; knobs: lever type (stalk/console/rotary), detent click 0..1, travel smoothness 0..1, transmission clunk 0..1, tail toggle",
+  "price": 2,
+  "kit": "car-interior"
+ },
+ {
+  "slug": "car-handbrake-pull",
+  "kind": "foley",
+  "brief": "Mechanical handbrake ratchet pull or electronic parking brake whir; knobs: brake type (lever/electric), ratchet speed 0..1, click density 0..1, motor whine 0..1, tail toggle",
+  "price": 2,
+  "kit": "car-interior"
+ },
+ {
+  "slug": "car-glovebox-open-close",
+  "kind": "foley",
+  "brief": "Glovebox latch pop, damped drop and contents shuffle, then close; knobs: latch material (plastic/soft-touch), damping 0..1, contents rattle 0..1, close force 0..1, tail toggle",
+  "price": 2,
+  "kit": "car-interior"
+ },
+ {
+  "slug": "car-pothole-bump",
+  "kind": "impact",
+  "brief": "Suspension slam over pothole with cabin rattle; knobs: tire size (small/large), hit severity 0..1, suspension bounce 0..1, interior rattle 0..1, low thump pitch, tail toggle",
+  "price": 3,
+  "kit": "car-interior"
+ },
+ {
+  "slug": "car-trunk-close",
+  "kind": "impact",
+  "brief": "Rear hatch shut heard from front seats; knobs: hatch type (sedan/hatchback/power), force 0..1, cabin pressure pop 0..1, latch motor 0..1, tail toggle",
+  "price": 3,
+  "kit": "car-interior"
+ },
+ {
+  "slug": "car-crash-cabin-impact",
+  "kind": "impact",
+  "brief": "Muffled collision felt from inside: crunch, glass crackle, airbag pop; knobs: severity 0..1, glass amount 0..1, airbag toggle, metal crumple 0..1, pitch, debris tail toggle",
+  "price": 5,
+  "kit": "car-interior"
+ },
+ {
+  "slug": "car-radio-tune-static",
+  "kind": "music-loop",
+  "brief": "Short loop sweeping radio dial through static into a lo-fi music fragment; knobs: band (AM/FM), static amount 0..1, tuning sweep speed 0..1, music clarity 0..1, speaker tinniness 0..1",
+  "price": 4,
+  "kit": "car-interior"
+ },
+ {
+  "slug": "car-night-drive-pad",
+  "kind": "music-loop",
+  "brief": "Short loopable synth pad groove synced to indicator tick for night-drive scenes; knobs: mood (calm/tense), tick sync amount 0..1, pad warmth 0..1, tempo, pitch, tail toggle",
+  "price": 4,
+  "kit": "car-interior"
+ },
+ {
+  "slug": "medieval-anvil-strike",
+  "kind": "impact",
+  "brief": "Hammer strike on a blacksmith's anvil. Knobs: anvil size (small/medium/large), force 0..1, ring amount 0..1, dampening 0..1, pitch, ring-tail toggle.",
+  "price": 3,
+  "kit": "medieval-market"
+ },
+ {
+  "slug": "medieval-anvil-hammer-sequence",
+  "kind": "sfx",
+  "brief": "Rhythmic run of blacksmith hammer blows on hot iron. Knobs: hammer weight (light/heavy), tempo rate, force 0..1, irregularity 0..1, metal ring 0..1, tail toggle.",
+  "price": 4,
+  "kit": "medieval-market"
+ },
+ {
+  "slug": "medieval-forge-bellows",
+  "kind": "sfx",
+  "brief": "Leather bellows pumping air into a forge, with an ember flare. Knobs: bellows size (small/large), pump rate, airflow 0..1, leather creak 0..1, fire roar 0..1, tail toggle.",
+  "price": 3,
+  "kit": "medieval-market"
+ },
+ {
+  "slug": "medieval-quench-hiss",
+  "kind": "sfx",
+  "brief": "Hot iron plunged into a water trough. Knobs: blade size (dagger/sword/horseshoe), heat 0..1, bubble amount 0..1, splash 0..1, steam-tail toggle.",
+  "price": 2,
+  "kit": "medieval-market"
+ },
+ {
+  "slug": "medieval-cart-wheels-cobbles",
+  "kind": "sfx",
+  "brief": "Wooden cart rolling over cobblestones. Knobs: cart size (handcart/oxcart/wagon), speed rate, load weight 0..1, wheel rattle 0..1, axle squeak 0..1, tail toggle.",
+  "price": 4,
+  "kit": "medieval-market"
+ },
+ {
+  "slug": "medieval-cart-stop-creak",
+  "kind": "foley",
+  "brief": "Cart rolling to a halt with a creak and settling planks. Knobs: wood type (oak/pine), stop abruptness 0..1, creak amount 0..1, cargo shift 0..1, pitch, tail toggle.",
+  "price": 2,
+  "kit": "medieval-market"
+ },
+ {
+  "slug": "medieval-cloth-unfurl",
+  "kind": "foley",
+  "brief": "Merchant unrolling a bolt of fabric across a stall. Knobs: fabric (linen/wool/silk), length 0..1, snap force 0..1, rustle density 0..1, tail toggle.",
+  "price": 2,
+  "kit": "medieval-market"
+ },
+ {
+  "slug": "medieval-cloth-awning-flap",
+  "kind": "foley",
+  "brief": "Canvas stall awning flapping in a breeze. Knobs: canvas weight (light/heavy), wind strength 0..1, flap rate, rope strain 0..1, tail toggle.",
+  "price": 2,
+  "kit": "medieval-market"
+ },
+ {
+  "slug": "medieval-coin-drop",
+  "kind": "foley",
+  "brief": "A single coin dropped and spinning on a surface. Knobs: coin metal (copper/silver/gold), surface (wood/stone), drop height 0..1, spin length 0..1, pitch, tail toggle.",
+  "price": 1,
+  "kit": "medieval-market"
+ },
+ {
+  "slug": "medieval-coin-purse-jingle",
+  "kind": "foley",
+  "brief": "Leather purse of coins jingled or shaken. Knobs: purse size (small/fat), coin count 0..1, shake intensity 0..1, leather muffle 0..1, rate, tail toggle.",
+  "price": 2,
+  "kit": "medieval-market"
+ },
+ {
+  "slug": "medieval-coins-counted-table",
+  "kind": "foley",
+  "brief": "Coins counted and slid across a wooden counter. Knobs: coin metal (copper/silver/gold), count rate, stack clink 0..1, slide amount 0..1, tail toggle.",
+  "price": 2,
+  "kit": "medieval-market"
+ },
+ {
+  "slug": "medieval-town-bell-toll",
+  "kind": "impact",
+  "brief": "Bronze church or market bell tolling once. Knobs: bell size (handbell/tower/great), strike force 0..1, inharmonic shimmer 0..1, distance 0..1, pitch, decay-tail toggle.",
+  "price": 4,
+  "kit": "medieval-market"
+ },
+ {
+  "slug": "medieval-crier-handbell",
+  "kind": "sfx",
+  "brief": "Town crier swinging a handbell to gather attention. Knobs: bell size (small/medium), swing rate, intensity 0..1, clapper rattle 0..1, distance 0..1, tail toggle.",
+  "price": 2,
+  "kit": "medieval-market"
+ },
+ {
+  "slug": "medieval-crowd-walla-bed",
+  "kind": "ambience",
+  "brief": "Loopable 2-4 s bed of market crowd murmur and haggling. Knobs: crowd size (sparse/busy/packed), excitement 0..1, distance 0..1, laughter density 0..1, loop-crossfade toggle.",
+  "price": 5,
+  "kit": "medieval-market"
+ },
+ {
+  "slug": "medieval-market-square-bed",
+  "kind": "ambience",
+  "brief": "Loopable 2-4 s full market square bed: distant hammering, carts, animals, chatter. Knobs: time of day (dawn/noon/dusk), activity 0..1, animal amount 0..1, reverb 0..1, loop-crossfade toggle.",
+  "price": 5,
+  "kit": "medieval-market"
+ },
+ {
+  "slug": "medieval-forge-interior-bed",
+  "kind": "ambience",
+  "brief": "Loopable 2-4 s smithy interior with crackling fire and soft roar. Knobs: forge size (small/large), fire intensity 0..1, crackle density 0..1, room reverb 0..1, loop-crossfade toggle.",
+  "price": 4,
+  "kit": "medieval-market"
+ },
+ {
+  "slug": "medieval-livestock-pen-bed",
+  "kind": "ambience",
+  "brief": "Loopable 2-4 s livestock pen with shuffling, snorts and straw. Knobs: animal mix (sheep/pigs/goats), herd size 0..1, restlessness 0..1, straw rustle 0..1, loop-crossfade toggle.",
+  "price": 4,
+  "kit": "medieval-market"
+ },
+ {
+  "slug": "medieval-horse-whinny",
+  "kind": "sfx",
+  "brief": "Horse whinny or nicker. Knobs: horse size (pony/mare/warhorse), agitation 0..1, breathiness 0..1, length 0..1, pitch, tail toggle.",
+  "price": 2,
+  "kit": "medieval-market"
+ },
+ {
+  "slug": "medieval-hooves-cobbles",
+  "kind": "foley",
+  "brief": "Horse hooves walking or trotting on cobbles. Knobs: gait (walk/trot/canter), rate, horseshoe ring 0..1, weight 0..1, surface wetness 0..1, tail toggle.",
+  "price": 3,
+  "kit": "medieval-market"
+ },
+ {
+  "slug": "medieval-chicken-cluck",
+  "kind": "sfx",
+  "brief": "Chickens clucking and flapping in a crate. Knobs: bird (hen/rooster), count 0..1, agitation 0..1, wing flap 0..1, pitch, tail toggle.",
+  "price": 2,
+  "kit": "medieval-market"
+ },
+ {
+  "slug": "medieval-goose-honk",
+  "kind": "sfx",
+  "brief": "Market goose honking and hissing. Knobs: flock size (single/pair/gaggle), aggression 0..1, honk length 0..1, hiss amount 0..1, pitch, tail toggle.",
+  "price": 1,
+  "kit": "medieval-market"
+ },
+ {
+  "slug": "medieval-pig-snort",
+  "kind": "sfx",
+  "brief": "Pig snorting, grunting or squealing. Knobs: pig size (piglet/sow/boar), excitement 0..1, squeal amount 0..1, wetness 0..1, pitch, tail toggle.",
+  "price": 1,
+  "kit": "medieval-market"
+ },
+ {
+  "slug": "medieval-barrel-roll-thud",
+  "kind": "impact",
+  "brief": "Wooden barrel rolled and set down hard on stone. Knobs: barrel size (keg/cask/tun), fill level 0..1, roll length 0..1, impact force 0..1, slosh toggle.",
+  "price": 3,
+  "kit": "medieval-market"
+ },
+ {
+  "slug": "medieval-crate-drop",
+  "kind": "impact",
+  "brief": "Wooden produce crate dropped onto cobbles. Knobs: wood (pine/oak), contents (apples/pottery/empty), drop height 0..1, splinter 0..1, scatter 0..1, tail toggle.",
+  "price": 2,
+  "kit": "medieval-market"
+ },
+ {
+  "slug": "medieval-pottery-shatter",
+  "kind": "sfx",
+  "brief": "Clay jug or pot smashing on the ground. Knobs: vessel size (cup/jug/amphora), force 0..1, shard scatter 0..1, liquid splash 0..1, tail toggle.",
+  "price": 2,
+  "kit": "medieval-market"
+ },
+ {
+  "slug": "medieval-ui-coin-purchase",
+  "kind": "ui",
+  "brief": "Shop purchase confirm: coin clink into a till. Knobs: coin metal (copper/silver/gold), coin count 0..1, brightness 0..1, sparkle 0..1, pitch, tail toggle.",
+  "price": 1,
+  "kit": "medieval-market"
+ },
+ {
+  "slug": "medieval-ui-scroll-open",
+  "kind": "ui",
+  "brief": "Menu open: parchment scroll unrolling with a wax seal crack. Knobs: parchment (thin/thick), unroll speed rate, crackle 0..1, seal snap 0..1, tail toggle.",
+  "price": 1,
+  "kit": "medieval-market"
+ },
+ {
+  "slug": "medieval-ui-ledger-tick",
+  "kind": "ui",
+  "brief": "Inventory hover/select tick: quill scratch or wooden token tap. Knobs: material (quill/wood/brass), sharpness 0..1, softness 0..1, pitch, tail toggle.",
+  "price": 1,
+  "kit": "medieval-market"
+ },
+ {
+  "slug": "medieval-minstrel-lute-loop",
+  "kind": "music-loop",
+  "brief": "Short loopable street minstrel lute and tabor phrase. Knobs: mode (dorian/mixolydian/aeolian), tempo rate, liveliness 0..1, drum amount 0..1, street reverb 0..1, loop toggle.",
+  "price": 5,
+  "kit": "medieval-market"
+ },
+ {
+  "slug": "medieval-hurdy-gurdy-sting",
+  "kind": "music-loop",
+  "brief": "Brief hurdy-gurdy and drone flourish for market arrival. Knobs: key root (D/G/A), drone level 0..1, buzz amount 0..1, ornament density 0..1, tempo rate, tail toggle.",
+  "price": 4,
+  "kit": "medieval-market"
+ },
+ {
+  "slug": "drum-kick-808-boom",
+  "kind": "sfx",
+  "brief": "Analogue bass-drum one-shot; knobs: circuit (808|909|606), decay 0..1, pitch-sweep 0..1, click 0..1, tune 30-80 Hz, tail toggle",
+  "price": 2,
+  "kit": "drum-machine"
+ },
+ {
+  "slug": "drum-kick-punch-short",
+  "kind": "sfx",
+  "brief": "Tight punchy kick with fast envelope; knobs: body (small|medium|large), attack 0..1, drive 0..1, tune 40-100 Hz, tail toggle",
+  "price": 2,
+  "kit": "drum-machine"
+ },
+ {
+  "slug": "drum-snare-tone-noise",
+  "kind": "sfx",
+  "brief": "Analogue snare blending tuned oscillators and noise; knobs: circuit (808|909|linn), tone-mix 0..1, snappy 0..1, decay 0..1, pitch 150-300 Hz, tail toggle",
+  "price": 2,
+  "kit": "drum-machine"
+ },
+ {
+  "slug": "drum-snare-gated-crack",
+  "kind": "sfx",
+  "brief": "Bright cracking snare with gated noise tail; knobs: size (tight|room|hall), crack 0..1, gate-length 0..1, saturation 0..1, tail toggle",
+  "price": 2,
+  "kit": "drum-machine"
+ },
+ {
+  "slug": "drum-rimshot-click",
+  "kind": "sfx",
+  "brief": "Short woody rimshot ping; knobs: circuit (808|909|cr78), brightness 0..1, decay 0..1, pitch 400-1800 Hz, tail toggle",
+  "price": 1,
+  "kit": "drum-machine"
+ },
+ {
+  "slug": "drum-hat-closed-tick",
+  "kind": "sfx",
+  "brief": "Closed hi-hat from six square oscillators through bandpass; knobs: metal (thin|bright|dark), decay 0..1, tone 0..1, accent 0..1, tail toggle",
+  "price": 1,
+  "kit": "drum-machine"
+ },
+ {
+  "slug": "drum-hat-open-sizzle",
+  "kind": "sfx",
+  "brief": "Open hi-hat with long metallic sizzle; knobs: metal (thin|bright|dark), decay 0..1, tone 0..1, choke-point 0..1, tail toggle",
+  "price": 2,
+  "kit": "drum-machine"
+ },
+ {
+  "slug": "drum-hat-pedal-chick",
+  "kind": "sfx",
+  "brief": "Pedal hat chick, very short noisy closure; knobs: metal (thin|bright|dark), tightness 0..1, noise 0..1, tail toggle",
+  "price": 1,
+  "kit": "drum-machine"
+ },
+ {
+  "slug": "drum-clap-multi-burst",
+  "kind": "sfx",
+  "brief": "Analogue handclap with staggered noise bursts and reverb tail; knobs: circuit (808|909|drumulator), spread 0..1, burst-count 2-6, tail-length 0..1, tail toggle",
+  "price": 2,
+  "kit": "drum-machine"
+ },
+ {
+  "slug": "drum-tom-low",
+  "kind": "sfx",
+  "brief": "Low analogue tom with pitch glide; knobs: circuit (808|909|simmons), decay 0..1, sweep 0..1, noise 0..1, tune 60-140 Hz, tail toggle",
+  "price": 2,
+  "kit": "drum-machine"
+ },
+ {
+  "slug": "drum-tom-mid",
+  "kind": "sfx",
+  "brief": "Mid analogue tom; knobs: circuit (808|909|simmons), decay 0..1, sweep 0..1, noise 0..1, tune 120-220 Hz, tail toggle",
+  "price": 2,
+  "kit": "drum-machine"
+ },
+ {
+  "slug": "drum-tom-high",
+  "kind": "sfx",
+  "brief": "High analogue tom/conga-like ping; knobs: circuit (808|909|simmons), decay 0..1, sweep 0..1, skin 0..1, tune 200-400 Hz, tail toggle",
+  "price": 2,
+  "kit": "drum-machine"
+ },
+ {
+  "slug": "drum-cowbell-two-tone",
+  "kind": "sfx",
+  "brief": "Two-square-oscillator cowbell; knobs: circuit (808|tr606|cr78), detune 0..1, decay 0..1, bandpass 0..1, pitch 500-900 Hz, tail toggle",
+  "price": 2,
+  "kit": "drum-machine"
+ },
+ {
+  "slug": "drum-tuned-perc-blip",
+  "kind": "sfx",
+  "brief": "Tuned percussion one-shot (zap/marimba-ish); knobs: wave (sine|triangle|fm), pitch 0..1, decay 0..1, pitch-env 0..1, resonance 0..1, tail toggle",
+  "price": 2,
+  "kit": "drum-machine"
+ },
+ {
+  "slug": "drum-claves-wood",
+  "kind": "sfx",
+  "brief": "Bright clave ping from resonant filter; knobs: material (rosewood|plastic|metal), pitch 0..1, decay 0..1, brightness 0..1, tail toggle",
+  "price": 1,
+  "kit": "drum-machine"
+ },
+ {
+  "slug": "drum-cymbal-crash-synth",
+  "kind": "sfx",
+  "brief": "Synthesized analogue crash cymbal; knobs: metal (bronze|brass|thin), decay 0..1, spread 0..1, tone 0..1, tail toggle",
+  "price": 2,
+  "kit": "drum-machine"
+ },
+ {
+  "slug": "drum-pad-button-press",
+  "kind": "foley",
+  "brief": "Mechanical step-button press on drum machine panel; knobs: switch (rubber|tact|clicky), force 0..1, release-click 0..1, room 0..1",
+  "price": 1,
+  "kit": "drum-machine"
+ },
+ {
+  "slug": "drum-knob-turn-detent",
+  "kind": "foley",
+  "brief": "Rotary pot or detented knob twist; knobs: knob (smooth|detented|stiff), speed 0..1, steps 1-20, scrape 0..1",
+  "price": 1,
+  "kit": "drum-machine"
+ },
+ {
+  "slug": "drum-fader-slide",
+  "kind": "foley",
+  "brief": "Small level fader slid on panel; knobs: fader (plastic|metal), distance 0..1, speed 0..1, friction 0..1",
+  "price": 1,
+  "kit": "drum-machine"
+ },
+ {
+  "slug": "drum-cable-patch-plug",
+  "kind": "foley",
+  "brief": "1/4-inch jack plugged/unplugged with hum pop; knobs: action (insert|pull), force 0..1, hum-pop 0..1, buzz 0..1",
+  "price": 1,
+  "kit": "drum-machine"
+ },
+ {
+  "slug": "drum-power-switch-on",
+  "kind": "foley",
+  "brief": "Power toggle with relay thunk and speaker pop; knobs: switch (rocker|toggle), pop 0..1, hum-rise 0..1, relay 0..1, tail toggle",
+  "price": 2,
+  "kit": "drum-machine"
+ },
+ {
+  "slug": "drum-ui-step-led-tick",
+  "kind": "ui",
+  "brief": "Short sequencer step tick for menu navigation; knobs: tone (hat|rim|blip), pitch 0..1, brightness 0..1, length 0..1",
+  "price": 1,
+  "kit": "drum-machine"
+ },
+ {
+  "slug": "drum-ui-confirm-cowbell",
+  "kind": "ui",
+  "brief": "Confirm chime from two-tone cowbell blip; knobs: interval (fifth|octave|third), pitch 0..1, decay 0..1, sparkle 0..1",
+  "price": 1,
+  "kit": "drum-machine"
+ },
+ {
+  "slug": "drum-ui-error-buzz",
+  "kind": "ui",
+  "brief": "Error/deny buzz from detuned low tom; knobs: wave (square|saw), detune 0..1, length 0..1, grit 0..1",
+  "price": 1,
+  "kit": "drum-machine"
+ },
+ {
+  "slug": "drum-impact-kick-sub-drop",
+  "kind": "impact",
+  "brief": "Huge sub kick drop for trailer hits; knobs: size (room|arena|cinematic), sub 0..1, distortion 0..1, sweep 0..1, tail toggle",
+  "price": 3,
+  "kit": "drum-machine"
+ },
+ {
+  "slug": "drum-impact-gated-tom-slam",
+  "kind": "impact",
+  "brief": "Stacked gated toms and snare slam; knobs: size (studio|hall|stadium), punch 0..1, gate 0..1, layering 0..1, tail toggle",
+  "price": 3,
+  "kit": "drum-machine"
+ },
+ {
+  "slug": "drum-impact-clap-reverse-hit",
+  "kind": "impact",
+  "brief": "Reverse clap riser into crash hit; knobs: space (plate|hall|spring), rise-length 0..1, hit-weight 0..1, brightness 0..1, tail toggle",
+  "price": 3,
+  "kit": "drum-machine"
+ },
+ {
+  "slug": "drum-amb-machine-hum",
+  "kind": "ambience",
+  "brief": "Idle drum machine hum and transformer buzz, loopable 3 s; knobs: mains (50Hz|60Hz), hum 0..1, hiss 0..1, crackle 0..1",
+  "price": 3,
+  "kit": "drum-machine"
+ },
+ {
+  "slug": "drum-amb-studio-room-tone",
+  "kind": "ambience",
+  "brief": "Small studio room tone with monitors idling, loopable 4 s; knobs: room (booth|control|live), air 0..1, monitor-hiss 0..1, distant-hvac 0..1",
+  "price": 4,
+  "kit": "drum-machine"
+ },
+ {
+  "slug": "drum-amb-sequencer-bleed",
+  "kind": "ambience",
+  "brief": "Muffled hats and kick bleeding through a wall, loopable 2-4 s; knobs: wall (drywall|brick|door), tempo 80-140 bpm, muffle 0..1, level 0..1",
+  "price": 4,
+  "kit": "drum-machine"
+ },
+ {
+  "slug": "drum-loop-classic-groove",
+  "kind": "music-loop",
+  "brief": "One-bar analogue drum pattern loop; knobs: circuit (808|909|cr78), tempo 80-140 bpm, swing 0..1, density 0..1, accent 0..1, fill toggle",
+  "price": 5,
+  "kit": "drum-machine"
+ },
+ {
+  "slug": "ocean-wave-slap-stone",
+  "kind": "sfx",
+  "brief": "Single wave slapping a harbour wall; knobs: stone (granite|concrete|mossy-block), force 0..1, spray 0..1, backwash 0..1, pitch, tail toggle",
+  "price": 2,
+  "kit": "ocean-harbour"
+ },
+ {
+  "slug": "ocean-wave-crash-breakwater",
+  "kind": "sfx",
+  "brief": "Larger swell bursting over a breakwater; knobs: size (small|medium|storm), impact 0..1, foam hiss 0..1, rumble 0..1, tail toggle",
+  "price": 3,
+  "kit": "ocean-harbour"
+ },
+ {
+  "slug": "ocean-water-lap-hull",
+  "kind": "sfx",
+  "brief": "Gentle water lapping against a moored hull; knobs: hull (wood|fibreglass|steel), amount 0..1, hollowness 0..1, rate, tail toggle",
+  "price": 2,
+  "kit": "ocean-harbour"
+ },
+ {
+  "slug": "ocean-gull-call",
+  "kind": "sfx",
+  "brief": "Herring gull call; knobs: bird size (small|adult|large), excitement 0..1, distance 0..1, rasp 0..1, pitch, tail toggle",
+  "price": 2,
+  "kit": "ocean-harbour"
+ },
+ {
+  "slug": "ocean-gull-squabble",
+  "kind": "sfx",
+  "brief": "Several gulls bickering over scraps; knobs: flock (pair|few|crowd), aggression 0..1, wing flaps 0..1, distance 0..1, rate",
+  "price": 3,
+  "kit": "ocean-harbour"
+ },
+ {
+  "slug": "ocean-gull-wing-takeoff",
+  "kind": "foley",
+  "brief": "Gull flapping off a post; knobs: size (small|large), flap strength 0..1, feather rustle 0..1, rate, tail toggle",
+  "price": 1,
+  "kit": "ocean-harbour"
+ },
+ {
+  "slug": "ocean-rope-creak-mooring",
+  "kind": "foley",
+  "brief": "Mooring line creaking under strain; knobs: rope (hemp|nylon|wire), tension 0..1, stretch 0..1, grit 0..1, pitch, tail toggle",
+  "price": 2,
+  "kit": "ocean-harbour"
+ },
+ {
+  "slug": "ocean-rope-coil-drop",
+  "kind": "foley",
+  "brief": "Coiled rope dropped onto a dock; knobs: surface (wood-plank|stone|steel-deck), weight 0..1, slither 0..1, wetness 0..1, tail toggle",
+  "price": 1,
+  "kit": "ocean-harbour"
+ },
+ {
+  "slug": "ocean-rope-cleat-tie",
+  "kind": "foley",
+  "brief": "Rope wrapped and cinched on a cleat; knobs: cleat (iron|wood|nylon), friction 0..1, speed 0..1, snap 0..1, rate",
+  "price": 2,
+  "kit": "ocean-harbour"
+ },
+ {
+  "slug": "ocean-bell-buoy-ring",
+  "kind": "sfx",
+  "brief": "Bell buoy clanging as it rocks; knobs: bell size (small|medium|large), swell 0..1, clapper hits 0..1, rust 0..1, pitch, tail toggle",
+  "price": 3,
+  "kit": "ocean-harbour"
+ },
+ {
+  "slug": "ocean-boat-engine-idle",
+  "kind": "sfx",
+  "brief": "Small boat diesel idling at the quay; knobs: engine (outboard|inboard-diesel|old-two-stroke), rpm 0..1, roughness 0..1, exhaust burble 0..1, tail toggle",
+  "price": 3,
+  "kit": "ocean-harbour"
+ },
+ {
+  "slug": "ocean-boat-engine-start",
+  "kind": "sfx",
+  "brief": "Engine cranking and catching; knobs: engine (outboard|diesel), crank attempts 0..1, choke sputter 0..1, smoke cough 0..1, pitch, tail toggle",
+  "price": 3,
+  "kit": "ocean-harbour"
+ },
+ {
+  "slug": "ocean-boat-pass-by",
+  "kind": "sfx",
+  "brief": "Motorboat passing across the harbour mouth; knobs: hull size (dinghy|trawler|ferry), speed 0..1, wake splash 0..1, distance 0..1, tail toggle",
+  "price": 3,
+  "kit": "ocean-harbour"
+ },
+ {
+  "slug": "ocean-foghorn-blast",
+  "kind": "sfx",
+  "brief": "Lighthouse foghorn blast; knobs: horn (diaphone|electric|ship-whistle), length 0..1, growl 0..1, distance 0..1, pitch, tail toggle",
+  "price": 3,
+  "kit": "ocean-harbour"
+ },
+ {
+  "slug": "ocean-wind-gust-water",
+  "kind": "sfx",
+  "brief": "Single gust skimming the water surface; knobs: strength (breeze|gust|gale), whistle 0..1, spray 0..1, rate, tail toggle",
+  "price": 2,
+  "kit": "ocean-harbour"
+ },
+ {
+  "slug": "ocean-halyard-clink",
+  "kind": "foley",
+  "brief": "Halyards slapping a mast in the wind; knobs: mast (aluminium|wood), wind 0..1, slap density 0..1, ring 0..1, rate",
+  "price": 2,
+  "kit": "ocean-harbour"
+ },
+ {
+  "slug": "ocean-footsteps-dock",
+  "kind": "foley",
+  "brief": "Footsteps on harbour planking; knobs: surface (dry-plank|wet-plank|stone-quay), weight 0..1, creak 0..1, shoe grit 0..1, rate",
+  "price": 2,
+  "kit": "ocean-harbour"
+ },
+ {
+  "slug": "ocean-net-haul",
+  "kind": "foley",
+  "brief": "Fishing net hauled dripping over a gunwale; knobs: net (nylon|rope), weight 0..1, drip 0..1, catch flop 0..1, tail toggle",
+  "price": 2,
+  "kit": "ocean-harbour"
+ },
+ {
+  "slug": "ocean-crate-set-down",
+  "kind": "foley",
+  "brief": "Fish crate set onto the quay; knobs: crate (wood|plastic), load 0..1, ice rattle 0..1, wetness 0..1, tail toggle",
+  "price": 1,
+  "kit": "ocean-harbour"
+ },
+ {
+  "slug": "ocean-hull-bump-fender",
+  "kind": "impact",
+  "brief": "Boat hull bumping a dock fender; knobs: fender (tyre|foam|rope-bumper), force 0..1, hull resonance 0..1, squeak 0..1, tail toggle",
+  "price": 2,
+  "kit": "ocean-harbour"
+ },
+ {
+  "slug": "ocean-anchor-drop",
+  "kind": "impact",
+  "brief": "Anchor dropping and chain rattling out; knobs: anchor size (small|medium|heavy), chain length 0..1, splash 0..1, clank 0..1, tail toggle",
+  "price": 3,
+  "kit": "ocean-harbour"
+ },
+ {
+  "slug": "ocean-gangway-slam",
+  "kind": "impact",
+  "brief": "Metal gangway plate slamming onto the quay; knobs: material (steel|aluminium|wood), force 0..1, rattle 0..1, ring 0..1, tail toggle",
+  "price": 2,
+  "kit": "ocean-harbour"
+ },
+ {
+  "slug": "ocean-amb-harbour-calm",
+  "kind": "ambience",
+  "brief": "Loopable 3 s bed of calm harbour: lapping, distant gulls, rope creaks; knobs: tide (low|mid|high), water 0..1, birds 0..1, creak 0..1, tail toggle",
+  "price": 4,
+  "kit": "ocean-harbour"
+ },
+ {
+  "slug": "ocean-amb-windy-quay",
+  "kind": "ambience",
+  "brief": "Loopable 3 s windy quay bed with halyards and chop; knobs: wind (breeze|stiff|gale), chop 0..1, rigging 0..1, gusts 0..1, rate",
+  "price": 4,
+  "kit": "ocean-harbour"
+ },
+ {
+  "slug": "ocean-amb-fog-night",
+  "kind": "ambience",
+  "brief": "Loopable 4 s foggy night harbour: muffled water, faint buoy bell; knobs: fog density (light|thick), water 0..1, bell 0..1, muffling 0..1, tail toggle",
+  "price": 5,
+  "kit": "ocean-harbour"
+ },
+ {
+  "slug": "ocean-amb-working-dock",
+  "kind": "ambience",
+  "brief": "Loopable 3 s busy dock bed: idling engines, crates, chatter-free activity; knobs: activity (quiet|busy|bustling), engines 0..1, handling 0..1, gulls 0..1, rate",
+  "price": 4,
+  "kit": "ocean-harbour"
+ },
+ {
+  "slug": "ocean-ui-bell-select",
+  "kind": "ui",
+  "brief": "Small ship's bell tick for menu select; knobs: bell (brass|bronze|tin), brightness 0..1, damping 0..1, pitch, tail toggle",
+  "price": 1,
+  "kit": "ocean-harbour"
+ },
+ {
+  "slug": "ocean-ui-rope-confirm",
+  "kind": "ui",
+  "brief": "Short rope-snap and knot cinch for confirm; knobs: rope (hemp|nylon), snap 0..1, creak 0..1, pitch, tail toggle",
+  "price": 1,
+  "kit": "ocean-harbour"
+ },
+ {
+  "slug": "ocean-music-sea-shanty-loop",
+  "kind": "music-loop",
+  "brief": "Short concertina-and-bodhrán shanty loop; knobs: instrument (concertina|fiddle|whistle), tempo, swing 0..1, drum 0..1, sea bed 0..1, tail toggle",
+  "price": 5,
+  "kit": "ocean-harbour"
+ },
+ {
+  "slug": "horror-floorboard-creak",
+  "kind": "foley",
+  "brief": "Single floorboard creak under a footstep; knobs: wood (pine|oak|rotten), stress 0..1, groan length 0..1, pitch, room tail toggle",
+  "price": 2,
+  "kit": "horror-house"
+ },
+ {
+  "slug": "horror-floorboard-step-sequence",
+  "kind": "foley",
+  "brief": "Slow pacing footsteps across old boards; knobs: shoe (bare|boot|heel), weight 0..1, creak amount 0..1, step rate, tail toggle",
+  "price": 3,
+  "kit": "horror-house"
+ },
+ {
+  "slug": "horror-stair-creak",
+  "kind": "foley",
+  "brief": "Groaning stair tread taking weight; knobs: stair size (narrow|wide), weight 0..1, squeal 0..1, nail rattle 0..1, pitch, tail toggle",
+  "price": 2,
+  "kit": "horror-house"
+ },
+ {
+  "slug": "horror-door-slow-open",
+  "kind": "foley",
+  "brief": "Heavy door swinging open on rusty hinges; knobs: door (wood|iron), rust 0..1, swing speed 0..1, latch click 0..1, pitch, tail toggle",
+  "price": 3,
+  "kit": "horror-house"
+ },
+ {
+  "slug": "horror-door-slam",
+  "kind": "impact",
+  "brief": "Interior door slammed by unseen force; knobs: door size (closet|room|front), force 0..1, frame rattle 0..1, debris 0..1, tail toggle",
+  "price": 3,
+  "kit": "horror-house"
+ },
+ {
+  "slug": "horror-shutter-slam",
+  "kind": "impact",
+  "brief": "Window shutter blown shut against the wall; knobs: material (wood|tin), force 0..1, bounce 0..1, glass shiver 0..1, tail toggle",
+  "price": 3,
+  "kit": "horror-house"
+ },
+ {
+  "slug": "horror-shutter-bang-loose",
+  "kind": "sfx",
+  "brief": "Loose shutter knocking repeatedly in gusts; knobs: material (wood|tin), gust strength 0..1, irregularity 0..1, knock rate, tail toggle",
+  "price": 3,
+  "kit": "horror-house"
+ },
+ {
+  "slug": "horror-dripping-tap",
+  "kind": "sfx",
+  "brief": "Single drip from a rusty tap into a basin; knobs: basin (porcelain|metal|puddle), drop size 0..1, resonance 0..1, pitch, tail toggle",
+  "price": 2,
+  "kit": "horror-house"
+ },
+ {
+  "slug": "horror-pipe-groan",
+  "kind": "sfx",
+  "brief": "Old plumbing groaning and knocking in walls; knobs: pipe (copper|iron), pressure 0..1, knock amount 0..1, pitch, tail toggle",
+  "price": 3,
+  "kit": "horror-house"
+ },
+ {
+  "slug": "horror-wind-whisper",
+  "kind": "sfx",
+  "brief": "Breathy wind gust through a crack that almost sounds like a voice; knobs: gap size (keyhole|window|chimney), breathiness 0..1, vowel shape 0..1, pitch, tail toggle",
+  "price": 3,
+  "kit": "horror-house"
+ },
+ {
+  "slug": "horror-ghost-whisper",
+  "kind": "sfx",
+  "brief": "Unintelligible whispered phrase drifting past; knobs: voice (child|adult|choir), intensity 0..1, reverse amount 0..1, pan motion 0..1, tail toggle",
+  "price": 4,
+  "kit": "horror-house"
+ },
+ {
+  "slug": "horror-distant-knock",
+  "kind": "foley",
+  "brief": "Three knocks from somewhere inside the walls; knobs: surface (wood|plaster|metal), force 0..1, distance 0..1, knock rate, tail toggle",
+  "price": 2,
+  "kit": "horror-house"
+ },
+ {
+  "slug": "horror-scratch-wall",
+  "kind": "foley",
+  "brief": "Fingernail scratching behind plaster; knobs: surface (plaster|wood|wallpaper), pressure 0..1, length 0..1, speed, tail toggle",
+  "price": 3,
+  "kit": "horror-house"
+ },
+ {
+  "slug": "horror-glass-shatter-small",
+  "kind": "impact",
+  "brief": "Picture frame or mirror falling and cracking; knobs: glass size (small|mirror|window), force 0..1, shard scatter 0..1, tail toggle",
+  "price": 3,
+  "kit": "horror-house"
+ },
+ {
+  "slug": "horror-music-box-wind-down",
+  "kind": "sfx",
+  "brief": "Child's music box tune slowing and detuning to a stop; knobs: comb (tin|brass), slowdown 0..1, detune 0..1, start pitch, tail toggle",
+  "price": 4,
+  "kit": "horror-house"
+ },
+ {
+  "slug": "horror-rocking-chair",
+  "kind": "foley",
+  "brief": "Empty rocking chair creaking back and forth; knobs: wood (oak|wicker), creak amount 0..1, floor contact 0..1, rock rate, tail toggle",
+  "price": 2,
+  "kit": "horror-house"
+ },
+ {
+  "slug": "horror-candle-blowout",
+  "kind": "foley",
+  "brief": "Candle flame snuffed by a sudden breath; knobs: candle size (taper|pillar), breath strength 0..1, sizzle 0..1, smoke hiss 0..1, tail toggle",
+  "price": 1,
+  "kit": "horror-house"
+ },
+ {
+  "slug": "horror-clock-tick-stop",
+  "kind": "sfx",
+  "brief": "Grandfather clock ticking then abruptly halting; knobs: clock (mantel|grandfather), tick level 0..1, mechanism rattle 0..1, tick rate, tail toggle",
+  "price": 2,
+  "kit": "horror-house"
+ },
+ {
+  "slug": "horror-lightbulb-flicker",
+  "kind": "sfx",
+  "brief": "Bare bulb buzzing and flickering out; knobs: bulb (filament|fluorescent), buzz 0..1, flicker chaos 0..1, pop 0..1, tail toggle",
+  "price": 2,
+  "kit": "horror-house"
+ },
+ {
+  "slug": "horror-stinger-hit",
+  "kind": "impact",
+  "brief": "Jump-scare stinger with orchestral stab and noise burst; knobs: palette (strings|brass|synth), intensity 0..1, noise layer 0..1, pitch, tail toggle",
+  "price": 4,
+  "kit": "horror-house"
+ },
+ {
+  "slug": "horror-stinger-rise",
+  "kind": "sfx",
+  "brief": "Rising tension swell ending in a cut; knobs: palette (strings|synth|reverse), length 0..1, dissonance 0..1, start pitch, tail toggle",
+  "price": 4,
+  "kit": "horror-house"
+ },
+ {
+  "slug": "horror-low-drone-bed",
+  "kind": "ambience",
+  "brief": "Loopable 4 s sub drone filling the house; knobs: tone (organ|synth|bowed), depth 0..1, beating 0..1, pitch, loop crossfade toggle",
+  "price": 5,
+  "kit": "horror-house"
+ },
+ {
+  "slug": "horror-house-room-tone",
+  "kind": "ambience",
+  "brief": "Loopable 3 s empty-room air with faint settling creaks; knobs: room size (closet|bedroom|hall), air level 0..1, creak density 0..1, hum 0..1, loop toggle",
+  "price": 4,
+  "kit": "horror-house"
+ },
+ {
+  "slug": "horror-wind-outside-bed",
+  "kind": "ambience",
+  "brief": "Loopable 4 s wind around the house exterior; knobs: exposure (sheltered|open), gust strength 0..1, whistle 0..1, rain 0..1, loop toggle",
+  "price": 4,
+  "kit": "horror-house"
+ },
+ {
+  "slug": "horror-basement-drip-bed",
+  "kind": "ambience",
+  "brief": "Loopable 3 s damp basement with scattered drips; knobs: space (cellar|crawlspace), drip density 0..1, echo 0..1, pipe hum 0..1, loop toggle",
+  "price": 4,
+  "kit": "horror-house"
+ },
+ {
+  "slug": "horror-ui-menu-select",
+  "kind": "ui",
+  "brief": "Menu select as a muted creak and low thud; knobs: material (wood|bone), weight 0..1, brightness 0..1, pitch, tail toggle",
+  "price": 1,
+  "kit": "horror-house"
+ },
+ {
+  "slug": "horror-ui-menu-hover",
+  "kind": "ui",
+  "brief": "Hover tick like a faint whisper breath; knobs: texture (breath|dust), level 0..1, airiness 0..1, pitch, tail toggle",
+  "price": 1,
+  "kit": "horror-house"
+ },
+ {
+  "slug": "horror-ui-pickup-key",
+  "kind": "ui",
+  "brief": "Item pickup jingle of an old iron key with eerie shimmer; knobs: metal (iron|brass), jingle amount 0..1, shimmer 0..1, pitch, tail toggle",
+  "price": 2,
+  "kit": "horror-house"
+ },
+ {
+  "slug": "horror-music-dread-loop",
+  "kind": "music-loop",
+  "brief": "Short loopable dread motif on detuned piano over pulse; knobs: instrument (piano|celesta|cello), detune 0..1, pulse level 0..1, tempo, loop toggle",
+  "price": 5,
+  "kit": "horror-house"
+ },
+ {
+  "slug": "horror-music-lullaby-sting",
+  "kind": "music-loop",
+  "brief": "Broken lullaby phrase one-shot that warps at the end; knobs: voice (music box|hum|toy piano), warp 0..1, tape wobble 0..1, pitch, tail toggle",
+  "price": 4,
+  "kit": "horror-house"
+ }
+]
