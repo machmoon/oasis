@@ -15,6 +15,16 @@ const api = async (path, { method = "GET", body } = {}) => { const r = await fet
 const toast = (msg) => { const t = $("#toast"); if (!t) return; t.textContent = msg; t.classList.add("on"); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("on"), 2600); };
 const store = { get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
 for (const href of ["/sound.css", "/pay.css"]) if (!document.querySelector(`link[href="${href}"]`)) { const l = document.createElement("link"); l.rel = "stylesheet"; l.href = href; document.head.appendChild(l); }
+// Copying the kit link follows github/clipboard-copy-element (src/clipboard.ts): navigator.clipboard.writeText when
+// the browser allows it, else select the text and execCommand("copy"); the button says "Copied" for a moment.
+async function copyLink(text, btn) {
+  let ok = false;
+  try { await navigator.clipboard.writeText(text); ok = true; }
+  catch { const f = $("#kv-url"); if (f) { f.focus(); f.select(); try { ok = document.execCommand("copy"); } catch {} } }
+  const lbl = btn.querySelector("span"); if (!lbl) return;
+  lbl.textContent = ok ? "Copied" : "Press ⌘C"; btn.classList.toggle("done", ok);
+  clearTimeout(copyLink.t); copyLink.t = setTimeout(() => { lbl.textContent = "Copy link"; btn.classList.remove("done"); }, 1800);
+}
 const EXAMPLES = ["rainy cyberpunk alley footsteps and UI clicks", "a cosy wooden tavern with a crackling fire", "sci-fi console: confirms, denies and a servo door", "lo-fi drum kit with a dusty kick", "forest at night, quiet, with an owl", "a kitchen scene: knives, a kettle and a fridge"];
 
 export async function pageKits(app) {
@@ -56,17 +66,20 @@ export async function pageKit(app, id) {
   draw();
 
   function draw() {
-    const paid = k.licensed, creators = {};
+    const paid = k.licensed, creators = {}, kitUrl = `${location.origin}/#/kit/${encodeURIComponent(k.id)}`;
     for (const i of k.items) if (i.price > 0) creators[i.author] = (creators[i.author] || 0) + i.price;
     app.innerHTML = `<div class="wrap a-page">
       <nav class="a-crumb" aria-label="Breadcrumb"><a href="#/kits">Kits</a><span>/</span><span>${esc(k.title)}</span></nav>
       <header class="kv-head">
         <div><h1>${esc(k.title)}</h1><p class="kv-vibe">"<b>${esc(k.vibe)}</b>". <span class="num">${k.items.length}</span> sounds from ${k.creators.length} creators, planned by ${esc(k.planner)}.</p></div>
-        <span class="kv-state${paid ? " paid" : ""}">${paid ? `${icon("seal-check")} Licensed · PayPal order ${esc(k.licence.orderId)}` : `${icon("waveform")} Watermarked preview until paid`}</span>
+        <div class="kv-side">
+          <span class="kv-state${paid ? " paid" : ""}">${paid ? `${icon("seal-check")} Licensed · PayPal order ${esc(k.licence.orderId)}` : `${icon("waveform")} Watermarked preview until paid`}</span>
+          <div class="kv-share"><label class="sr-only" for="kv-url">Link to this kit</label><input id="kv-url" readonly value="${esc(kitUrl)}" spellcheck="false"><button class="btn small" id="kv-copy" type="button">${icon("link-simple")} <span>Copy link</span></button></div>
+        </div>
       </header>
       <div class="kv-body">
         <div>
-          <div class="kv-all"><button class="s-play" id="kv-all" aria-label="Play the whole kit">${icon("play")}</button><span>Play the kit, one part after another. Each part plays a fresh take of its program.</span><div class="kv-live" id="kv-live" aria-hidden="true"></div></div>
+          <div class="kv-all"><button class="s-play big" id="kv-all" aria-label="Play the kit" aria-pressed="false">${icon("play")}</button><div class="kv-now" aria-live="polite"><b id="kv-now-t">Play the kit</b><span id="kv-now-s">${k.items.length} parts, one after another</span></div><div class="kv-live" id="kv-live" aria-hidden="true"></div></div>
           <div class="kv-parts" id="kv-parts">${k.items.map((it, i) => part(it, i, paid)).join("")}</div>
         </div>
         <aside class="kv-bill">
@@ -89,8 +102,8 @@ export async function pageKit(app, id) {
     return `<div class="kv-part" data-i="${i}">
       <button class="s-play" data-play="${i}" aria-label="Play ${esc(it.name)}">${icon("play")}</button>
       <div class="pic" data-wave="${i}"></div>
-      <div class="who"><b>${esc(it.name)}</b><span>${esc(it.title)}, ${esc(KIND_LABEL[it.kind] || it.kind)} by ${esc(it.author)}${it.reason ? `. ${esc(it.reason[0].toUpperCase() + it.reason.slice(1))}.` : ""}</span>${knobs.length ? `<span class="knobs">${knobs.map(([k, v]) => `<span>${esc(k)} ${esc(String(v))}</span>`).join("")}</span>` : ""}
-        <span class="acts"><a href="#/a/${esc(it.assetId)}${it.licence ? `?lic=${esc(it.licence)}` : ""}">${icon("sliders-horizontal")} Open with knobs</a>${it.wav ? `<a href="${esc(it.wav)}">${icon("download-simple")} WAV, 44.1 kHz</a>` : ""}</span></div>
+      <div class="who"><b class="kv-name">${esc(it.name)}</b><span class="kv-meta">${esc(it.title)}, ${esc(KIND_LABEL[it.kind] || it.kind)} by ${esc(it.author)}${it.reason ? `. ${esc(it.reason[0].toUpperCase() + it.reason.slice(1))}.` : ""}</span>${knobs.length ? `<span class="kv-knobs">${knobs.map(([k, v]) => `<span>${esc(k)} ${esc(String(v))}</span>`).join("")}</span>` : ""}
+        <span class="kv-acts"><a href="#/a/${esc(it.assetId)}${it.licence ? `?lic=${esc(it.licence)}` : ""}">${icon("sliders-horizontal")} Open with knobs</a>${it.wav ? `<a href="${esc(it.wav)}">${icon("download-simple")} WAV, 44.1 kHz</a>` : ""}</span></div>
       <div class="amt num${paid || it.price === 0 ? " clean" : ""}">${it.covered ? "covered" : price(it.price)}<small>${it.covered ? "same program" : paid || it.price === 0 ? "clean" : "preview"}</small></div>
       ${it.wav ? `<div class="links"><code>import { play } from "${esc(it.module)}"</code></div>` : ""}
     </div>`;
@@ -100,27 +113,64 @@ export async function pageKit(app, id) {
     const bufFor = async (i) => { if (!buffers.has(i)) buffers.set(i, loadWav(k.items[i].licence ? `/api/licenses/${k.items[i].licence}/render.wav?p=${encodeURIComponent(JSON.stringify(k.items[i].knobs))}` : k.items[i].preview.replace(/^https?:\/\/[^/]+/, ""))); return buffers.get(i); };
     // each part's waveform is a small wavesurfer over the same buffer it plays (public/wave.js lazyWave), dimmed while
     // it is a watermarked preview; the live spectrum and scope by "play the kit" listen to the master bus
-    const waves = k.items.map((it, i) => lazyWave($(`[data-wave="${i}"]`), async () => ({ buffer: await bufFor(i), dim: !paid && it.price > 0 }), { height: 48, barWidth: 2, barGap: 1, barRadius: 1 }));
+    const waves = k.items.map((it, i) => lazyWave($(`[data-wave="${i}"]`), async () => ({ buffer: await bufFor(i), dim: !paid && it.price > 0 }), { height: 48, barWidth: 2, barGap: 1, barRadius: 1, wsOptions: { cursorWidth: 2 } }));
     const live = mountLive($("#kv-live"));
-    addEventListener("hashchange", () => setTimeout(() => { if (!$("#kv-live")) live.destroy(); }, 0), { once: true });
-    let playingAll = false;
-    const playOne = async (i) => {
-      await unlock();
-      const b = $(`[data-play="${i}"]`); b.classList.add("on"); b.innerHTML = icon("stop"); b.closest(".kv-part")?.classList.add("on");
-      try {
-        const buf = await bufFor(i), w = waves[i].wave;
-        if (w) { await w.play(); await new Promise((r) => w.ws.once("finish", r)); }
-        else await play(buf).done;
-      } catch (e) { toast(e.message); }
-      b.classList.remove("on"); b.innerHTML = icon("play"); b.closest(".kv-part")?.classList.remove("on");
+    addEventListener("hashchange", () => setTimeout(() => { if (!$("#kv-live")) { stop(); live.destroy(); } }, 0), { once: true });
+    // one transport for the page: a single part, or the whole kit in order. Every start takes a new token, so a stop
+    // or a newer click ends whatever was playing (its wave pauses, its "finish" wait resolves) and the loop below exits.
+    let token = 0, current = null, playingAll = false;
+    const motion = matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+    const mark = (i, on) => {
+      const b = $(`[data-play="${i}"]`), row = b?.closest(".kv-part"); if (!b) return;
+      b.classList.toggle("on", on); b.innerHTML = icon(on ? "stop" : "play"); b.setAttribute("aria-label", `${on ? "Stop" : "Play"} ${k.items[i].name}`);
+      row.classList.toggle("on", on); if (on) row.setAttribute("aria-current", "true"); else row.removeAttribute("aria-current");
     };
-    app.addEventListener("click", (e) => { const b = e.target.closest("[data-play]"); if (b) playOne(Number(b.dataset.play)); });
-    $("#kv-all").addEventListener("click", async () => {
-      if (playingAll) { playingAll = false; return; }
-      playingAll = true; $("#kv-all").innerHTML = icon("stop");
-      for (let i = 0; i < k.items.length && playingAll; i++) { await playOne(i); await new Promise((r) => setTimeout(r, 140)); }
-      playingAll = false; $("#kv-all").innerHTML = icon("play");
+    const now = (t, sub) => { $("#kv-now-t").textContent = t; $("#kv-now-s").textContent = sub; };
+    const allBtn = (on) => { const b = $("#kv-all"); b.classList.toggle("on", on); b.innerHTML = icon(on ? "stop" : "play"); b.setAttribute("aria-pressed", String(on)); b.setAttribute("aria-label", on ? "Stop the kit" : "Play the kit"); };
+    function stop() {
+      token++;
+      if (current) { current.end(); current = null; }
+      if (playingAll) { playingAll = false; allBtn(false); now("Play the kit", `${k.items.length} parts, one after another`); $("#kv-parts").classList.remove("seq"); }
+    }
+    const playOne = async (i, t) => {
+      mark(i, true);
+      try {
+        const w = await waves[i].ensure();
+        if (t !== token) return;
+        await new Promise((resolve) => {
+          if (w) {
+            const done = () => { w.ws.un("finish", done); w.ws.un("pause", done); resolve(); };
+            current = { i, end: () => w.stop() };
+            w.ws.on("finish", done); w.ws.on("pause", done);
+            w.play();
+          } else {
+            bufFor(i).then((buf) => { if (t !== token) return resolve(); const h = play(buf); current = { i, end: () => { h.stop?.(); resolve(); } }; h.done.then(resolve); }, resolve);
+          }
+        });
+      } catch (e) { toast(e.message); }
+      finally { mark(i, false); if (current?.i === i) current = null; }
+    };
+    $("#kv-parts").addEventListener("click", async (e) => {
+      const b = e.target.closest("[data-play]"); if (!b) return;
+      const i = Number(b.dataset.play), was = current?.i === i && !playingAll;
+      stop(); if (was) return;
+      await unlock(); playOne(i, token);
     });
+    $("#kv-all").addEventListener("click", async () => {
+      if (playingAll) { stop(); return; }
+      stop(); await unlock();
+      const t = token; playingAll = true; allBtn(true); $("#kv-parts").classList.add("seq");
+      for (let i = 0; i < k.items.length && t === token; i++) {
+        now(k.items[i].name, `Part ${i + 1} of ${k.items.length}`);
+        $(`.kv-part[data-i="${i}"]`)?.scrollIntoView({ block: "nearest", behavior: motion });
+        if (i + 1 < k.items.length) waves[i + 1].ensure(); // the next take decodes while this one plays
+        await playOne(i, t);
+        if (t === token) await new Promise((r) => setTimeout(r, 220));
+      }
+      if (t === token) stop();
+    });
+    $("#kv-copy").addEventListener("click", () => copyLink($("#kv-url").value, $("#kv-copy")));
+    $("#kv-url").addEventListener("focus", (e) => e.target.select());
     $("#kv-pay")?.addEventListener("click", async () => {
       const b = $("#kv-pay"); b.setAttribute("aria-busy", "true"); b.innerHTML = `<span class="pk-spin" aria-hidden="true"></span> Opening PayPal…`;
       try {
