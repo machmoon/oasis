@@ -6,6 +6,7 @@ import { createViewer, THREE, partsToGroup } from "/world3d.js";
 import { LOOKS, applyLook } from "/looks.js";
 import { pageSound, KIND_LABEL } from "/sound-page.js";
 import { unlock, loadWav, play } from "/audio.js";
+import { lazyWave } from "/wave.js";
 
 // styles live in kit.css and sound.css; loaded once, from here, so index.html stays as it is
 for (const href of ["/kit.css", "/sound.css"]) if (!document.querySelector(`link[href="${href}"]`)) {
@@ -126,17 +127,23 @@ function liveCards(root) {
 }
 
 // ---------- the sounds browser ----------
-// Cards show each sound's sheet (waveform over spectrogram) with a play control; the sheet plays the default take
-// and hovering plays nothing (sound needs a gesture). Filters: kind, kit, price, creator, the way the 3D kit's are.
+// Cards show each sound's default take as a small wavesurfer waveform (public/wave.js lazyWave, built when the card
+// scrolls into view, from the same render.wav the play button plays) with a play control that drives its cursor;
+// hovering plays nothing (sound needs a gesture). Filters: kind, kit, price, creator, the way the 3D kit's are.
 const soundThumb = (id, q = {}) => { const u = new URLSearchParams({ w: 400, ...q }); return `/api/assets/${encodeURIComponent(id)}/render.png?${u}`; };
 export function soundCard(a) {
   return `<div class="s-card" data-id="${esc(a.id)}">
-    <span class="s-sheet"><a href="#/a/${esc(a.id)}" class="s-link" aria-label="${esc(a.title)}"><img src="${soundThumb(a.id)}" alt="${esc(a.title)}: waveform and spectrogram" loading="lazy" width="400" height="400"></a><button class="s-play" data-play="${esc(a.id)}" aria-label="Play ${esc(a.title)}">${icon("play")}</button></span>
+    <span class="s-sheet"><a href="#/a/${esc(a.id)}" class="s-link" aria-label="${esc(a.title)}: waveform"><span class="s-wave" data-wave-id="${esc(a.id)}" data-dim="${a.price > 0 ? 1 : 0}"></span></a><button class="s-play" data-play="${esc(a.id)}" aria-label="Play ${esc(a.title)}">${icon("play")}</button></span>
     <a class="s-meta" href="#/a/${esc(a.id)}"><b>${esc(a.title)}</b><em class="num">${price(a.price)}</em><span class="by">${esc(a.author)}${a.kit ? `, ${esc(a.kit)}` : ""}</span><span class="facts">${esc(KIND_LABEL[a.kind] || a.kind)} · ${a.duration} s · ${a.knobCount} knobs</span></a></div>`;
 }
 const soundSkeleton = (n = 10) => Array.from({ length: n }, () => `<div class="s-skel" aria-hidden="true"><div class="skel"></div><div class="skel t"></div><div class="skel t"></div></div>`).join("");
 export function liveSoundCards(root) {
-  $$(".s-sheet img", root).forEach((img) => { const on = () => img.closest(".s-sheet").classList.add("in"); img.complete && img.naturalWidth ? on() : img.addEventListener("load", on, { once: true }); img.addEventListener("error", on, { once: true }); });
+  $$(".s-wave:not([data-lazy])", root).forEach((el) => {
+    el.dataset.lazy = "1";
+    el.addEventListener("wave", () => el.closest(".s-sheet").classList.add("in"), { once: true });
+    el.lazy = lazyWave(el, async () => ({ buffer: await loadWav(`/api/assets/${encodeURIComponent(el.dataset.waveId)}/render.wav`), dim: false }), { height: Math.max(80, el.clientHeight || 120), barWidth: 2, barGap: 1, barRadius: 1 });
+    setTimeout(() => el.closest(".s-sheet")?.classList.add("in"), 8000);
+  });
   if (root.dataset.wired) return; root.dataset.wired = "1";
   let playing = null;
   root.addEventListener("click", async (e) => {
@@ -148,7 +155,8 @@ export function liveSoundCards(root) {
     b.classList.add("on"); b.innerHTML = icon("stop");
     try {
       const buf = await loadWav(`/api/assets/${encodeURIComponent(b.dataset.play)}/render.wav`);
-      const p = play(buf); playing = { b, p };
+      const w = b.closest(".s-card")?.querySelector(".s-wave")?.lazy?.wave;
+      const p = w ? { stop: () => w.stop(), done: w.play().then(() => new Promise((r) => { const off = w.ws.on("pause", () => { off(); r(); }); })) } : play(buf); playing = { b, p };
       p.done.then(() => { if (playing?.p === p) { playing = null; b.classList.remove("on"); b.innerHTML = icon("play"); } });
     } catch (err) { toast(err.message); b.classList.remove("on"); b.innerHTML = icon("play"); }
   });

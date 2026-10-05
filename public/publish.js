@@ -3,7 +3,8 @@
 // factory's harness across its knob space, and the page shows the render, the numbers, every gate and a play button
 // per knob before anything is written. Publish re-runs the same check and lists the program under the creator's
 // name. The creator page is what the ledger says they earned, order by order, plus forks and the royalty those paid.
-import { audio, unlock, play, toBuffer, renderInWorker, analyse, drawWave, drawSpec, playhead } from "/audio.js";
+import { audio, unlock, toBuffer, renderInWorker } from "/audio.js";
+import { mountWave } from "/wave.js";
 import { segment, KIND_LABEL } from "/sound-page.js";
 import { soundCard, liveSoundCards } from "/kit.js";
 
@@ -68,8 +69,7 @@ export function build(p, ctx) { … return { samples }; }"></textarea>
       </section>
       <aside class="pb-results" id="pb-results">
         <div class="sp-stage pb-stage" id="pb-stage" hidden>
-          <div class="sp-wave"><span class="sp-axis">waveform</span><canvas id="pb-wave"></canvas></div>
-          <div class="sp-spec"><span class="sp-axis">spectrogram</span><canvas id="pb-spec"></canvas></div>
+          <div class="sp-ws pb-ws" id="pb-ws"><span class="sp-axis">waveform</span><span class="sp-axis spec">spectrogram</span></div>
           <div class="sp-ctl"><button class="s-play big" id="pb-play" aria-label="Play the defaults">${icon("play")}</button><span class="pb-playing" id="pb-playing">defaults</span></div>
         </div>
         <div class="sp-readout pb-readout" id="pb-readout" hidden></div>
@@ -95,7 +95,7 @@ export function build(p, ctx) { … return { samples }; }"></textarea>
     <section class="pb-done" id="pb-done" hidden></section>
   </div>`;
 
-  const src = $("#pb-source"), stage = $("#pb-stage"), waveC = $("#pb-wave"), specC = $("#pb-spec");
+  const src = $("#pb-source"), stage = $("#pb-stage");
   let checked = null, playing = null, defaultsBuffer = null;
   const lines = () => { $("#pb-lines").textContent = `${src.value ? src.value.split("\n").length : 0} lines`; };
   const draft = store.get("oasis.publish.draft"); if (draft) src.value = draft; lines();
@@ -110,9 +110,12 @@ export function build(p, ctx) { … return { samples }; }"></textarea>
   });
   $("#pb-file").addEventListener("change", async (e) => { const f = e.target.files?.[0]; if (!f) return; src.value = await f.text(); lines(); store.set("oasis.publish.draft", src.value); stale(); e.target.value = ""; });
 
-  const draw = (an, at = null) => { drawWave(waveC, an.wave, { at }); drawSpec(specC, an.spec, { at }); };
-  new ResizeObserver(() => { if (checked?.analysis) draw(checked.analysis); }).observe(stage);
-  const stopPlaying = () => { playing?.stop(); playing = null; $$(".s-play.on", app).forEach((b) => { b.classList.remove("on"); b.innerHTML = icon("play"); }); if (checked?.analysis) draw(checked.analysis); };
+  // the take on the stage is a wavesurfer (public/wave.js): waveform, Roseus spectrogram, hover readout; each knob's
+  // far end, when played, morphs out of the defaults
+  let wave = null;
+  const ensureWave = () => (wave ||= mountWave($("#pb-ws"), { height: 150, spectrogram: 130, barWidth: 2, barGap: 1, barRadius: 2, onState: (on) => { if (!on) stopPlaying(true); } }));
+  const showDefaults = async () => { if (!checked) return; const { samples, sr } = await renderInWorker(checked.source, checked.values, audio().sampleRate); await ensureWave().show(toBuffer(samples, sr)); };
+  const stopPlaying = (fromWave = false) => { if (!fromWave) wave?.stop(); playing = null; $$(".s-play.on", app).forEach((b) => { b.classList.remove("on"); b.innerHTML = icon("play"); }); };
   /** Renders the checked source with knob values in the Worker and plays it, drawing the take on the stage. */
   const playValues = async (values, btn, label) => {
     await unlock();
@@ -121,11 +124,9 @@ export function build(p, ctx) { … return { samples }; }"></textarea>
     btn.classList.add("on"); btn.innerHTML = icon("stop"); $("#pb-playing").textContent = label;
     try {
       const { samples, sr } = await renderInWorker(checked.source, values, audio().sampleRate);
-      const an = analyse(samples, sr, { cols: 320 }), buf = toBuffer(samples, sr);
       if (!btn.classList.contains("on")) return;
-      const p = play(buf); playing = p;
-      playhead(buf, p.startedAt, (at) => (at === null ? null : draw(an, at)));
-      p.done.then(() => { if (playing === p) stopPlaying(); });
+      await ensureWave().show(toBuffer(samples, sr));
+      playing = wave; await wave.play();
     } catch (e) { toast(e.message); stopPlaying(); }
   };
   $("#pb-play").addEventListener("click", () => checked && playValues(checked.values, $("#pb-play"), "defaults"));
@@ -140,7 +141,7 @@ export function build(p, ctx) { … return { samples }; }"></textarea>
       const c = await api("/api/publish/check", { method: "POST", body: { source: src.value } });
       c.source = src.value; checked = c; defaultsBuffer = null;
       stage.classList.remove("busy");
-      if (c.analysis) { draw(c.analysis); $("#pb-readout").hidden = false; $("#pb-readout").innerHTML = `<span><b>${c.analysis.seconds.toFixed(2)}</b> s</span><span>peak <b>${c.analysis.peak}</b></span><span>rms <b>${c.analysis.rms}</b></span><span>centroid <b>${c.analysis.centroid}</b> Hz</span><span><b>${c.report.renders}</b> renders, worst <b>${c.report.slowestMs}</b> ms</span>`; }
+      if (c.analysis) { showDefaults().catch(() => {}); $("#pb-readout").hidden = false; $("#pb-readout").innerHTML = `<span><b>${c.analysis.seconds.toFixed(2)}</b> s</span><span>peak <b>${c.analysis.peak}</b></span><span>rms <b>${c.analysis.rms}</b></span><span>centroid <b>${c.analysis.centroid}</b> Hz</span><span><b>${c.report.renders}</b> renders, worst <b>${c.report.slowestMs}</b> ms</span>`; }
       else { stage.hidden = true; $("#pb-readout").hidden = true; }
       $("#pb-gates").innerHTML = gateList(gateRows(c.report));
       $("#pb-verdict").textContent = c.ok ? `passes${c.report.warnings.length ? `, ${c.report.warnings.length} warning${c.report.warnings.length === 1 ? "" : "s"}` : ""}` : `${c.report.errors.length} problem${c.report.errors.length === 1 ? "" : "s"}`;

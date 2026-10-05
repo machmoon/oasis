@@ -1,11 +1,11 @@
 /* The sound registry's pages: the browser, the sound page, the kit pages, and the sound parts of the home page.
    Spent from tokens.css (docs/DESIGN.md): one face, one mono, one lantern accent, pills for buttons and chips,
-   controls 12, inner panels 8, tiles 20. Borrowed, with the file named: the waveform's played part in a second
-   colour with a cursor is wavesurfer.js src/renderer.ts (renderProgress); the spectrogram is wavesurfer's spectrogram
-   plugin (src/spectrogram-setup.ts) through Audacity's default Roseus colour map (public/spectrogram-roseus.js);
-   the slider is shadcn/ui slider.tsx (6px track, 16px thumb with a 1px accent border, a 4px ring on hover and
-   focus); choices are cult-ui halo-segmented (kit.css .seg); the "tap to listen" pill over the silent hero is the
-   muted-autoplay unmute pill every video player puts in the corner of the picture. */
+   controls 12, inner panels 8, tiles 20. Every waveform, spectrogram, timeline, hover readout, minimap and region
+   is wavesurfer.js v7 (public/vendor/wavesurfer, glue in public/wave.js); these rules only frame it and style its
+   ::part()s (the renderer exposes part="cursor", "hover", "hover-label", "region", "timeline-notch" and so on).
+   Knobs are <oasis-knob> (public/knob.js, after webaudio-controls). The walk's scatter is d3-scale on SVG. The
+   slider is shadcn/ui slider.tsx; the segmented control is cult-ui halo-segmented (kit.css .seg); the "tap to
+   listen" pill over the silent hero is the muted-autoplay unmute pill every video player puts in the corner. */
 
 /* ---------- the browser ---------- */
 .s-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(236px, 1fr)); gap: 14px; }
@@ -46,21 +46,31 @@
 .sp-hero { display: grid; grid-template-columns: minmax(0, 1fr) 372px; gap: 20px; align-items: start; }
 @media (max-width: 1023px) { .sp-hero { grid-template-columns: 1fr; } }
 .sp-stage-wrap { display: grid; gap: 10px; }
-.sp-stage { position: relative; border-radius: var(--r-lg); overflow: hidden; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--inset-top), var(--shadow); display: grid; grid-template-rows: minmax(0, 5fr) minmax(0, 6fr); min-height: 400px; isolation: isolate; }
-.sp-stage canvas { display: block; width: 100%; height: 100%; }
-.sp-stage .sp-wave { position: relative; border-bottom: 1px solid var(--line); min-height: 0; }
-.sp-stage .sp-spec { position: relative; background: #010101; min-height: 0; }
-.sp-stage .sp-ctl { position: absolute; left: 14px; bottom: 14px; z-index: 2; display: flex; align-items: center; gap: 10px; }
-.sp-stage .sp-ctl .btn { background: color-mix(in srgb, var(--surface) 90%, transparent); border-color: color-mix(in srgb, var(--line-strong) 70%, transparent); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.sp-stage { position: relative; border-radius: var(--r-lg); overflow: hidden; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--inset-top), var(--shadow); display: grid; min-height: 400px; isolation: isolate; }
+/* the wavesurfer mount: waveform on the surface, the spectrogram plugin's canvases on their own near-black below it */
+.sp-ws { position: relative; padding-top: 30px; background: linear-gradient(var(--surface) 0 calc(30px + 184px), #010101 0); }
+.sp-ws .sp-axis { z-index: 3; }
+.sp-ws .sp-axis.spec { top: calc(30px + 184px + 8px); color: rgb(255 255 255 / .62); }
+@media (max-width: 599px) { .sp-ws { background: linear-gradient(var(--surface) 0 calc(30px + 128px), #010101 0); } .sp-ws .sp-axis.spec { top: calc(30px + 128px + 8px); } }
+/* wavesurfer's shadow parts: the playback cursor, the hover line and its time + level label */
+.sp-ws ::part(cursor) { box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 70%, transparent); }
+.sp-ws ::part(hover-label), .rebuild-stage ::part(hover-label) { font-family: var(--font-mono); border-radius: 6px; font-variant-numeric: tabular-nums; }
+.sp-tl { height: 22px; padding: 2px 0 0; background: var(--surface); border-top: 1px solid var(--line); overflow: hidden; }
+.sp-tl ::part(timeline-notch) { border-left-color: var(--line-strong) !important; }
+.sp-bar { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: center; padding: 12px 14px; border-top: 1px solid var(--line); background: var(--sunk); }
+.sp-stage .sp-ctl { display: flex; align-items: center; gap: 10px; }
+/* the live view: a spectrum (Roseus bars) and a scope (accent line) of whatever is playing, on its own dark */
+.sp-live, .kv-live { position: relative; height: 56px; border-radius: var(--r-sm); background: #010101; overflow: hidden; box-shadow: inset 0 0 0 1px rgb(255 255 255 / .06); }
+.sp-live > div, .kv-live > div { position: absolute; inset: 0; }
+.sp-live .lv-scope, .kv-live .lv-scope { mix-blend-mode: screen; opacity: .9; }
+.lv-tag { position: absolute; right: 8px; top: 6px; z-index: 2; display: inline-flex; align-items: center; gap: 6px; font: var(--fs-xs) var(--font-mono); color: rgb(255 255 255 / .45); pointer-events: none; }
+.lv-tag::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: rgb(255 255 255 / .25); transition: background var(--t), box-shadow var(--t); }
+.on > .lv-tag { color: rgb(255 255 255 / .8); }
+.on > .lv-tag::before { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
 .sp-stage .sp-wm { position: absolute; right: 14px; top: 14px; z-index: 2; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border-radius: var(--r-pill); background: color-mix(in srgb, var(--surface) 86%, transparent); border: 1px solid var(--line); color: var(--ink-2); font: var(--w-semibold) var(--fs-xs) var(--font-sans); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
 .sp-stage .sp-wm.clean { color: var(--ok); }
 .sp-stage .sp-wm i { font-size: 13px; }
 .sp-axis { position: absolute; left: 10px; top: 10px; font: var(--fs-xs) var(--font-mono); color: var(--muted); pointer-events: none; }
-.sp-spec .sp-axis, .hs-pic.spec .sp-axis { color: rgb(255 255 255 / .62); }
-/* frequency ticks down the right edge of the spectrogram */
-.sp-ticks { position: absolute; top: 0; right: 0; bottom: 0; width: 44px; pointer-events: none; font: var(--fs-xs) var(--font-mono); color: rgb(255 255 255 / .62); font-variant-numeric: tabular-nums; }
-.sp-ticks span { position: absolute; right: 8px; transform: translateY(-50%); padding-left: 10px; }
-.sp-ticks span::before { content: ""; position: absolute; left: 0; top: 50%; width: 6px; height: 1px; background: rgb(255 255 255 / .35); }
 /* loading: the stage shimmers; error: a note over the stage with a retry */
 .sp-stage.busy::after { content: ""; position: absolute; inset: 0; z-index: 1; background: linear-gradient(90deg, transparent, rgb(255 255 255 / .18), transparent); background-size: 200% 100%; animation: k-shimmer 1.2s linear infinite; pointer-events: none; }
 .sp-stage .sp-err { position: absolute; inset: 0; z-index: 3; display: grid; place-content: center; justify-items: center; gap: 10px; padding: 24px; text-align: center; background: color-mix(in srgb, var(--surface) 88%, transparent); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); color: var(--ink-2); font-size: 14px; }
@@ -81,6 +91,9 @@
 .a-range input:hover::-webkit-slider-thumb, .a-range input:active::-webkit-slider-thumb { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 30%, transparent); transform: none; }
 .a-range input:focus-visible::-webkit-slider-thumb { outline: none; box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 45%, transparent); }
 .a-range output { font: var(--fs-sm) var(--font-mono); }
+/* the rotary knobs (public/knob.js): a wrapping row of dials, labels under them */
+.a-dials { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 14px 6px; justify-items: center; padding: 4px 0 2px; }
+oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
 /* the seed row: the number in a mono field, a button that takes a new seed, both control-shaped */
 .a-seed { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; }
 .a-seed label { font-size: 14px; color: var(--ink-2); }
@@ -96,18 +109,31 @@
 .a-copy:hover { background: rgb(255 255 255 / .14); }
 .a-copy.done { color: var(--ok); }
 
-/* the walk: 300 takes along one timeline, each a dot (x time, y brightness, size level) */
+/* the walk: 300 takes along one timeline. A d3-scale scatter (x time, y brightness on a log axis, r level, fill the
+   Roseus ramp) over the walk's own zoomed wavesurfer waveform, its Minimap, and a Regions highlight on the take that
+   is sounding. */
 .sp-walk { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 32px; align-items: center; padding: 88px 0 0; }
 .sp-walk .lede { margin-top: 12px; font-size: 17px; }
-.sp-walk-stage { position: relative; aspect-ratio: 16 / 9; border-radius: var(--r-lg); overflow: hidden; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--inset-top), var(--shadow); }
-.sp-walk-stage canvas { display: block; width: 100%; height: 100%; }
-.sp-walk-stage .sp-ctl { position: absolute; left: 14px; bottom: 14px; z-index: 2; display: flex; align-items: center; gap: 10px; }
-.sp-walk-stage .sp-n { position: absolute; right: 14px; top: 16px; font: var(--fs-xs) var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
-.sp-walk-stage .seg { position: absolute; left: 14px; top: 14px; z-index: 2; }
-.sp-walk-stage .sp-note { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 10px; padding: 24px; text-align: center; color: var(--ink-2); font-size: 14px; }
+.sp-walk-stage { position: relative; display: grid; grid-template-rows: auto minmax(220px, 1fr) auto; border-radius: var(--r-lg); overflow: hidden; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--inset-top), var(--shadow); min-height: 420px; }
+.sp-walk-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 12px 14px 0; }
+.sp-walk-head .sp-legend { display: flex; gap: 12px; font: var(--fs-xs) var(--font-mono); color: var(--muted); }
+.sp-walk-head .sp-n { margin-left: auto; font: var(--fs-xs) var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.sp-walk-plot { display: block; width: 100%; height: 100%; min-height: 220px; }
+.sp-walk-plot .grid line { stroke: var(--line); stroke-width: 1; }
+.sp-walk-plot .grid line.v { stroke-dasharray: 2 4; }
+.sp-walk-plot .grid text { fill: var(--muted); font: 10.5px var(--font-mono); font-variant-numeric: tabular-nums; }
+.sp-walk-plot .ph { stroke: var(--accent); stroke-width: 1.5; }
+.sp-walk-plot circle { stroke: var(--surface); stroke-width: .8; fill-opacity: .82; cursor: pointer; transition: r var(--t) var(--ease-spring), fill-opacity var(--t), stroke var(--t); }
+.sp-walk-plot circle:hover { fill-opacity: 1; stroke: var(--ink); }
+.sp-walk-plot circle.heard { stroke: var(--accent); stroke-width: 1.2; }
+.sp-walk-plot circle.hot { fill: var(--accent); fill-opacity: 1; stroke: var(--accent); stroke-width: 6; stroke-opacity: .28; }
+.sp-walk-foot { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: center; padding: 10px 14px 12px; border-top: 1px solid var(--line); background: var(--sunk); }
+.sp-walk-waves { display: grid; gap: 4px; min-width: 0; }
+.sp-walk-waves ::part(region) { border-left: 1px solid var(--accent); border-right: 1px solid var(--accent); }
+#sp-walk-mini { border-radius: 4px; overflow: hidden; }
+.sp-walk-stage .sp-note { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 10px; padding: 24px; text-align: center; color: var(--ink-2); font-size: 14px; background: color-mix(in srgb, var(--surface) 70%, transparent); }
 .sp-walk-stage .sp-note[hidden] { display: none; }
 .sp-walk-stage .sp-note b { color: var(--ink); font-weight: var(--w-semibold); }
-.sp-walk-stage .sp-legend { position: absolute; right: 14px; top: 36px; display: flex; gap: 12px; font: var(--fs-xs) var(--font-mono); color: var(--muted); pointer-events: none; }
 .sp-walk .a-program { margin-top: 18px; font-size: 12px; }
 @media (max-width: 899px) { .sp-walk { grid-template-columns: 1fr; gap: 20px; padding-top: 56px; } }
 
@@ -193,18 +219,13 @@
 /* ---------- home: the hero is a sound program running ---------- */
 /* The pictures sit in the right part of the band, beside the copy. The waveform is on the surface, the spectrogram on
    its own black, and a knob strip under them. Below the stage: the readout on the left, the bill on the right. */
-.hero-sound { display: grid; grid-template-rows: minmax(0, 5fr) minmax(0, 6fr) auto; left: 47%; right: var(--gutter); top: clamp(40px, 7vh, 88px); bottom: 100px; inset-inline-start: 47%; border-radius: var(--r-lg); overflow: hidden; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--inset-top), var(--shadow-lg); }
-.hero-sound .hs-pic { position: relative; min-height: 0; background: var(--surface); }
-.hero-sound .hs-pic.spec { background: #010101; }
-.hero-sound .hs-pic + .hs-pic { border-top: 1px solid var(--line); }
-.hero-sound .hs-pic canvas { display: block; width: 100%; height: 100%; }
-.hero-sound .sp-axis { top: 8px; }
-.hs-knobs { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--line); background: var(--sunk); }
-.hs-knob { display: grid; gap: 4px; font-size: var(--fs-xs); color: var(--muted); transition: color .3s; }
-.hs-knob b { font: var(--w-semibold) var(--fs-sm) var(--font-mono); color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.hs-knob i { display: block; height: 4px; border-radius: 2px; background: linear-gradient(90deg, var(--accent) var(--p, 0%), var(--line) var(--p, 0%)); transition: background .3s; }
-.hs-knob.hot { color: var(--accent-text); }
-.hs-knob.hot b { color: var(--accent-text); }
+.hero-sound { display: grid; grid-template-rows: minmax(0, 1fr) auto; left: 47%; right: var(--gutter); top: clamp(40px, 7vh, 88px); bottom: 100px; inset-inline-start: 47%; border-radius: var(--r-lg); overflow: hidden; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--inset-top), var(--shadow-lg); }
+/* one wavesurfer mount: the waveform on the surface (30px of headroom for the label), the spectrogram on black */
+.hero-sound .hs-pic { position: relative; min-height: 0; padding-top: 30px; background: linear-gradient(var(--surface) 0 var(--wave-h, 45%), #010101 0); }
+.hero-sound .sp-axis { top: 8px; z-index: 3; }
+.hero-sound .sp-axis.spec { color: rgb(255 255 255 / .62); }
+/* the film's knobs: read-only dials that turn (knob.js), the one that just moved in the accent */
+.hs-knobs { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; justify-items: center; gap: 4px; padding: 8px 12px 6px; border-top: 1px solid var(--line); background: var(--sunk); --knob-size: 40px; --knob-w: 84px; }
 /* the silent hero's unmute pill: over the picture, says it is muted, becomes "listening" after the gesture */
 .hs-unlock { position: absolute; left: 14px; bottom: 14px; z-index: 3; display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 14px 0 12px; border-radius: var(--r-pill); border: 1px solid color-mix(in srgb, var(--line-strong) 70%, transparent); background: color-mix(in srgb, var(--surface) 88%, transparent); color: var(--ink); font: var(--w-semibold) var(--fs-sm) var(--font-sans); cursor: pointer; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: var(--shadow); transition: transform var(--t-fast) var(--ease-out), opacity var(--t-slow) var(--ease-out), background var(--t); }
 .hs-unlock i { font-size: 16px; }
@@ -229,12 +250,12 @@
   .hero:has(.hero-sound) .hero-chips .chip:nth-child(n + 4) { display: inline-flex; }
   .hero:has(.hero-sound) .hero-pay .pay:not(.in) { display: none; }
 }
-/* rendered, not resampled: two canvases and a play control in the band's stage */
-.hs-stage2 { display: grid; grid-template-rows: minmax(0, 5fr) minmax(0, 6fr); background: var(--surface); }
-.hs-stage2 canvas { display: block; width: 100%; height: 100%; min-height: 0; }
-.hs-stage2 canvas:first-child { border-bottom: 1px solid var(--line); }
-.hs-stage2 canvas:last-child { background: #010101; }
-.hs-stage2 .s-play { position: absolute; left: var(--s-4); bottom: var(--s-4); }
+/* rendered, not resampled: one wavesurfer (waveform over spectrogram) and a play control in the band's stage */
+.hs-stage2 { background: #010101; }
+.hs-stage2 #rb-ws { background: var(--surface); }
+.hs-stage2 .s-play { position: absolute; left: var(--s-4); bottom: var(--s-4); z-index: 4; }
+.hs-stage2 .readout { z-index: 4; }
+.rebuild-knobs .a-dials { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); }
 .hs-stage2 .readout { left: auto; right: var(--s-4); background: color-mix(in srgb, var(--surface) 86%, transparent); color: var(--muted); border-color: color-mix(in srgb, var(--line-strong) 70%, transparent); }
 .hs-stage2 .readout b { color: var(--ink); }
 .rebuild-knobs { gap: 14px; }

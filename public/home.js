@@ -3,9 +3,13 @@
 // PayPal order lands: the preview tick lifts off every part as each creator's share appears. The loop is shaped
 // after polyfork.dev's hero film (their hero-stage.js: one stage, a cast of briefs, beats that each change one thing,
 // the headline answering the beat, and the film yielding when a visitor touches the stage). Sound needs a gesture,
-// so the hero runs silent until "Listen" is pressed and then plays every render it draws.
-import { audio, unlock, unlocked, onUnlock, loadWav, play, drawWave, drawSpec, playhead } from "/audio.js";
-import { control, segment } from "/sound-page.js";
+// so the hero runs silent until "Listen" is pressed and then plays every render it draws. The pictures are wavesurfer
+// (public/wave.js): each render morphs out of the last one, the spectrogram is the Spectrogram plugin in Roseus, and
+// the hero's knobs are read-only <oasis-knob>s (public/knob.js) that the film turns.
+import { audio, unlock, unlocked, onUnlock, loadWav } from "/audio.js";
+import { controls } from "/sound-page.js";
+import { mountWave } from "/wave.js";
+import "/knob.js";
 
 const $ = (s, el = document) => el.querySelector(s);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -39,8 +43,7 @@ export async function pageHome(app, ctx) {
   app.innerHTML = `
   <section class="hero" id="hero" aria-label="Oasis rendering and licensing a sound kit, live">
     <div class="hero-stage hero-sound" id="hero-stage">
-      <div class="hs-pic"><span class="sp-axis">waveform</span><canvas id="hs-wave"></canvas></div>
-      <div class="hs-pic spec"><span class="sp-axis">spectrogram</span><canvas id="hs-spec"></canvas><button class="hs-unlock" id="hs-listen" type="button" aria-label="Unmute: play every render">${icon("speaker-slash")} Muted. Tap to listen</button></div>
+      <div class="hs-pic" id="hs-ws"><span class="sp-axis">waveform</span><span class="sp-axis spec" id="hs-spec-axis">spectrogram</span><button class="hs-unlock" id="hs-listen" type="button" aria-label="Unmute: play every render">${icon("speaker-slash")} Muted. Tap to listen</button></div>
       <div class="hs-knobs" id="hs-knobs"></div>
     </div>
     <div class="wrap"><div class="hero-copy">
@@ -54,7 +57,7 @@ export async function pageHome(app, ctx) {
 
   <section class="wrap band">
     <div class="rebuild">
-      <div><div class="rebuild-stage hs-stage2" id="rb-stage"><canvas id="rb-wave"></canvas><canvas id="rb-spec"></canvas><button class="s-play big" id="rb-play" aria-label="Play">${icon("play")}</button><span class="readout" id="rb-readout"></span></div></div>
+      <div><div class="rebuild-stage hs-stage2" id="rb-stage"><div id="rb-ws"></div><button class="s-play big" id="rb-play" aria-label="Play">${icon("play")}</button><span class="readout" id="rb-readout"></span></div></div>
       <div>
         <h2>Rendered, not resampled.</h2>
         <p class="lede">Turn a knob and the sound is built again: heavier is a lower, longer thump with more stones shifting, not the same file played louder.</p>
@@ -106,13 +109,18 @@ export async function pageHome(app, ctx) {
 
 // ---------- the hero ----------
 function mountHero({ api, esc, usd, icon, reduced, onBill }) {
-  const el = $("#hero"), stage = $("#hero-stage"), readout = $("#readout"), payBtn = $("#pay-btn"), money = $("#pay-money"), chips = $("#hero-chips"), knobsEl = $("#hs-knobs"), waveC = $("#hs-wave"), specC = $("#hs-spec");
+  const el = $("#hero"), stage = $("#hero-stage"), readout = $("#readout"), payBtn = $("#pay-btn"), money = $("#pay-money"), chips = $("#hero-chips"), knobsEl = $("#hs-knobs");
   const lines = [...el.querySelectorAll("h1 .line")];
   let alive = true, paused = 0, offscreen = false, current = null;
-  const stop = () => { alive = false; off(); };
+  // the picture: waveform over spectrogram, sized from the stage (the knob strip keeps its own height)
+  const wsEl = $("#hs-ws"), avail = Math.max(200, stage.clientHeight - 74 - 30), wh = Math.round(avail * 0.44);
+  $("#hs-spec-axis").style.top = `${30 + wh + 8}px`;
+  wsEl.style.setProperty("--wave-h", `${30 + wh}px`);
+  const wave = mountWave(wsEl, { height: wh, spectrogram: avail - wh, specLabels: false, hover: false, compact: true, barWidth: 3, barGap: 1, barRadius: 2 });
+  const stop = () => { alive = false; off(); wave.destroy(); };
   // the unmute pill: pressed once, it turns the accent, says so, and fades out of the picture's way
   const listening = () => { const b = $("#hs-listen"); if (!b || b.classList.contains("on")) return; b.innerHTML = `${icon("speaker-high")} Listening`; b.classList.add("on"); b.setAttribute("aria-label", "Listening"); setTimeout(() => b.classList.add("gone"), 2200); };
-  $("#hs-listen").addEventListener("click", async () => { await unlock(); listening(); if (current) { const p = play(current.buffer); playhead(current.buffer, p.startedAt, draw); } });
+  $("#hs-listen").addEventListener("click", async () => { await unlock(); listening(); if (current) wave.play(); });
   const off = onUnlock((s) => { const b = $("#hs-listen"); if (!b) { off(); return; } if (s === "running") listening(); });
   stage.addEventListener("pointerdown", () => { paused = performance.now() + 6000; });
   const io = new IntersectionObserver((es) => { offscreen = !es[0].isIntersecting; }, { threshold: 0.05 });
@@ -120,15 +128,15 @@ function mountHero({ api, esc, usd, icon, reduced, onBill }) {
   const wait = async () => { while (alive && (offscreen || paused > performance.now())) await sleep(200); };
   const beat = (name) => lines.forEach((l) => { const i = ["vibe", "kit", "paid"].indexOf(l.dataset.beat), j = ["vibe", "kit", "paid"].indexOf(name); l.classList.toggle("on", i === j); l.classList.toggle("done", i < j); });
   const say = (html, live = false) => { if (!readout.isConnected) { alive = false; return; } readout.innerHTML = `<i class="${live ? "live" : ""}"></i>${html}`; };
-  const draw = (at = null) => { if (!current) return; drawWave(waveC, current.an.wave, { at, dim: current.wm }); drawSpec(specC, current.an.spec, { at }); };
-  new ResizeObserver(() => draw()).observe(stage);
 
   let meta = null;
   const KNOBS = ["surface", "weight", "pace", "wetness"];
   const values = {};
+  // read-only dials the film turns: each value glides on Motion's spring (knob.js), the knob that moved is lit
   const paintKnobs = (hot = null) => {
     if (!meta) return;
-    knobsEl.innerHTML = KNOBS.filter((k) => meta.knobs[k]).map((k) => { const d = meta.knobs[k]; const v = values[k] ?? d.default; return `<div class="hs-knob${k === hot ? " hot" : ""}"><span>${esc(d.label || k)}</span>${d.type === "choice" ? `<b>${esc(v)}</b>` : `<i style="--p:${((v - d.min) / (d.max - d.min)) * 100}%"></i><b>${v}</b>`}</div>`; }).join("");
+    if (!knobsEl.children.length) knobsEl.innerHTML = KNOBS.filter((k) => meta.knobs[k]).map((k) => { const d = meta.knobs[k]; return d.type === "choice" ? `<oasis-knob readonly data-k="${k}" label="${esc(d.label || k)}" options="${esc(d.options.join("|"))}" value="${esc(values[k] ?? d.default)}"></oasis-knob>` : `<oasis-knob readonly data-k="${k}" label="${esc(d.label || k)}" min="${d.min}" max="${d.max}" step="${d.step || (d.max - d.min) / 100}" value="${values[k] ?? d.default}"></oasis-knob>`; }).join("");
+    knobsEl.querySelectorAll("oasis-knob").forEach((el) => { const k = el.dataset.k; el.classList.toggle("hot", k === hot); if (String(el.value) !== String(values[k])) el.value = values[k]; });
   };
   const cache = new Map();
   async function render(knobs, lic = null) {
@@ -144,9 +152,10 @@ function mountHero({ api, esc, usd, icon, reduced, onBill }) {
     Object.assign(values, knobs);
     current = await render(values);
     if (!stage.isConnected) { alive = false; return; }
-    paintKnobs(hot); draw();
+    paintKnobs(hot);
+    await wave.show(current.buffer, { dim: current.wm });
     say(what, true);
-    if (unlocked()) { const p = play(current.buffer); playhead(current.buffer, p.startedAt, draw); }
+    if (unlocked()) wave.play();
   }
   async function type(text) {
     if (reduced) { say(`"${esc(text)}"`, true); return; }
@@ -166,7 +175,7 @@ function mountHero({ api, esc, usd, icon, reduced, onBill }) {
     Object.entries(creators).sort((a, b) => b[1] - a[1]).forEach(([who, v], i) => { const chip = document.createElement("span"); chip.className = "chip"; chip.innerHTML = `${esc(who)} <b>+${usd(v)}</b>`; chips.appendChild(chip); setTimeout(() => chip.classList.add("in"), reduced ? 0 : 300 + i * 420); });
     // the licence lands: the watermark tick lifts; the clean render is drawn and heard
     el.classList.add("paid");
-    if (current) { current = { ...current, wm: false }; draw(); }
+    if (current) { current = { ...current, wm: false }; wave.show(current.buffer, { dim: false, morph: false }); }
     say(`<b>${usd(kit.total)}</b> paid to ${Object.keys(creators).length} creators in one PayPal order · previews now clean`);
     if (unlocked()) await sleep(300);
   }
@@ -210,42 +219,42 @@ function mountHero({ api, esc, usd, icon, reduced, onBill }) {
 
 // ---------- rendered, not resampled ----------
 async function mountRebuild({ api, esc, icon, reduced }) {
-  const stage = $("#rb-stage"), knobsEl = $("#rb-knobs"), imp = $("#rb-import"), out = $("#rb-readout"), waveC = $("#rb-wave"), specC = $("#rb-spec");
+  const stage = $("#rb-stage"), knobsEl = $("#rb-knobs"), imp = $("#rb-import"), out = $("#rb-readout");
   const id = HERO_SOUND;
   const a = await api(`/api/assets/${id}`).catch(() => null);
   if (!a || !stage.isConnected) return;
   const knobs = a.knobs || {};
   const values = Object.fromEntries(Object.entries(knobs).map(([k, d]) => [k, d.default]));
   const show = ["surface", "weight", "pace", "wetness", "seed"].filter((k) => knobs[k]);
-  // the same controls as the sound page (sound-page.js control: a segmented choice, a slider, a seed with a dice)
-  knobsEl.innerHTML = show.map((k) => control(k, { ...knobs[k], label: knobs[k].label || k[0].toUpperCase() + k.slice(1) })).join("");
+  // the same controls as the sound page (sound-page.js controls: rotary knobs, choices with detents, a seed with a dice)
+  knobsEl.innerHTML = controls(show.map((k) => [k, { ...knobs[k], label: knobs[k].label || k[0].toUpperCase() + k.slice(1) }]));
   const diff = () => Object.fromEntries(Object.entries(values).filter(([k, val]) => val !== knobs[k].default));
   const schedule = () => { clearTimeout(rebuild.t); rebuild.t = setTimeout(() => rebuild(true), 60); };
-  for (const k of show) if (knobs[k].type === "choice") segment($(`[data-choice="${k}"]`, knobsEl), knobs[k].options.map((o) => ({ id: o, label: o })), knobs[k].default, (v) => { values[k] = v; schedule(); });
   $("#a-dice", knobsEl)?.addEventListener("click", () => { const d = knobs.seed; values.seed = d.min + Math.floor(Math.random() * (d.max - d.min + 1)); $("#k-seed", knobsEl).value = values.seed; schedule(); });
   let n = 0, current = null;
-  const draw = (at = null) => { if (!current) return; drawWave(waveC, current.an.wave, { at, dim: current.buffer.oasisWatermarked }); drawSpec(specC, current.an.spec, { at }); };
-  new ResizeObserver(() => draw()).observe(stage);
+  const rbH = Math.max(260, stage.clientHeight || 360), rbW = Math.round(rbH * 0.42);
+  const wave = mountWave($("#rb-ws"), { height: rbW, spectrogram: rbH - rbW, specLabels: false, barWidth: 3, barGap: 1, barRadius: 2,
+    onState: (on) => { const b = $("#rb-play"); if (!b) return; b.classList.toggle("on", on); b.innerHTML = icon(on ? "stop" : "play"); } });
   const rebuild = async (playIt) => {
     const run = ++n, t0 = performance.now();
     const q = `?p=${encodeURIComponent(JSON.stringify(diff()))}`;
     const [buffer, an] = await Promise.all([loadWav(`/api/assets/${id}/render.wav${q}`), api(`/api/assets/${id}/sound.json${q}`)]);
     if (run !== n || !stage.isConnected) return;
-    current = { buffer, an }; draw();
+    current = { buffer, an };
+    await wave.show(buffer, { dim: buffer.oasisWatermarked });
     out.innerHTML = `<b>${an.seconds.toFixed(2)}</b> s, peak <b>${an.peak}</b>, centroid <b>${an.centroid}</b> Hz, <b>${Math.round(performance.now() - t0)}</b> ms`;
     const d = diff();
     imp.innerHTML = `<span class="k">import</span> { play } <span class="k">from</span> <span class="s">"${esc(location.origin)}/cdn/${id}.mjs?lic=…"</span>;\nplay(ctx, ${Object.keys(d).length ? esc(JSON.stringify(d)) : "{}"});`;
-    if (playIt && unlocked()) { const p = play(buffer); playhead(buffer, p.startedAt, draw); }
+    if (playIt && unlocked()) wave.play();
   };
   knobsEl.addEventListener("input", (e) => {
     const k = e.target.dataset.k; if (!k) return;
     const d = knobs[k];
     values[k] = d.type === "toggle" ? e.target.checked : d.type === "range" ? Number(e.target.value) : e.target.value;
-    if (d.type === "range" && k !== "seed") e.target.style.setProperty("--p", `${((values[k] - d.min) / (d.max - d.min)) * 100}%`);
     const o = $(`#o-${k}`, knobsEl); if (o) o.textContent = e.target.value;
     schedule();
   });
-  $("#rb-play").addEventListener("click", async () => { await unlock(); if (current) { const p = play(current.buffer); playhead(current.buffer, p.startedAt, draw); } });
+  $("#rb-play").addEventListener("click", async () => { await unlock(); if (current) wave.toggle(); });
   await rebuild(false);
 }
 

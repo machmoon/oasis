@@ -30,7 +30,10 @@
 
 /* the results column */
 .pb-results { position: sticky; top: 80px; display: grid; gap: 12px; }
-.pb-stage { min-height: 300px; aspect-ratio: 16 / 10; }
+.pb-stage { min-height: 300px; }
+.pb-ws { background: linear-gradient(var(--surface) 0 180px, #010101 0); }
+.pb-ws .sp-axis.spec { top: 188px; }
+.pb-stage .sp-ctl { position: absolute; left: 14px; bottom: 14px; z-index: 4; }
 .pb-stage[hidden] { display: none; }
 .pb-playing { font: var(--fs-xs) var(--font-mono); color: var(--ink-2); padding: 0 10px; height: 28px; display: inline-flex; align-items: center; border-radius: var(--r-pill); background: color-mix(in srgb, var(--surface) 88%, transparent); border: 1px solid color-mix(in srgb, var(--line-strong) 70%, transparent); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
 .pb-readout[hidden] { display: none; }

@@ -1,7 +1,8 @@
 // Kits: describe the vibe you're going for and get straight to playing (the Crate idea). The kit page plays every
 // part (watermarked until paid), shows each part's knobs, and licenses the whole kit with one PayPal order; when the
 // order lands every part turns clean and gets its import line and WAV.
-import { audio, unlock, loadWav, play, drawWave, playhead } from "/audio.js";
+import { audio, unlock, loadWav, play } from "/audio.js";
+import { lazyWave, mountLive } from "/wave.js";
 import { KIND_LABEL } from "/sound-page.js";
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -65,7 +66,7 @@ export async function pageKit(app, id) {
       </header>
       <div class="kv-body">
         <div>
-          <div class="kv-all"><button class="s-play" id="kv-all" aria-label="Play the whole kit">${icon("play")}</button><span>Play the kit, one part after another. Each part plays a fresh take of its program.</span></div>
+          <div class="kv-all"><button class="s-play" id="kv-all" aria-label="Play the whole kit">${icon("play")}</button><span>Play the kit, one part after another. Each part plays a fresh take of its program.</span><div class="kv-live" id="kv-live" aria-hidden="true"></div></div>
           <div class="kv-parts" id="kv-parts">${k.items.map((it, i) => part(it, i, paid)).join("")}</div>
         </div>
         <aside class="kv-bill">
@@ -87,7 +88,7 @@ export async function pageKit(app, id) {
     const knobs = Object.entries(it.knobs || {});
     return `<div class="kv-part" data-i="${i}">
       <button class="s-play" data-play="${i}" aria-label="Play ${esc(it.name)}">${icon("play")}</button>
-      <div class="pic"><canvas data-wave="${i}"></canvas></div>
+      <div class="pic" data-wave="${i}"></div>
       <div class="who"><b>${esc(it.name)}</b><span>${esc(it.title)}, ${esc(KIND_LABEL[it.kind] || it.kind)} by ${esc(it.author)}${it.reason ? `. ${esc(it.reason[0].toUpperCase() + it.reason.slice(1))}.` : ""}</span>${knobs.length ? `<span class="knobs">${knobs.map(([k, v]) => `<span>${esc(k)} ${esc(String(v))}</span>`).join("")}</span>` : ""}
         <span class="acts"><a href="#/a/${esc(it.assetId)}${it.licence ? `?lic=${esc(it.licence)}` : ""}">${icon("sliders-horizontal")} Open with knobs</a>${it.wav ? `<a href="${esc(it.wav)}">${icon("download-simple")} WAV, 44.1 kHz</a>` : ""}</span></div>
       <div class="amt num${paid || it.price === 0 ? " clean" : ""}">${it.covered ? "covered" : price(it.price)}<small>${it.covered ? "same program" : paid || it.price === 0 ? "clean" : "preview"}</small></div>
@@ -97,18 +98,19 @@ export async function pageKit(app, id) {
   function wire(paid) {
     const buffers = new Map();
     const bufFor = async (i) => { if (!buffers.has(i)) buffers.set(i, loadWav(k.items[i].licence ? `/api/licenses/${k.items[i].licence}/render.wav?p=${encodeURIComponent(JSON.stringify(k.items[i].knobs))}` : k.items[i].preview.replace(/^https?:\/\/[^/]+/, ""))); return buffers.get(i); };
-    // waveforms, drawn from each part's numbers
-    k.items.forEach(async (it, i) => {
-      try { const j = await api(`/api/assets/${it.assetId}/sound.json?p=${encodeURIComponent(JSON.stringify(it.knobs))}`); const c = $(`canvas[data-wave="${i}"]`); if (c) { it.wave = j.wave; drawWave(c, j.wave, { dim: !paid && it.price > 0 }); } } catch {}
-    });
+    // each part's waveform is a small wavesurfer over the same buffer it plays (public/wave.js lazyWave), dimmed while
+    // it is a watermarked preview; the live spectrum and scope by "play the kit" listen to the master bus
+    const waves = k.items.map((it, i) => lazyWave($(`[data-wave="${i}"]`), async () => ({ buffer: await bufFor(i), dim: !paid && it.price > 0 }), { height: 48, barWidth: 2, barGap: 1, barRadius: 1 }));
+    const live = mountLive($("#kv-live"));
+    addEventListener("hashchange", () => setTimeout(() => { if (!$("#kv-live")) live.destroy(); }, 0), { once: true });
     let playingAll = false;
     const playOne = async (i) => {
       await unlock();
       const b = $(`[data-play="${i}"]`); b.classList.add("on"); b.innerHTML = icon("stop"); b.closest(".kv-part")?.classList.add("on");
       try {
-        const buf = await bufFor(i); const p = play(buf);
-        const c = $(`canvas[data-wave="${i}"]`); if (c && k.items[i].wave) playhead(buf, p.startedAt, (at) => drawWave(c, k.items[i].wave, { at, dim: !paid && k.items[i].price > 0 }));
-        await p.done;
+        const buf = await bufFor(i), w = waves[i].wave;
+        if (w) { await w.play(); await new Promise((r) => w.ws.once("finish", r)); }
+        else await play(buf).done;
       } catch (e) { toast(e.message); }
       b.classList.remove("on"); b.innerHTML = icon("play"); b.closest(".kv-part")?.classList.remove("on");
     };
