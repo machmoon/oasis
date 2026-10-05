@@ -66,7 +66,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
     <header class="a-head">
       <div>
         <h1>${esc(a.title)}</h1>
-        <p class="a-sub">by <b>${esc(a.author)}</b> · ${esc(KIND_LABEL[a.kind] || a.kind)}${kitName ? ` · ${esc(kitName)} kit` : ""} · ${Object.keys(knobs).length} knobs · ${a.duration} s</p>
+        <p class="a-sub">by <b>${esc(a.author)}</b>${kitName ? ` for the ${esc(kitName)} kit` : ""}. ${esc(KIND_LABEL[a.kind] || a.kind)}, ${Object.keys(knobs).length} knobs, <span class="num">${a.duration}</span> s.</p>
         <p class="a-desc">${esc(a.description)}</p>
       </div>
       <div class="a-buy">

@@ -60,7 +60,7 @@ export async function pageKit(app, id) {
     app.innerHTML = `<div class="wrap a-page">
       <nav class="a-crumb" aria-label="Breadcrumb"><a href="#/kits">Kits</a><span>/</span><span>${esc(k.title)}</span></nav>
       <header class="kv-head">
-        <div><h1>${esc(k.title)}</h1><p class="kv-vibe">"<b>${esc(k.vibe)}</b>" · ${k.items.length} sounds · ${k.creators.length} creators · planned by ${esc(k.planner)}</p></div>
+        <div><h1>${esc(k.title)}</h1><p class="kv-vibe">"<b>${esc(k.vibe)}</b>". <span class="num">${k.items.length}</span> sounds from ${k.creators.length} creators, planned by ${esc(k.planner)}.</p></div>
         <span class="kv-state${paid ? " paid" : ""}">${paid ? `${icon("seal-check")} Licensed · PayPal order ${esc(k.licence.orderId)}` : `${icon("waveform")} Watermarked preview until paid`}</span>
       </header>
       <div class="kv-body">

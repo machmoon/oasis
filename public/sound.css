@@ -153,6 +153,7 @@
 .kv-vibe b { color: var(--ink); font-weight: var(--w-semibold); }
 .kv-state { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: var(--r-pill); background: var(--sunk); color: var(--ink-2); font: var(--w-semibold) var(--fs-sm) var(--font-sans); white-space: nowrap; }
 .kv-state.paid { background: var(--ok-soft); color: var(--ok); }
+@media (max-width: 899px) { .kv-head { grid-template-columns: 1fr; align-items: start; } .kv-state { height: auto; min-height: 32px; padding: 6px 12px; white-space: normal; justify-self: start; } }
 .kv-body { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 24px; align-items: start; }
 @media (max-width: 1023px) { .kv-body { grid-template-columns: 1fr; } }
 .kv-parts { display: grid; gap: 8px; }
