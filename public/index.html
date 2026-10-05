@@ -27,10 +27,21 @@
       <nav class="nav" aria-label="Main">
         <a href="#/sounds" data-nav="sounds">Sounds</a>
         <a href="#/kits" data-nav="kits">Kits</a>
-        <a href="#/ledger" data-nav="ledger">Ledger</a>
+        <a href="#/ledger" data-nav="ledger" class="ovf">Ledger</a>
         <a href="#/publish" data-nav="publish">Publish</a>
-        <a href="/llms.txt" class="hide-sm">For agents</a>
-        <a href="#/budget" data-nav="budget">Budget</a>
+        <a href="/llms.txt" class="ovf">For agents</a>
+        <a href="#/budget" data-nav="budget" class="ovf">Budget</a>
+        <!-- Phone overflow, after GitHub Primer's UnderlineNav (primer/react packages/react/src/UnderlineNav/UnderlineNav.tsx):
+             the links that do not fit move behind a trailing "More" button that opens a menu, and the button carries
+             data-current when the current page is inside it. Sounds, Kits and Publish stay inline, so one tap. -->
+        <div class="nav-more">
+          <button type="button" class="nav-more-btn" aria-haspopup="true" aria-expanded="false" aria-controls="nav-more-menu">More<span class="sr-only"> items</span><i class="ph-bold ph-caret-down" aria-hidden="true"></i></button>
+          <div class="nav-more-menu" id="nav-more-menu" hidden>
+            <a href="#/ledger" data-nav="ledger">Ledger</a>
+            <a href="#/budget" data-nav="budget">Budget</a>
+            <a href="/llms.txt">For agents</a>
+          </div>
+        </div>
       </nav>
     </div>
   </header>

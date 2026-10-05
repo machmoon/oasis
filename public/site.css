@@ -38,6 +38,22 @@ p { text-wrap: pretty; }
 .nav a:hover { background: var(--sunk); color: var(--ink); }
 .nav a.on { color: var(--ink); background: var(--sunk); }
 @media (max-width: 767px) { .nav .hide-sm { display: none; } .nav a { padding: 8px 9px; font-size: 14px; } }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* Overflow menu (Primer UnderlineNav's MoreButton + ActionMenu): hidden on wide screens, where every link fits. */
+.nav-more { display: none; position: relative; }
+.nav-more-btn { display: inline-flex; align-items: center; gap: 4px; padding: 8px 9px; border: 0; border-radius: var(--r-pill); background: none; color: var(--ink-2); font: var(--w-medium) 14px / inherit var(--font-sans); cursor: pointer; }
+.nav-more-btn:hover, .nav-more-btn[aria-expanded="true"] { background: var(--sunk); color: var(--ink); }
+.nav-more-btn[data-current] { color: var(--ink); background: var(--sunk); }
+.nav-more-btn i { font-size: 12px; transition: transform var(--t) var(--ease-out); }
+.nav-more-btn[aria-expanded="true"] i { transform: rotate(180deg); }
+.nav-more-menu { position: absolute; right: 0; top: calc(100% + 8px); min-width: 180px; display: grid; padding: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow-lg); z-index: var(--z-overlay); }
+.nav-more-menu[hidden] { display: none; }
+.nav .nav-more-menu a { padding: 10px 12px; border-radius: var(--r-sm); font-size: 15px; }
+@media (max-width: 767px) {
+  .nav .ovf { display: none; }
+  .nav-more { display: block; }
+  .top .wrap { gap: var(--s-2); }
+}
 
 /* buttons: pills. Primary is the ink, not a second hue (polyfork.dev style.css: "secondary buttons take the ink,
    not a second hue"); only the control that approves money wears PayPal blue. */

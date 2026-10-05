@@ -233,6 +233,18 @@ function notFound(msg) {
   app.innerHTML = `<div class="wrap split2"><div><h1>${esc(msg)}</h1><p class="lede">It may have been removed, or the link has a typo.</p><div class="cta" style="margin-top:24px;display:flex;gap:12px"><a class="btn primary" href="#/sounds">Browse sounds</a><a class="link" href="#/">Home</a></div></div></div>`;
 }
 
+// ---------- nav overflow menu (Primer UnderlineNav: a "More" button that opens the links that do not fit) ----------
+const moreBtn = $(".nav-more-btn"), moreMenu = $("#nav-more-menu");
+function closeMore(focus = false) { moreMenu.hidden = true; moreBtn.setAttribute("aria-expanded", "false"); if (focus) moreBtn.focus(); }
+moreBtn.addEventListener("click", () => {
+  const open = moreMenu.hidden;
+  moreMenu.hidden = !open; moreBtn.setAttribute("aria-expanded", String(open));
+  if (open) moreMenu.querySelector("a")?.focus();
+});
+document.addEventListener("click", (e) => { if (!moreMenu.hidden && !e.target.closest(".nav-more")) closeMore(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !moreMenu.hidden) closeMore(true); });
+moreMenu.addEventListener("click", (e) => { if (e.target.closest("a")) closeMore(); });
+
 // ---------- router ----------
 async function route() {
   disposeViewers();
@@ -242,6 +254,8 @@ async function route() {
   const seg = (path || "/").split("/").filter(Boolean);
   const navKey = seg[0] === "kit" && seg[1] ? "kits" : seg[0] === "a" ? "sounds" : seg[0] || "home";
   document.querySelectorAll("[data-nav]").forEach((a) => a.classList.toggle("on", a.dataset.nav === navKey));
+  closeMore();
+  moreBtn.toggleAttribute("data-current", !!moreMenu.querySelector(`[data-nav="${navKey}"]`));
   window.scrollTo(0, 0);
   try {
     if (!seg.length) await pageHome();
