@@ -4,7 +4,7 @@
 import "dotenv/config";
 import Anthropic from "@anthropic-ai/sdk";
 
-const client = new Anthropic();
+const client = new Anthropic({ timeout: 300000, maxRetries: 1 });
 const MODEL = process.env.FACTORY_GRADER_MODEL || "claude-opus-5-5";
 const SYSTEM = `You are the quality gate for Oasis, a registry of parametric sound programs bought by game audio designers and film sound editors. You did not make this sound and owe its maker nothing. Most submissions should not ship: reject anything a working sound designer would not pay for or would be embarrassed to put in a scene.
 

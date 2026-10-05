@@ -17,7 +17,8 @@ import { cardPng } from "../server/sound.js";
 import { measure } from "./harness-sound.mjs";
 import { gradeSound } from "./grader-sound.mjs";
 
-const client = new Anthropic();
+// Per-request timeout so a hung stream fails and retries instead of blocking a lane for hours (seen 2026-10-05 02:00-04:00 PT).
+const client = new Anthropic({ timeout: 300000, maxRetries: 1 });
 const MODEL = process.env.FACTORY_MODEL || "claude-opus-5-5";
 const ROOT = path.resolve(import.meta.dirname, "..");
 const CONTRACT = fs.readFileSync(path.join(ROOT, "factory/CONTRACT-SOUND.md"), "utf8");
@@ -71,7 +72,7 @@ async function ask(messages, { system = SYSTEM(), max_tokens = 16000, effort = p
   let msg;
   for (let attempt = 0; ; attempt++) {
     try {
-      msg = await client.messages.stream({ model: MODEL, max_tokens, output_config: { effort }, system, messages }).finalMessage();
+      msg = await client.messages.create({ model: MODEL, max_tokens, output_config: { effort }, system, messages });
       break;
     } catch (e) {
       if (attempt >= 4 || (e.status && e.status < 500 && e.status !== 429)) throw e;
