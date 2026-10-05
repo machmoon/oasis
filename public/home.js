@@ -5,6 +5,7 @@
 // the headline answering the beat, and the film yielding when a visitor touches the stage). Sound needs a gesture,
 // so the hero runs silent until "Listen" is pressed and then plays every render it draws.
 import { audio, unlock, unlocked, onUnlock, loadWav, play, drawWave, drawSpec, playhead } from "/audio.js";
+import { control, segment } from "/sound-page.js";
 
 const $ = (s, el = document) => el.querySelector(s);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -39,13 +40,13 @@ export async function pageHome(app, ctx) {
   <section class="hero" id="hero" aria-label="Oasis rendering and licensing a sound kit, live">
     <div class="hero-stage hero-sound" id="hero-stage">
       <div class="hs-pic"><span class="sp-axis">waveform</span><canvas id="hs-wave"></canvas></div>
-      <div class="hs-pic"><span class="sp-axis">spectrogram</span><canvas id="hs-spec"></canvas></div>
+      <div class="hs-pic spec"><span class="sp-axis">spectrogram</span><canvas id="hs-spec"></canvas><button class="hs-unlock" id="hs-listen" type="button" aria-label="Unmute: play every render">${icon("speaker-slash")} Muted. Tap to listen</button></div>
       <div class="hs-knobs" id="hs-knobs"></div>
     </div>
     <div class="wrap"><div class="hero-copy">
       <h1><span class="line on" data-beat="vibe">Vibe in.</span><span class="line" data-beat="kit">Kit out.</span><span class="line" data-beat="paid">Creators paid.</span></h1>
       <p class="lede">Every sound is a program with knobs, so one footstep is three hundred footsteps. Describe a vibe, get a tuned kit, and one PayPal order pays every creator in it.</p>
-      <div class="cta"><a class="btn primary" href="#/kits">Make a kit</a><a class="btn" href="#/sounds">Browse sounds</a><button class="btn listen" id="hs-listen" type="button">${icon("speaker-high")} Listen</button></div>
+      <div class="cta"><a class="btn primary" href="#/kits">Make a kit</a><a class="btn" href="#/sounds">Browse sounds</a></div>
     </div></div>
     <div class="hero-readout" id="readout" aria-live="polite"><i class="live"></i><span>rendering a footstep</span></div>
     <div class="hero-pay" id="hero-pay"><div class="hero-chips" id="hero-chips"></div><span class="btn paypal pay" id="pay-btn">${icon("paypal-logo")} Pay <span class="money num" id="pay-money">$0.00</span></span></div>
@@ -109,8 +110,10 @@ function mountHero({ api, esc, usd, icon, reduced, onBill }) {
   const lines = [...el.querySelectorAll("h1 .line")];
   let alive = true, paused = 0, offscreen = false, current = null;
   const stop = () => { alive = false; off(); };
-  $("#hs-listen").addEventListener("click", async () => { await unlock(); $("#hs-listen").innerHTML = `${icon("speaker-high")} Listening`; $("#hs-listen").classList.add("on"); if (current) play(current.buffer); });
-  const off = onUnlock((s) => { const b = $("#hs-listen"); if (!b) { off(); return; } if (s === "running") { b.innerHTML = `${icon("speaker-high")} Listening`; b.classList.add("on"); } });
+  // the unmute pill: pressed once, it turns the accent, says so, and fades out of the picture's way
+  const listening = () => { const b = $("#hs-listen"); if (!b || b.classList.contains("on")) return; b.innerHTML = `${icon("speaker-high")} Listening`; b.classList.add("on"); b.setAttribute("aria-label", "Listening"); setTimeout(() => b.classList.add("gone"), 2200); };
+  $("#hs-listen").addEventListener("click", async () => { await unlock(); listening(); if (current) { const p = play(current.buffer); playhead(current.buffer, p.startedAt, draw); } });
+  const off = onUnlock((s) => { const b = $("#hs-listen"); if (!b) { off(); return; } if (s === "running") listening(); });
   stage.addEventListener("pointerdown", () => { paused = performance.now() + 6000; });
   const io = new IntersectionObserver((es) => { offscreen = !es[0].isIntersecting; }, { threshold: 0.05 });
   io.observe(stage);
@@ -214,13 +217,12 @@ async function mountRebuild({ api, esc, icon, reduced }) {
   const knobs = a.knobs || {};
   const values = Object.fromEntries(Object.entries(knobs).map(([k, d]) => [k, d.default]));
   const show = ["surface", "weight", "pace", "wetness", "seed"].filter((k) => knobs[k]);
-  knobsEl.innerHTML = show.map((k) => {
-    const d = knobs[k], label = esc(d.label || k[0].toUpperCase() + k.slice(1));
-    if (d.type === "range") return `<div class="knob"><label for="rb-${k}">${label}</label><input type="range" id="rb-${k}" data-k="${k}" min="${d.min}" max="${d.max}" step="${d.step || 1}" value="${d.default}"><output id="rbo-${k}" class="num">${d.default}</output></div>`;
-    if (d.type === "choice") return `<div class="knob"><label for="rb-${k}">${label}</label><select id="rb-${k}" data-k="${k}">${d.options.map((o) => `<option ${o === d.default ? "selected" : ""}>${esc(o)}</option>`).join("")}</select><output></output></div>`;
-    return "";
-  }).join("");
+  // the same controls as the sound page (sound-page.js control: a segmented choice, a slider, a seed with a dice)
+  knobsEl.innerHTML = show.map((k) => control(k, { ...knobs[k], label: knobs[k].label || k[0].toUpperCase() + k.slice(1) })).join("");
   const diff = () => Object.fromEntries(Object.entries(values).filter(([k, val]) => val !== knobs[k].default));
+  const schedule = () => { clearTimeout(rebuild.t); rebuild.t = setTimeout(() => rebuild(true), 60); };
+  for (const k of show) if (knobs[k].type === "choice") segment($(`[data-choice="${k}"]`, knobsEl), knobs[k].options.map((o) => ({ id: o, label: o })), knobs[k].default, (v) => { values[k] = v; schedule(); });
+  $("#a-dice", knobsEl)?.addEventListener("click", () => { const d = knobs.seed; values.seed = d.min + Math.floor(Math.random() * (d.max - d.min + 1)); $("#k-seed", knobsEl).value = values.seed; schedule(); });
   let n = 0, current = null;
   const draw = (at = null) => { if (!current) return; drawWave(waveC, current.an.wave, { at, dim: current.buffer.oasisWatermarked }); drawSpec(specC, current.an.spec, { at }); };
   new ResizeObserver(() => draw()).observe(stage);
@@ -237,9 +239,11 @@ async function mountRebuild({ api, esc, icon, reduced }) {
   };
   knobsEl.addEventListener("input", (e) => {
     const k = e.target.dataset.k; if (!k) return;
-    values[k] = e.target.type === "range" ? Number(e.target.value) : e.target.value;
-    const o = $(`#rbo-${k}`); if (o) o.textContent = e.target.value;
-    clearTimeout(rebuild.t); rebuild.t = setTimeout(() => rebuild(true), 60);
+    const d = knobs[k];
+    values[k] = d.type === "toggle" ? e.target.checked : d.type === "range" ? Number(e.target.value) : e.target.value;
+    if (d.type === "range" && k !== "seed") e.target.style.setProperty("--p", `${((values[k] - d.min) / (d.max - d.min)) * 100}%`);
+    const o = $(`#o-${k}`, knobsEl); if (o) o.textContent = e.target.value;
+    schedule();
   });
   $("#rb-play").addEventListener("click", async () => { await unlock(); if (current) { const p = play(current.buffer); playhead(current.buffer, p.startedAt, draw); } });
   await rebuild(false);
