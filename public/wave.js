@@ -274,15 +274,19 @@ export function mountLive(container) {
   return { destroy() { alive = false; cancelAnimationFrame(raf); clearTimeout(raf); io.disconnect(); ro.disconnect(); offTheme(); spec.destroy(); scope.destroy(); } };
 }
 
-/** A small waveform for a card or a kit part, built lazily when it scrolls into view. */
+/**
+ * A small waveform for a card or a kit part, built lazily when it scrolls into view. ensure() builds it now (a kit
+ * playing through its parts needs the next part's waveform before that part has scrolled into view) and resolves to
+ * the mounted wave, or null when the take could not be loaded.
+ */
 export function lazyWave(el, load, opts = {}) {
-  let w = null, done = false;
-  const io = new IntersectionObserver(async (es) => {
-    if (!es.some((e) => e.isIntersecting) || done) return;
-    done = true; io.disconnect();
-    try { const { buffer, dim } = await load(); if (!el.isConnected) return; w = mountWave(el, { compact: true, hover: false, ...opts }); await w.show(buffer, { dim, morph: false }); el.classList.add("in"); el.dispatchEvent(new CustomEvent("wave", { detail: w })); }
-    catch { el.classList.add("in", "err"); }
-  }, { rootMargin: "240px" });
+  let w = null, pending = null;
+  const build = () => pending ||= (async () => {
+    io.disconnect();
+    try { const { buffer, dim } = await load(); if (!el.isConnected) return null; w = mountWave(el, { compact: true, hover: false, ...opts }); await w.show(buffer, { dim, morph: false }); el.classList.add("in"); el.dispatchEvent(new CustomEvent("wave", { detail: w })); return w; }
+    catch { el.classList.add("in", "err"); return null; }
+  })();
+  const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) build(); }, { rootMargin: "240px" });
   io.observe(el);
-  return { get wave() { return w; } };
+  return { get wave() { return w; }, ensure: build };
 }
