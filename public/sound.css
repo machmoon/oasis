@@ -274,3 +274,4 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
 .kv-all .kv-live { flex: 1; min-width: 120px; height: 40px; margin-left: 6px; }
 @media (max-width: 599px) { .kv-all .kv-live { display: none; } }
 .sp-axis.spec { left: auto; right: 10px; }
+.hero-sound .hs-pic { overflow: hidden; }

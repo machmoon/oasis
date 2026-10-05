@@ -22,7 +22,7 @@ async function record(name, fn) {
 
 const open = async (p) => {
   await p.goto(`${base}/#/a/footstep`);
-  await p.waitForSelector("#sp-stage:not(.busy)", { timeout: 60000 });
+  await p.waitForSelector("#sp-readout b", { timeout: 90000 });
   await p.evaluate(() => window.scrollTo(0, 250));
   await p.waitForTimeout(1200);
 };
@@ -30,18 +30,20 @@ const open = async (p) => {
 // 1. turning knobs: weight up by drag, then the surface choice detent by detent; each render morphs out of the last
 await record("knob-morph", async (p) => {
   await open(p);
+  // waits for the render log to grow, so each step is filmed after its rebuild landed and the morph ran
+  const rendered = async (n) => { await p.waitForFunction((n) => document.querySelectorAll("#a-log li:not(.empty)").length >= n, n, { timeout: 90000 }); await p.waitForTimeout(900); };
   const drag = async (sel, dy) => {
-    const box = await p.locator(`${sel}`).boundingBox();
-    const x = box.x + box.width / 2, y = box.y + 28;
+    const box = await p.locator(`${sel} .dial`).boundingBox();
+    const x = box.x + box.width / 2, y = box.y + box.height / 2;
     await p.mouse.move(x, y); await p.mouse.down();
     for (let i = 1; i <= 12; i++) { await p.mouse.move(x, y - (dy * i) / 12); await p.waitForTimeout(30); }
     await p.mouse.up();
   };
-  await drag("#k-weight", 60); await p.waitForTimeout(1300);
-  await p.locator("#k-surface").click(); await p.keyboard.press("ArrowRight"); await p.waitForTimeout(1300);
-  await p.keyboard.press("ArrowRight"); await p.waitForTimeout(1300);
-  await drag("#k-wetness", 90); await p.waitForTimeout(1300);
-  await p.keyboard.press("ArrowRight"); await p.waitForTimeout(1500);
+  await drag("#k-weight", 60); await rendered(1);
+  await p.locator("#k-surface .dial").focus(); await p.keyboard.press("ArrowRight"); await rendered(2);
+  await p.keyboard.press("ArrowRight"); await rendered(3);
+  await drag("#k-wetness", 90); await rendered(4);
+  await p.locator("#k-pace .dial").focus(); await p.keyboard.press("PageUp"); await p.keyboard.press("PageUp"); await rendered(5);
 });
 
 // 2. a sound playing on loop: the cursor crosses the waveform and spectrogram, the live spectrum and scope move

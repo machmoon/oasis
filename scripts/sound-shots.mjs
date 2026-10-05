@@ -10,7 +10,7 @@ const pages = [
   ["sounds", "#/sounds", 3500],
   ["sound", "#/a/footstep", 4000],
   ["walk", "#/a/footstep", 7000, "#sp-walk-sec"],
-  ["kit", "#/kit/k0f23ce2020", 3500],
+  ["kit", "#/kit/k58950da729", 3500],
 ];
 const b = await chromium.launch();
 for (const [scheme, vp, tag] of [["light", { width: 1440, height: 900 }, "desktop"], ["dark", { width: 1440, height: 900 }, "desktop"], ["light", { width: 390, height: 844 }, "phone"]]) {

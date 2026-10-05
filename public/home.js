@@ -113,7 +113,7 @@ function mountHero({ api, esc, usd, icon, reduced, onBill }) {
   const lines = [...el.querySelectorAll("h1 .line")];
   let alive = true, paused = 0, offscreen = false, current = null;
   // the picture: waveform over spectrogram, sized from the stage (the knob strip keeps its own height)
-  const wsEl = $("#hs-ws"), avail = Math.max(200, stage.clientHeight - 74 - 30), wh = Math.round(avail * 0.44);
+  const wsEl = $("#hs-ws"), avail = Math.max(200, stage.clientHeight - 88 - 30), wh = Math.round(avail * 0.44);
   $("#hs-spec-axis").style.top = `${30 + wh + 8}px`;
   wsEl.style.setProperty("--wave-h", `${30 + wh}px`);
   const wave = mountWave(wsEl, { height: wh, spectrogram: avail - wh, specLabels: false, hover: false, compact: true, barWidth: 3, barGap: 1, barRadius: 2 });

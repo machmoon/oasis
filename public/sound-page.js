@@ -255,7 +255,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
       const dur = walkBuf?.duration || takes.at(-1)[0] + 1;
       const cs = takes.map((t) => t[2]).filter((c) => c > 0), ps = takes.map((t) => t[1]);
       const x = scaleLinear().domain([0, dur]).range([m.l, w - m.r]);
-      const y = scaleLog().domain([Math.max(20, Math.min(...cs) * 0.85), Math.max(...cs) * 1.15]).range([h - m.b, m.t]).nice();
+      const y = scaleLog().domain([Math.max(20, Math.min(...cs) * 0.92), Math.max(...cs) * 1.08]).range([h - m.b, m.t]);
       const r = scaleSqrt().domain([0, Math.max(...ps) || 1]).range([1.5, count > 100 ? 6 : 9]);
       const c = scaleLinear().domain(y.domain().map(Math.log)).range([0.08, 1]);
       const lo = y.domain()[0];
@@ -320,8 +320,11 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
     new ResizeObserver(() => drawPlot()).observe(stageW);
     onTheme(drawPlot);
     walkPlay.addEventListener("click", async () => { await unlock(); if (walk.playing) { walk.ws.pause(); return; } if (walkBuf) walk.ws.play(); });
-    // a knob change rebuilds the walk too, lazily
-    app.addEventListener("input", () => { if (takes) { clearTimeout(loadWalk.t); loadWalk.t = setTimeout(loadWalk, 900); } }, true);
+    // a knob change rebuilds the walk too, lazily: only while the walk is on screen (a 300-take render queued behind
+    // every knob turn would hold up the stage's own rebuild), otherwise once it scrolls back into view
+    let walkSeen = false, walkStale = false;
+    new IntersectionObserver((es) => { walkSeen = es[0].isIntersecting; if (walkSeen && walkStale && takes) { walkStale = false; loadWalk(); } }).observe(stageW);
+    app.addEventListener("input", () => { if (!takes) return; if (!walkSeen) { walkStale = true; return; } clearTimeout(loadWalk.t); loadWalk.t = setTimeout(loadWalk, 900); }, true);
     addEventListener("hashchange", () => setTimeout(() => { if (!stageW.isConnected) walk.destroy(); }, 0), { once: true });
   }
 

@@ -214,7 +214,7 @@ export function mountWave(container, opts = {}) {
       ws.setOptions(colors());
       await ws.load("", [buf.getChannelData(0).slice()], buf.duration);
       setTimeline(buf.duration);
-      if (glide) anim = animate(0, 1, { type: "spring", visualDuration: 0.26, bounce: 0.22, onUpdate: (k) => { state.k = k; ws.setOptions({}); }, onComplete: () => { state.k = 1; state.from = null; ws.setOptions({}); } });
+      if (glide) anim = animate(0, 1, { type: "spring", visualDuration: 0.34, bounce: 0.2, onUpdate: (k) => { state.k = k; ws.setOptions({}); }, onComplete: () => { state.k = 1; state.from = null; ws.setOptions({}); } });
     },
     async play() { if (!buffer) return; ws.setTime(0); await ws.play(); },
     stop() { ws.pause(); ws.setTime(0); },
