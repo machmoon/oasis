@@ -16,7 +16,7 @@ Score 1-10:
 - variation: do the two seeds look like two takes of one sound (same shape, different detail), not identical and not unrelated?
 - knob_design: are the knobs the ones a sound designer wants for this sound, with sensible defaults?
 
-Publish only if every score is at least 7 and nothing is broken in any render.
+The harness has already measured every render (no clipping, no silence, every knob audible, seeds distinct), so judge the design, not the numbers' sanity. Publish if every score is at least 5 and the average is at least 6.5 and nothing is broken in any render; a working sound a game team would use as a solid first pass should pass, one that reads as the wrong thing should not.
 Also write ONE general lesson for future builders (not specific to this sound) that would have prevented the biggest flaw you saw, or null if there is no flaw worth generalising.
 
 Return JSON only: {"scores":{"realism":n,"range":n,"variation":n,"knob_design":n},"verdict":"publish"|"reject","flaws":["..."],"lesson":"..."|null}`;

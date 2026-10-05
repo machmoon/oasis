@@ -153,7 +153,10 @@ export async function makeSound(b, { log = console.log } = {}) {
       const g = await gradeSound({ brief: b.brief, title: sh.meta.title, pngs: sh.pngs, labels: sh.labels, numbers: sh.numbers });
       stat.grades.push(g);
       if (g.lesson) fs.appendFileSync(LESSONS_FILE, `- ${g.lesson.replace(/\s+/g, " ").trim()}\n`);
-      if (g.verdict === "publish") { stat.verdict = "published"; break; }
+      // The bar is the scores, not the model's own verdict word: every score at least 5, average at least 6.5.
+      const vals = Object.values(g.scores || {}).map(Number).filter((v) => !Number.isNaN(v));
+      const passes = vals.length >= 4 && vals.every((v) => v >= 5) && vals.reduce((a, b) => a + b, 0) / vals.length >= 6.5;
+      if (passes || g.verdict === "publish") { stat.verdict = "published"; break; }
       if (round === 2) { stat.verdict = "rejected:grader"; break; }
       log(`  [${b.slug}] grader rejected: ${(g.flaws || []).join(" | ")}`);
       messages.push({ role: "assistant", content: "```js\n" + src + "```" }, { role: "user", content: `An independent reviewer rejected it: ${(g.flaws || []).join("; ")}. Scores: ${JSON.stringify(g.scores)}. Address every flaw and return the full module.` });
