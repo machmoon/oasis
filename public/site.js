@@ -85,7 +85,7 @@ async function drawSales({ limit = 6, empty = null, after = null } = {}) {
     $("#sales").innerHTML = sales.length ? sales.slice(0, limit).map((s, i) => saleRow(s, i === 0 && bump.length)).join("")
       : empty || `<div class="empty"><h3>No agent has bought anything yet.</h3><p>Give an agent a budget and ask it to build a scene. Its purchase shows up here the moment PayPal completes it.</p><a class="btn" href="#/budget">Give your agent a budget</a></div>`;
     const totals = creatorTotals(sales);
-    $("#creators").innerHTML = totals.length ? totals.map(([a, v]) => `<div class="creator"><img src="${face(a) ? thumb(face(a), 120) : ""}" alt=""><div><b>${esc(a)}</b><div class="muted" style="font-size:13px">sandbox creator account</div></div><div class="earn${bump.includes(a) ? " bump" : ""}">${usd(v)}</div></div>`).join("")
+    $("#creators").innerHTML = totals.length ? totals.map(([a, v]) => `<div class="creator"><img src="${face(a) ? thumb(face(a), 120) : ""}" alt=""><div><b><a href="#/creator/${encodeURIComponent(a)}">${esc(a)}</a></b><div class="muted" style="font-size:13px">sandbox creator account</div></div><div class="earn${bump.includes(a) ? " bump" : ""}">${usd(v)}</div></div>`).join("")
       : "";
     $("#creators").hidden = !totals.length;
     $("#sales").closest(".ledger")?.classList.toggle("solo", !totals.length);
@@ -252,6 +252,8 @@ async function route() {
     else if (seg[0] === "kit" && seg[1]) await pageKit(app, seg[1]);
     else if (seg[0] === "kit") await page3dKit(app);
     else if (seg[0] === "a" && seg[1]) await pageAsset(app, seg[1]);
+    else if (seg[0] === "publish") await (await import("/publish.js")).pagePublish(app);
+    else if (seg[0] === "creator" && seg[1]) await (await import("/publish.js")).pageCreator(app, decodeURIComponent(seg[1]));
     else if (seg[0] === "studio") await pageStudio(app, null);
     else if (seg[0] === "film" && seg[1]) await pageStudio(app, seg[1]);
     else notFound("That page doesn't exist.");

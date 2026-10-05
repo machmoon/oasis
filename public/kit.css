@@ -65,6 +65,9 @@
 .a-head h1 { font-size: clamp(32px, 4vw, 46px); }
 .a-sub { margin: 8px 0 0; color: var(--ink-2, #3A3F4A); font-size: 16px; }
 .a-sub b { color: var(--ink, #131313); font-weight: 600; }
+/* "by foleyroom" is the creator's page */
+.a-sub .a-by { color: var(--ink, #131313); font-weight: 600; text-decoration: underline; text-decoration-color: var(--line-strong, #C9CED8); text-underline-offset: 4px; text-decoration-thickness: 2px; transition: text-decoration-color var(--t, .2s); }
+.a-sub .a-by:hover { text-decoration-color: var(--accent, #E08A1E); }
 .a-desc { margin: 10px 0 0; max-width: 62ch; color: var(--ink-2, #3A3F4A); }
 .a-buy { display: grid; justify-items: end; gap: 10px; padding-top: 8px; }
 .a-price { font: 600 32px/1 var(--display, var(--sans, sans-serif)); color: var(--navy, inherit); font-variant-numeric: tabular-nums; }
