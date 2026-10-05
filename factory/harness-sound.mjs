@@ -23,7 +23,9 @@ function distance(x, y) {
 }
 
 export function measure(src, { sr = SOUND_SR } = {}) {
-  const report = { errors: [], warnings: [], renders: 0, slowestMs: 0, knobs: 0, deadKnobs: [], subtleKnobs: [], seedSimilarity: null, defaults: null };
+  // knobEffects: one row per knob with the loudest-changing extreme and how far it moved, so the publish page can
+  // offer a play button per knob and say what the harness heard.
+  const report = { errors: [], warnings: [], renders: 0, slowestMs: 0, knobs: 0, deadKnobs: [], subtleKnobs: [], knobEffects: [], seedSimilarity: null, defaults: null };
   let meta, params;
   try { ({ meta, params } = inspect(src)); } catch (e) { report.errors.push(`does not load: ${e.message}`); return report; }
   if (meta.format !== "sound") report.errors.push('meta.format must be "sound"');
@@ -62,8 +64,9 @@ export function measure(src, { sr = SOUND_SR } = {}) {
     if (k.type === "range") alts = [{ [n]: k.min }, { [n]: k.max }];
     else if (k.type === "choice") alts = k.options.filter((o) => o !== k.default).slice(0, 3).map((o) => ({ [n]: o }));
     else if (k.type === "toggle") alts = [{ [n]: !k.default }];
-    let best = 0;
-    for (const alt of alts) { const out = run(alt, `knob ${n}`); if (out) best = Math.max(best, distance(base, out)); }
+    let best = 0, bestAlt = alts[0] || {};
+    for (const alt of alts) { const out = run(alt, `knob ${n}`); if (out) { const d = distance(base, out); if (d > best) { best = d; bestAlt = alt; } } }
+    report.knobEffects.push({ knob: n, label: k.label || n, type: k.type, alt: bestAlt, distance: +best.toFixed(3), dead: best < 0.03, subtle: best >= 0.03 && best < 0.12 });
     if (best < 0.03) report.deadKnobs.push(n);
     else if (best < 0.12) report.subtleKnobs.push(n);
   }

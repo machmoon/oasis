@@ -60,7 +60,9 @@ export async function load() {
   }
   const seedDir = new URL("../seed/forks/", import.meta.url).pathname;
   const seeds = fs.existsSync(seedDir) ? fs.readdirSync(seedDir).filter((f) => f.endsWith(".json")).map((f) => JSON.parse(fs.readFileSync(path.join(seedDir, f), "utf8"))) : [];
-  const forks = [...seeds, ...(await store.list("forks"))];
+  // Creator-published programs (server/publish.js) live in the store beside forks, so they survive a deploy the
+  // same way and reach the same catalogue, ledger and CDN. Published docs carry `published: true`.
+  const forks = [...seeds, ...(await store.list("forks")), ...(await store.list("published"))];
   for (const fk of forks) {
     try {
       assets.set(fk.id, record(fk.id, fk.source, fk));
@@ -214,6 +216,13 @@ export function toPng(svg, width = 1024) {
 
 export async function addFork(doc) {
   await store.put("forks", doc.id, doc);
+  assets.set(doc.id, record(doc.id, doc.source, doc));
+  return assets.get(doc.id);
+}
+
+/** A creator's own program, checked by server/publish.js, into the store and the live catalogue. */
+export async function addPublished(doc) {
+  await store.put("published", doc.id, doc);
   assets.set(doc.id, record(doc.id, doc.source, doc));
   return assets.get(doc.id);
 }

@@ -22,6 +22,7 @@ import * as filmRender from "./film-render.js";
 import { musicFor } from "./film-music.js";
 import * as sound from "./sound.js";
 import * as kits from "./kits.js";
+import * as publish from "./publish.js";
 
 export async function createApp() {
   await catalog.load();
@@ -35,7 +36,8 @@ export async function createApp() {
   const wrap = (fn) => (req, res) =>
     Promise.resolve(fn(req, res)).catch((e) => {
       if (!e.status || e.status >= 500) console.error(req.method, req.path, e);
-      if (!res.headersSent) res.status(e.status || 500).json({ error: e.message });
+      // a coded refusal (publish checks) carries its code and the harness's full list, so a page can show every line
+      if (!res.headersSent) res.status(e.status || 500).json({ error: e.message, ...(e.code ? { code: e.code } : {}), ...(e.errors ? { errors: e.errors, warnings: e.warnings || [] } : {}) });
     });
   const parseKnobs = (req) => {
     try {
@@ -229,6 +231,15 @@ export async function createApp() {
     const fork = await forkAsset({ assetId: req.params.id, instruction, author: String(author || "anonymous").slice(0, 40), payoutEmail: email, price });
     res.json(catalog.summary(fork));
   }));
+
+  // Creators publish their own programs (server/publish.js): a dry run that loads, measures and renders, then the
+  // write, which re-runs the dry run. The contract is served as text, the way polyfork.dev serves /prompt.txt.
+  const publishLimit = rateLimit({ windowMs: 60_000, limit: 30, standardHeaders: "draft-8", legacyHeaders: false });
+  app.get("/contract.txt", (req, res) => res.type("text/plain").send(publish.CONTRACT));
+  app.get("/api/publish/template", (req, res) => res.type("text/javascript").send(publish.TEMPLATE));
+  app.post("/api/publish/check", publishLimit, wrap(async (req, res) => res.set("Cache-Control", "no-cache").json(await publish.check(req.body?.source))));
+  app.post("/api/publish", publishLimit, wrap(async (req, res) => res.status(201).json(catalog.summary(await publish.publish(req.body || {})))));
+  app.get("/api/creators/:name", wrap(async (req, res) => res.set("Cache-Control", "no-cache").json(await publish.creator(String(req.params.name).toLowerCase().slice(0, 40)))));
 
   app.post("/api/orders", wrap(async (req, res) => {
     const worldId = /^w[0-9a-f]{10}$/.test(req.body?.worldId || "") ? req.body.worldId : null;

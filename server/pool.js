@@ -32,6 +32,8 @@ function spawn() {
 const DEADLINE_MS = 3000;
 // Sound renders are per-sample loops in an interpreter (see sandbox.SOUND_TIME_LIMIT_MS); they get a longer clock.
 const SOUND_DEADLINE_MS = 8000;
+// The harness renders a program fifteen to twenty times across its knob space (factory/harness-sound.mjs).
+const HARNESS_DEADLINE_MS = 40000;
 
 function pump() {
   for (const w of workers) {
@@ -40,7 +42,7 @@ function pump() {
     const job = queue.shift();
     w.busy = true;
     pending.set(job.id, job);
-    const deadline = job.op === "sound" ? SOUND_DEADLINE_MS : DEADLINE_MS;
+    const deadline = job.op === "harness" ? HARNESS_DEADLINE_MS : job.op === "sound" ? SOUND_DEADLINE_MS : DEADLINE_MS;
     // QuickJS's own interrupt can't fire while a program thrashes the allocator, so the wall clock is
     // enforced from outside: a render that overruns gets its whole worker terminated and replaced.
     job.timer = setTimeout(() => {
@@ -79,6 +81,15 @@ export function soundInPool(source, values, sr) {
   if (!workers.length) for (let i = 0; i < SIZE; i++) workers.push(spawn());
   return new Promise((resolve, reject) => {
     queue.push({ id: ++seq, op: "sound", source, values, opts: { sr }, resolve, reject });
+    pump();
+  });
+}
+
+/** The sound harness (factory/harness-sound.mjs measure) on a worker: the publish page's dry run. */
+export function harnessInPool(source) {
+  if (!workers.length) for (let i = 0; i < SIZE; i++) workers.push(spawn());
+  return new Promise((resolve, reject) => {
+    queue.push({ id: ++seq, op: "harness", source, resolve, reject });
     pump();
   });
 }
