@@ -10,7 +10,28 @@
 // so it never drifts between the preview and the render.
 import * as THREE from "three";
 import { partsToGroup } from "./blocks-runtime.js";
-import { createFinish, curve, shakeAt, transitionAt, makeTitle, titlePose, seedOf, STYLES } from "./film-fx.js";
+import { createFinish, curve, shakeAt, transitionAt, makeTitle, titlePose, seedOf, STYLES, patchLook, dropOrder } from "./film-fx.js";
+import { ImprovedNoise } from "three/addons/math/ImprovedNoise.js";
+
+// One display face for every word the film sets itself: Anton (SIL OFL, public/fonts/Anton-OFL.txt) for the 3D
+// title, the end card's name and the knob readout; Source Sans 3 for the small lines. Loaded here so the Studio and
+// the render page draw the same glyphs without either page having to know.
+let displayFont = null;
+export function loadDisplayFont() {
+  return (displayFont ||= (async () => {
+    try {
+      if (!("FontFace" in window)) return false;
+      const f = new FontFace("Anton", "url(/fonts/Anton-Regular.ttf)");
+      await f.load();
+      document.fonts.add(f);
+      return true;
+    } catch { return false; }
+  })());
+}
+const DISPLAY = '"Anton", "Source Sans 3", system-ui, sans-serif';
+const TEXT = '"Source Sans 3", system-ui, sans-serif';
+// the kit's own lawn colours (town-plaza's grass by season), so the ground and the lawns are one green
+const GROUND = { kyoto: "#AFC793", seaside: "#E6D8B4", winter: "#EEF2F6", autumn: "#C9B58E", candy: "#BFD9A8", sf: "#AFC793", town: "#AFC793" };
 
 // Unlicensed paid pieces render in clay, the way a 3D tool shows a model before its materials: the set reads as a
 // set, and licensing the film is what paints it.
@@ -78,9 +99,13 @@ export async function createFilmPlayer(el, film, { api = "", audio = false, reve
   }));
   sky.frustumCulled = false;
   scene.add(sky);
+  await loadDisplayFont();
   const edit = film.edit || { style: "clean" };
-  const finish = createFinish(renderer, scene, camera, W, H, edit.style);
+  const b = film.brand || {};
+  const palette = [...new Set([b.background, b.ink, b.primary, b.secondary, b.highlight, b.surface, b.muted].filter(Boolean))];
+  const finish = createFinish(renderer, scene, camera, W, H, edit.style, { look: edit.look || "none", palette, ink: b.ink });
   const seed = seedOf(film);
+  const dress = (g) => g.traverse((o) => { if (o.isMesh) patchLook(o.material, edit.look); });
 
   // the set: every placement, grey when its piece is paid and the film is not licensed; movers remember their rest
   const paid = new Set(film.bill.lines.filter((l) => l.price > 0).map((l) => l.asset));
@@ -100,26 +125,73 @@ export async function createFilmPlayer(el, film, { api = "", audio = false, reve
   }
   const [Wm, Dm] = film.world.size;
   const movers = [], groups = [];
-  for (const p of film.placements) {
-    const g = partsToGroup(film.parts[p.part]);
-    g.position.set(...p.at);
-    g.rotation.y = -deg(p.rot);
+  /** A kit piece as the player shows it: clay until licensed (with drawn edges, like a model sheet), in the film's look. */
+  function piece(parts, at, rot) {
+    const g = partsToGroup(parts);
+    g.position.set(...at);
+    g.rotation.y = -deg(rot);
     if (!film.licensed || reveal) { // in preview the whole set is clay; the licence paints the street
-      // clay with drawn edges, like a model sheet: it reads as "not yet bought", not as a broken render. Each paid
-      // material keeps its real colour so licensing can paint it back in (sweep()).
+      // Each paid material keeps its real colour so licensing can paint it back in (sweep()).
       const entry = { g, mats: [], edges: [], d: 0 };
       g.traverse((o) => { if (o.isMesh) { o.material = o.material.clone(); entry.mats.push({ m: o.material, color: o.material.color.clone(), emissive: o.material.emissive.clone(), ei: o.material.emissiveIntensity, rough: o.material.roughness, metal: o.material.metalness }); } });
       g.traverse((o) => { if (o.isMesh) { const e = new THREE.LineSegments(new THREE.EdgesGeometry(o.geometry, 25), CLAY_EDGE.clone()); e.position.copy(o.position); e.quaternion.copy(o.quaternion); e.scale.copy(o.scale); o.parent.add(e); entry.edges.push(e); } });
       clay.push(entry);
       setClay(entry, 1);
+      g.userData.clay = entry;
     }
+    dress(g);
     world.add(g);
+    return g;
+  }
+  // the street assembles during the first shot: each placement drops in, lands as its stock program (default
+  // knobs) and rebuilds into its remix. The stock piece is a second group, shown only while it lands.
+  const buildShot = film.shots[0]?.build ? film.shots[0] : null;
+  const drops = []; // { g, stock, y, at (0..1 of the build window) }
+  for (const p of film.placements) {
+    const g = piece(film.parts[p.part], p.at, p.rot);
     groups.push(g);
+    if (buildShot) {
+      const stock = p.stock !== undefined ? piece(film.parts[p.stock], p.at, p.rot) : null;
+      if (stock) stock.visible = false;
+      drops.push({ g, stock, y: p.at[1], at: dropOrder(p, Wm), land: false });
+    }
     const m = MOVERS[p.asset];
     if (m) {
       const box = new THREE.Box3().setFromObject(g), len = box.max.x - box.min.x;
       movers.push({ g, x0: p.at[0], dir: p.rot === 180 ? -1 : 1, len, phase: (hash(p.id) >>> 0) % 1000 / 1000, ...m });
     }
+  }
+  // a rebuild shot: every step of the knob walk is its own group, swapped in on its beat (stage() below)
+  const rebuilds = {};
+  for (const [shotId, r] of Object.entries(film.rebuilds || {})) {
+    const k = film.placements.findIndex((p) => p.id === r.placement);
+    if (k < 0) continue;
+    const p = film.placements[k];
+    const steps = r.steps.map((st) => { const g = piece(film.parts[st.part], p.at, p.rot); g.visible = false; return { ...st, g }; });
+    rebuilds[shotId] = { ...r, g: groups[k], steps, placement: p };
+  }
+
+  // the ground the street sits in, after Polyfork's terrain that joins (polyfork.dev/blog/terrain-that-joins): a
+  // base height every chunk would agree on, times a skirt weight that is zero on the street's own slab (their level
+  // clearing) and rises to one past its edge, so the kit's flat grid and the hills are one surface with no seam.
+  // Studio dressing, like the sky: free, never clay, in the theme's ground colour.
+  {
+    const M = 80, pitch = 1.5, cols = Math.ceil((Wm + 2 * M) / pitch), rows = Math.ceil((Dm + 2 * M) / pitch);
+    const geo = new THREE.PlaneGeometry(cols * pitch, rows * pitch, cols, rows);
+    geo.rotateX(-Math.PI / 2);
+    const n = new ImprovedNoise(), s = (seed % 97) * 1.37, pos = geo.attributes.position;
+    const base = (x, z) => 3.2 * n.noise(x * 0.028 + s, z * 0.028, 0.5) + 1.2 * n.noise(x * 0.09, z * 0.09 + s, 2.5);
+    const skirt = (x, z) => { const dx = Math.max(-2 - x, x - (Wm + 2), 0), dz = Math.max(-2 - z, z - (Dm + 2), 0); const d = Math.hypot(dx, dz); const w = Math.min(1, d / 14); return w * w * (3 - 2 * w); };
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i) + Wm / 2, z = pos.getZ(i) + Dm / 2, w = skirt(x, z);
+      const far = Math.min(1, Math.max(0, (Math.hypot(Math.max(-x, x - Wm, 0), Math.max(-z, z - Dm, 0)) - 20) / 50));
+      pos.setXYZ(i, x, w * (1.2 + Math.max(0, base(x, z)) * (1 + 1.6 * far)) - 0.05, z);
+    }
+    geo.computeVertexNormals();
+    const ground = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: GROUND[film.world.theme] || GROUND.town, roughness: 0.95, flatShading: true }));
+    ground.receiveShadow = true;
+    dress(ground);
+    scene.add(ground);
   }
   const box = new THREE.Box3(new THREE.Vector3(0, 0, 0), new THREE.Vector3(Wm, 8, Dm));
   const centre = box.getCenter(new THREE.Vector3());
@@ -147,8 +219,10 @@ export async function createFilmPlayer(el, film, { api = "", audio = false, reve
         l.add(b, t, u); l.position.set(x, 3.25 - 0.18 * Math.sin((x / 2.6) * 1.3), z);
         world.add(l); lanterns.push(l); pts.push(new THREE.Vector3(x, l.position.y + 0.3, z));
         if (!film.licensed || reveal) { const entry = { g: l, mats: [], edges: [], d: 0 }; l.traverse((o) => { if (o.isMesh) { o.material = o.material.clone(); entry.mats.push({ m: o.material, color: o.material.color.clone(), emissive: o.material.emissive.clone(), ei: o.material.emissiveIntensity, rough: o.material.roughness, metal: o.material.metalness }); } }); clay.push(entry); setClay(entry, 1); }
+        dress(l);
       }
-      world.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), cord));
+      const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), cord);
+      world.add(line); lanterns.push(line);
     }
     // the paper's emissive is lifted by setLight with the windows: faint by day, glowing by night
   }
@@ -178,8 +252,11 @@ export async function createFilmPlayer(el, film, { api = "", audio = false, reve
       post.position.set(x, m.post / 2, 0);
       g.add(post);
     }
+    dress(g);
     world.add(g);
     groups.push(g);
+    g.userData.sign = s; // a roof sign rides its building's roofline through a rebuild
+    if (buildShot) drops.push({ g, stock: null, y: m.at[1], at: 0.96, land: false }); // signs hang last
   }));
   const cards = {};
   await Promise.all(film.shots.filter((s) => s.card).map(async (s) => {
@@ -224,6 +301,14 @@ export async function createFilmPlayer(el, film, { api = "", audio = false, reve
       shadow.rotation.x = -Math.PI / 2; shadow.position.set(tm.at[0], 0.16, tm.at[2]); shadow.renderOrder = 2;
       shadow.scale.set(2.2, title.userData.width * fit * 1.15, 1); // the word runs along z once it faces down the street
       shadow.visible = false; scene.add(shadow); title.userData.shadow = shadow;
+      // the slam's weight: a shock ring that runs out across the road and a dust disc that rises and thins
+      const ringMat = new THREE.MeshBasicMaterial({ color: "#FFF3DC", transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide });
+      const ring = new THREE.Mesh(new THREE.RingGeometry(0.86, 1, 48), ringMat);
+      ring.rotation.x = -Math.PI / 2; ring.position.set(tm.at[0], 0.14, tm.at[2]); ring.renderOrder = 3; ring.visible = false;
+      const dust = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: shadow.material.map, color: "#E8DCC8", transparent: true, opacity: 0, depthWrite: false }));
+      dust.rotation.x = -Math.PI / 2; dust.position.set(tm.at[0], 0.18, tm.at[2]); dust.renderOrder = 3; dust.visible = false;
+      scene.add(ring, dust); title.userData.ring = ring; title.userData.dust = dust;
+      dress(title);
       title.visible = false;
       title.userData.base = tm.at[1];
       title.userData.fit = fit;
@@ -452,31 +537,96 @@ export async function createFilmPlayer(el, film, { api = "", audio = false, reve
       ctx.globalAlpha = a; ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh); ctx.globalAlpha = 1;
       return;
     }
-    const m1 = stage(0.05, 0.5), m2 = stage(0.35, 0.55), m3 = stage(0.75, 0.5);
-    const mark = S * 0.22 * (0.86 + 0.14 * m1), top = H * 0.5 - S * 0.27;
+    // The lockup: the monogram settles, the name rises word by word out of a mask (the "rise" of the hyperframes
+    // text effects: each word lifts through a clipped slot, staggered), then a short rule and the place line. One
+    // display face (Anton) against one text face (Source Sans 3), a strict scale: name 11.5% of the short side,
+    // sub 2.6%, and nothing else.
+    const m1 = stage(0.05, 0.5), m3 = stage(0.95, 0.5);
+    const mark = S * 0.2 * (0.86 + 0.14 * m1), top = H * 0.5 - S * 0.27;
     ctx.globalAlpha = a * m1;
     ctx.drawImage(img, cx - mark / 2, top + (S * 0.2 - mark) / 2, mark, mark * (ih / iw));
-    ctx.globalAlpha = a * m2;
     ctx.fillStyle = paper; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-    // the name is set to fit the frame: a long name on a vertical or square film shrinks instead of clipping
-    let nameSize = S * 0.085, nameTrack = S * 0.012;
-    ctx.font = `800 ${Math.round(nameSize)}px "Source Sans 3", system-ui, sans-serif`;
-    ctx.letterSpacing = `${Math.round(nameTrack)}px`;
-    const nameW = ctx.measureText(c.name).width + nameTrack * c.name.length, maxName = W * 0.86;
-    if (nameW > maxName) {
-      const f = maxName / nameW; nameSize *= f; nameTrack *= f;
-      ctx.font = `800 ${Math.round(nameSize)}px "Source Sans 3", system-ui, sans-serif`;
-      ctx.letterSpacing = `${Math.round(nameTrack)}px`;
-    }
-    ctx.fillText(c.name, cx, top + S * 0.31 + (1 - m2) * S * 0.02);
+    let nameSize = S * 0.115, nameTrack = S * 0.004;
+    const setName = () => { ctx.font = `400 ${Math.round(nameSize)}px ${DISPLAY}`; ctx.letterSpacing = `${Math.round(nameTrack)}px`; };
+    setName();
+    const words = c.name.split(/\s+/).filter(Boolean), gapW = nameSize * 0.2;
+    const widths = words.map((w) => ctx.measureText(w).width + nameTrack * w.length);
+    let total = widths.reduce((s, w) => s + w, 0) + gapW * (words.length - 1);
+    const maxName = W * 0.86;
+    if (total > maxName) { const f = maxName / total; nameSize *= f; nameTrack *= f; setName(); total *= f; for (let k = 0; k < widths.length; k++) widths[k] *= f; }
+    const baseline = top + S * 0.32, slotTop = baseline - nameSize * 0.95, slotH = nameSize * 1.12;
+    let x = cx - total / 2;
+    words.forEach((w, k) => {
+      const rise = stage(0.3 + k * 0.09, 0.5), o3 = 1 - Math.pow(1 - rise, 3);
+      ctx.save();
+      ctx.beginPath(); ctx.rect(x - nameSize * 0.1, slotTop, widths[k] + nameSize * 0.2, slotH); ctx.clip();
+      ctx.globalAlpha = a * Math.min(1, rise * 2);
+      ctx.textAlign = "start";
+      ctx.fillText(w, x, baseline + (1 - o3) * nameSize * 1.05);
+      ctx.restore();
+      setName();
+      x += widths[k] + gapW;
+    });
+    ctx.textAlign = "center";
     ctx.globalAlpha = a * m3;
     ctx.fillStyle = gold;
-    const rw = S * 0.07 * m3; ctx.fillRect(cx - rw / 2, top + S * 0.345, rw, Math.max(2, S * 0.005));
+    const rw = S * 0.07 * m3; ctx.fillRect(cx - rw / 2, top + S * 0.36, rw, Math.max(2, S * 0.005));
     ctx.fillStyle = paper; ctx.globalAlpha = a * m3 * 0.85;
-    ctx.font = `600 ${Math.round(S * 0.03)}px "Source Sans 3", system-ui, sans-serif`;
-    ctx.letterSpacing = `${Math.round(S * 0.008)}px`;
-    if (c.sub) ctx.fillText(c.sub.toUpperCase(), cx, top + S * 0.4);
+    ctx.font = `500 ${Math.round(S * 0.026)}px ${TEXT}`;
+    ctx.letterSpacing = `${Math.round(S * 0.01)}px`;
+    if (c.sub) ctx.fillText(c.sub.toUpperCase(), cx, top + S * 0.415);
     ctx.letterSpacing = "0px"; ctx.textAlign = "start"; ctx.globalAlpha = 1;
+  }
+
+  /**
+   * The knob readout for a rebuild shot: the knob's name small, its value large in the display face rolling up as it
+   * changes (a counter), and the knob itself drawn underneath (a track with a dot for a range, segments for a
+   * choice). Bottom left, where the lower third sits in its own shot, in the brand's paper over a soft shadow.
+   */
+  function drawReadout(rb, shot) {
+    const S = Math.min(W, H), portrait = H > W;
+    const def = (rb.cur || rb.steps[0])?.def;
+    if (!def) return;
+    const a = rb.intro * (1 - rb.outro);
+    if (a <= 0) return;
+    const x = portrait ? W * 0.08 : W * 0.06, bottom = H - H * 0.12;
+    const paper = film.brand?.background || "#F6EEE0", ink = film.brand?.ink || "#1B1F2A", accent = film.brand?.highlight || "#F2B33D";
+    const lit = shot.time === "day" && (!shot.timeTo || shot.timeTo === "day");
+    const fg = lit ? ink : paper;
+    const labelSize = Math.round(S * 0.024), valueSize = Math.round(S * 0.085), track = S * 0.22, gap = S * 0.016;
+    const trackH = Math.max(2, S * 0.004), dot = S * 0.012;
+    const ty = bottom - trackH, vy = ty - gap - dot, ly = vy - valueSize * 0.98 - gap;
+    const slide = (1 - rb.intro) * S * 0.03;
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.shadowColor = lit ? "rgba(255, 255, 255, 0.5)" : "rgba(0, 0, 0, 0.6)"; ctx.shadowBlur = S * 0.024; ctx.shadowOffsetY = S * 0.002;
+    ctx.fillStyle = fg; ctx.textAlign = "start"; ctx.textBaseline = "alphabetic";
+    ctx.font = `600 ${labelSize}px ${TEXT}`; ctx.letterSpacing = `${Math.round(S * 0.006)}px`;
+    ctx.fillText(String(def.label || rb.label).toUpperCase(), x, ly + slide);
+    // the value rolls: the new one rises into a slot as the old one leaves through the top
+    const roll = Math.min(1, rb.since / 0.24), o3 = 1 - Math.pow(1 - roll, 3);
+    ctx.font = `400 ${valueSize}px ${DISPLAY}`; ctx.letterSpacing = `${Math.round(S * 0.003)}px`;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(x - S * 0.01, vy - valueSize * 1.02, W * 0.5, valueSize * 1.16); ctx.clip();
+    const prev = rb.k >= 1 ? (rb.k === 1 ? rb.value0 : rb.k - 2 < rb.steps.length ? rb.steps[rb.k - 2]?.value : rb.value) : undefined;
+    const show = (v) => String(v).toUpperCase();
+    ctx.fillText(show(rb.value), x, vy + slide + (1 - o3) * valueSize);
+    if (rb.k >= 1 && prev !== undefined && roll < 1) { ctx.globalAlpha = a * (1 - roll); ctx.fillText(show(prev), x, vy + slide - o3 * valueSize); ctx.globalAlpha = a; }
+    ctx.restore();
+    ctx.shadowColor = "transparent";
+    // the knob: a range is a track with a dot at the value, a choice is one segment per option, the current one filled
+    const dim = lit ? "rgba(27, 31, 42, 0.28)" : "rgba(246, 238, 224, 0.35)";
+    if (def.type === "range" && Number.isFinite(def.min) && Number.isFinite(def.max) && def.max > def.min) {
+      ctx.fillStyle = dim; ctx.fillRect(x, ty, track, trackH);
+      const kx = x + track * Math.min(1, Math.max(0, (Number(rb.value) - def.min) / (def.max - def.min)));
+      ctx.fillStyle = accent; ctx.fillRect(x, ty, kx - x, trackH);
+      ctx.beginPath(); ctx.arc(kx, ty + trackH / 2, dot, 0, Math.PI * 2); ctx.fill();
+    } else if (Array.isArray(def.options)) {
+      const n = def.options.length, segW = (track - (n - 1) * S * 0.006) / n;
+      def.options.forEach((o, k) => { ctx.fillStyle = o === rb.value ? accent : dim; ctx.fillRect(x + k * (segW + S * 0.006), ty, segW, trackH * 1.6); });
+    }
+    ctx.restore();
+    ctx.letterSpacing = "0px"; ctx.globalAlpha = 1;
   }
 
   // hits: moments the camera takes an impact (a title landing, a flash cut), as seconds on the film's clock
@@ -487,6 +637,8 @@ export async function createFilmPlayer(el, film, { api = "", audio = false, reve
       for (const h of s.hits || []) hits.push(starts[i] + h);
       if (s.title) hits.push(starts[i] + (s.title.at ?? 1));
       if (s.cut === "flash") hits.push(starts[i]);
+      const r = rebuilds[s.id];
+      if (r) { const { n, t0, each } = rebuildBeats(r, s); for (let k = 0; k <= n; k++) hits.push({ t: starts[i] + t0 + k * each, k: 0.3 }); } // each knob turn lands with a small kick
     });
   }
   impacts();
@@ -504,18 +656,82 @@ export async function createFilmPlayer(el, film, { api = "", audio = false, reve
   let building = false; // during the build-in the first frame is drawn without its fade from black
   let samplesCap = 16; // motion-blur samples per frame; the live preview lowers it while playing
 
+  /**
+   * The street assembling at second t of the build window: a piece is up in the air before its drop, falls on an
+   * ease-in (a thing falling), lands with a settle, and if it landed as stock it pops into its remix a beat later.
+   * Each piece's moment is a function of its placement (dropOrder), so the render and the preview agree.
+   */
+  const flash = (g, amt) => { const c = g.userData.clay; if (!c) return; if (amt > 0) { setClay(c, c.k, amt); c.flashed = true; } else if (c.flashed) { setClay(c, c.k, 0); c.flashed = false; } };
+  function assemble(t, B) {
+    for (const d of drops) {
+      const t0 = d.at * (B - 0.55), u = Math.min(1, Math.max(0, (t - t0) / 0.5)); // every piece is down 0.05 s before the window ends
+      if (u <= 0) { d.g.visible = false; if (d.stock) d.stock.visible = false; continue; }
+      const e = u < 0.8 ? Math.pow(u / 0.8, 2.2) : 1, since = t - (t0 + 0.5);
+      const settle = u >= 1 ? Math.exp(-since * 10) * Math.sin(since * 34) * 0.06 : u >= 0.8 ? -Math.sin(((u - 0.8) / 0.2) * Math.PI) * 0.05 : 0;
+      const live = !d.stock || since >= 0.22; // stock for a beat, then the remix pops in
+      const pop = d.stock && live ? Math.sin(Math.PI * Math.min(1, Math.max(0, (since - 0.22) / 0.28))) * 0.1 : 0;
+      const active = live ? d.g : d.stock, other = live ? d.stock : d.g;
+      active.visible = true;
+      if (other) { other.visible = false; other.position.y = d.y; other.scale.setScalar(1); }
+      active.position.y = d.y + (1 - e) * 16;
+      active.scale.set(1 + pop, (1 + pop) * (1 + settle), 1 + pop);
+      flash(d.g, pop * 6); // a warm front passes over the remix as it lands
+    }
+    for (const l of lanterns) l.visible = t >= B - 0.4;
+  }
+  function assembled() {
+    for (const d of drops) { d.g.visible = true; d.g.position.y = d.y; d.g.scale.setScalar(1); if (d.stock) d.stock.visible = false; flash(d.g, 0); }
+    for (const l of lanterns) l.visible = true;
+  }
+  /** The beats of a rebuild shot: the first step at t0, one every `each` seconds, the return after the last. */
+  function rebuildBeats(r, shot) {
+    const n = r.steps.length, S = shot.seconds, span = Math.min(0.62 * S, 0.9 * (n + 1)), t0 = Math.max(0.3, 0.2 * S), each = span / (n + 1);
+    return { n, t0, each, span };
+  }
+  /** The knob walk at second `secs` of a rebuild shot: which step shows, its pop, and the readout to draw. */
+  function rebuildAt(r, shot, secs) {
+    const { n, t0, each, span } = rebuildBeats(r, shot);
+    const k = Math.min(n + 1, Math.max(0, Math.floor((secs - t0) / each + 1)));
+    const since = secs - (t0 + (k - 1) * each);
+    const pop = k > 0 && k <= n + 1 ? Math.sin(Math.PI * Math.min(1, Math.max(0, since / 0.26))) * 0.07 : 0;
+    const cur = k === 0 || k > n ? null : r.steps[k - 1];
+    const first = r.steps[0]?.knob;
+    const own = film.world.placements.find((p) => p.id === r.placement.id)?.knobs || {};
+    // before the walk and after the return the readout shows the knob as the remix has it
+    const label = cur ? cur.knob : first;
+    const value = cur ? cur.value : own[first] ?? "";
+    return { k, cur, pop, since, label, value, value0: own[first] ?? "", steps: r.steps, top: cur ? cur.top : r.top, on: secs >= t0 - 0.25 && secs <= t0 + span + 0.9, intro: Math.min(1, Math.max(0, (secs - (t0 - 0.25)) / 0.35)), outro: Math.min(1, Math.max(0, (secs - (t0 + span + 0.55)) / 0.35)) };
+  }
+  let readout = null; // what seek() draws for a rebuild shot
+
   /** Sets the whole world to second t and returns the finishing parameters for that instant. */
   function stage(t) {
     const { i, shot, local } = shotAt(t);
     const dark = setLight(shot.time, shot.timeTo, shot.timeTo ? ease(local) : 0);
     let focus = pose(shot, local);
     move(t);
-    for (const m of movers) m.g.visible = i !== titleShot; // the street clears for the title
-    for (const g of cheat) g.visible = i !== titleShot;
+    if (drops.length) { if (buildShot && i === 0 && t < buildShot.build) assemble(t, buildShot.build); else assembled(); }
+    // the street clears for the title; in a film that assembles itself, assemble() owns visibility until then
+    for (const m of movers) { if (i === titleShot) m.g.visible = false; else if (!drops.length) m.g.visible = true; }
+    for (const g of cheat) { if (i === titleShot) g.visible = false; else if (!drops.length) g.visible = true; }
     weather?.(t);
     // rolling fog: the bank breathes in and out down the street, as a function of the second, not the clock
     if (film.weather === "fog" && scene.fog) { scene.fog.near = 4 + 3 * Math.sin(t * 0.35); scene.fog.far = 46 + 14 * Math.sin(t * 0.35 + 1.2); }
-    const p = { frame: Math.round(t * film.fps), dark, focus, rgb: 0, glitch: 0, zoom: 0, flash: 0, angle: 0, fade: 0 };
+    const p = { frame: Math.round(t * film.fps), dark, focus, rgb: 0, glitch: 0, zoom: 0, flash: 0, angle: 0, fade: 0, blur: [0, 0] };
+    // the knob walk: the step's group shows, the others hide, the roof sign rides the roofline, the readout is set
+    readout = null;
+    for (const [sid, r] of Object.entries(rebuilds)) {
+      const on = shot.id === sid;
+      const rb = on ? rebuildAt(r, shot, local * shot.seconds) : null;
+      for (const st of r.steps) { st.g.visible = !!rb?.cur && rb.cur === st; if (!st.g.visible) st.g.scale.setScalar(1); }
+      if (rb?.cur) r.g.visible = false; else if (on) r.g.visible = true;
+      const active = rb?.cur ? rb.cur.g : r.g, s = 1 + (rb?.pop || 0);
+      active.scale.set(s, s, s);
+      flash(active, (rb?.pop || 0) * 5);
+      const top = rb ? rb.top : r.top;
+      for (const g of groups) if (g.userData.sign?.placement === r.placement.id && g.userData.sign.where === "roof") g.position.y = g.userData.sign.mount.at[1] + (top - r.top);
+      if (rb?.on) readout = rb;
+    }
     // transitions on the cut nearest t
     const tr = transitionAt(t, starts, film.shots);
     if (tr) {
@@ -526,6 +742,18 @@ export async function createFilmPlayer(el, film, { api = "", audio = false, reve
         camera.rotateY(dir * (side < 0 ? swing : -swing));
         p.rgb = 0.004 * tr.env;
         p.angle = 0;
+        p.blur = [dir * 0.03 * tr.env * tr.env, 0]; // the smear runs along the pan
+      } else if (tr.kind === "match") {
+        // the eye line carries: the incoming camera starts on the outgoing shot's last look direction and eases home
+        if (tr.u >= 0 && tr.i > 0) {
+          const home = camera.quaternion.clone(), fov = camera.fov;
+          pose(film.shots[tr.i - 1], 1);
+          const from = camera.quaternion.clone();
+          pose(shot, local);
+          if (camera.fov !== fov) { camera.fov = fov; camera.updateProjectionMatrix(); }
+          const k = ease(Math.min(1, tr.u));
+          camera.quaternion.copy(from).slerp(home, k);
+        }
       } else if (tr.kind === "zoom") {
         camera.fov = camera.fov * (1 - 0.38 * tr.env); camera.updateProjectionMatrix();
         p.zoom = 0.2 * tr.env;
@@ -544,6 +772,8 @@ export async function createFilmPlayer(el, film, { api = "", audio = false, reve
       title.visible = false;
       if (title.userData.shadow) title.userData.shadow.visible = false;
       if (title.userData.rim) title.userData.rim.intensity = 0;
+      if (title.userData.ring) title.userData.ring.visible = false;
+      if (title.userData.dust) title.userData.dust.visible = false;
       if (on) {
         const secs = local * shot.seconds, tp = titlePose(secs, shot.title.at ?? 1);
         title.visible = tp.visible;
@@ -552,9 +782,14 @@ export async function createFilmPlayer(el, film, { api = "", audio = false, reve
         const sh = title.userData.shadow;
         if (sh) { sh.visible = tp.visible; sh.material.opacity = Math.max(0, 1 - tp.y / 6); }
         title.rotation.x = -tp.tilt;
-        const f = title.userData.fit;
+        const f = title.userData.fit, wide = title.userData.width * f;
         title.scale.set(f / Math.sqrt(tp.squash), f * tp.squash, f);
+        // the slam: a shock ring runs out from the word, dust lifts and thins, the picture kicks and the lens punches
+        const ring = title.userData.ring, dust = title.userData.dust;
+        if (ring && tp.ring > 0) { ring.visible = true; const rs = 1.5 + tp.ring * (wide * 0.9 + 6); ring.scale.set(rs, rs, 1); ring.material.opacity = tp.ringAlpha * 0.85; }
+        if (dust && tp.dust > 0 && tp.dust < 1) { dust.visible = true; const ds = wide * 0.8 + 2 + tp.dust * 5; dust.scale.set(ds, ds * 0.6, 1); dust.position.y = 0.18 + tp.dust * 0.8; dust.material.opacity = Math.sin(Math.PI * tp.dust) * 0.5; }
         if (tp.visible && tp.y < 0.01) p.flash = Math.max(p.flash, Math.exp(-(secs - (shot.title.at ?? 1)) * 12) * 0.22);
+        if (tp.kick > 0) { p.rgb = Math.max(p.rgb, tp.kick * 0.011); camera.fov *= 1 - tp.kick * 0.04; camera.updateProjectionMatrix(); }
         if (tp.y < 0.5) p.focus = Math.max(4, camera.position.distanceTo(title.position));
       }
     }
@@ -604,6 +839,7 @@ export async function createFilmPlayer(el, film, { api = "", audio = false, reve
     ctx.globalCompositeOperation = "source-over";
     const { shot, local } = shotAt(t);
     if (shot.card) drawCard(shot, local);
+    if (readout) drawReadout(readout, shot);
     if (label) {
       // the unlicensed mark: a small dark pill at the bottom left, two words and a hairline between them
       const S = Math.min(W, H), fs = Math.round(S / 50), ph = Math.round(S / 28), pad = Math.round(S / 48), ip = Math.round(fs * 0.8);
@@ -675,8 +911,9 @@ export async function createFilmPlayer(el, film, { api = "", audio = false, reve
   function pause() { samplesCap = 16; playing = false; cancelAnimationFrame(raf); track?.pause(); }
   function goto(t) { at = t; const info = seek(t); for (const f of listeners) f(info, playing); if (playing) t0 = performance.now() - t * 1000; if (track) track.currentTime = t; }
 
-  /** The set drops in piece by piece (as the kit viewer does), then the film starts. */
+  /** The set drops in piece by piece (as the kit viewer does), then the film starts. A film that assembles itself in its first shot skips this. */
   function buildIn(ms = 1400) {
+    if (buildShot) { seek(0); return Promise.resolve(); }
     return new Promise((resolve) => {
       building = true;
       const order = groups.map((g, i) => ({ g, y: g.position.y, d: (hash(i * 7919 + Wm) >>> 0) % 1000 / 1000 }));

@@ -26,9 +26,19 @@ export const SHOT_KINDS = ["orbit", "dolly", "push", "crane", "static"];
 // film-wide finish. "hype" is the After Effects cut (ramps, whips, a title that slams in); "clean" is calm and
 // straight; "dream" is soft, bright and slow.
 export const RAMPS = ["smooth", "linear", "expo", "punch", "build", "quart"];
-export const CUTS = ["cut", "whip", "zoom", "glitch", "flash"];
+export const CUTS = ["cut", "whip", "zoom", "glitch", "flash", "match"];
 export const STYLES = ["hype", "clean", "dream"];
 export const styleOf = (brief) => (/\b(calm|dreamy|dream|soft|cosy|cozy|gentle|slow)\b/i.test(brief) ? "dream" : /\b(clean|minimal|simple|quiet)\b/i.test(brief) ? "clean" : "hype");
+// The look: a film-wide grade after Polyfork's shader looks (polyfork.dev/blog/six-shader-looks-and-which-ones-you-can-keep),
+// which are per-model viewer toggles there. Here the brief picks one and the whole film wears it (public/film-fx.js):
+// toon (posterised light and a depth outline), pixel, dither (Bayer), ps1 (vertex snap), palette (the brand's own colours).
+export const LOOKS = ["none", "toon", "pixel", "dither", "ps1", "palette"];
+export const lookOf = (brief) => (/\b(game ?boy|gameboy|palette|two[- ]tone|duotone)\b/i.test(brief) ? "palette" : /\b(ps1|playstation|psx|low[- ]?fi|lofi)\b/i.test(brief) ? "ps1" : /\b(dither|dithered|print|risograph|riso|halftone)\b/i.test(brief) ? "dither" : /\b(pixel|pixel[- ]art|8[- ]bit|16[- ]bit|retro game)\b/i.test(brief) ? "pixel" : /\b(toon|cel|cell|anime|cartoon|comic)\b/i.test(brief) ? "toon" : "none");
+// The street assembles in the first shot: this many seconds of pieces dropping in, each landing as its stock program
+// and rebuilding into its remix (the kit's knobs, shown). Pieces that can carry a mid-film rebuild (a knob turned
+// on camera) are the buildings; the steps walk one knob away from the remix and back.
+export const BUILD_SECONDS = 2.4;
+export const REBUILD_KINDS = ["town-shop", "town-house", "town-flats", "town-stall"];
 const TIMES = ["day", "dusk", "night"];
 const MAX_SHOTS = 8, MAX_SECONDS = 30, MAX_SIGNS = 6;
 
@@ -131,7 +141,30 @@ export async function planFilm(brief, { seed } = {}) {
   const style = styleOf(brief);
   const shots = shotsFor(style, plan, hero, name, { ...brand, board: signBg, boardInk: signInk });
   const place = { kyoto: "a Kyoto street", sf: "a San Francisco street", seaside: "a seaside street", winter: "a winter street", autumn: "an autumn street", candy: "a candy street", town: "a street" }[plan.theme] || "a street";
-  return cleanFilm({ title: `${name}: ${place}`, brief, brand, world: plan, signs, shots, edit: { style }, weather: weatherOf(plan.theme, brief), music: { seed: brief, mood: moodOf(plan.theme, plan.time) } });
+  return cleanFilm({ title: `${name}: ${place}`, brief, brand, world: plan, signs, shots, edit: { style, look: lookOf(brief) }, weather: weatherOf(plan.theme, brief), music: { seed: brief, mood: moodOf(plan.theme, plan.time) } });
+}
+
+/**
+ * The knob walk a piece performs on camera: one range knob (floors, usually) away from the remix and past it, then
+ * one choice knob flipped, then back to the remix. Every step is an override on the piece's own knobs, so the piece
+ * the rest of the film shows is the one the walk returns to.
+ */
+export function rebuildStepsFor(asset, knobs = {}) {
+  const a = typeof asset === "string" ? catalog.getAsset(asset) : asset;
+  if (!a?.params?.knobs) return [];
+  const K = a.params.knobs, steps = [];
+  const rangeName = K.floors?.type === "range" ? "floors" : Object.keys(K).find((k) => K[k].type === "range");
+  if (rangeName) {
+    const d = K[rangeName], step = d.step || 1, cur = Number(knobs[rangeName] ?? d.default);
+    const lo = Math.max(d.min, cur - 2 * step), hi = Math.min(d.max, cur + 2 * step), far = Math.min(d.max, cur + 3 * step);
+    for (const v of [lo, hi, far]) if (v !== cur && !steps.some((s) => s.value === v) && steps.length < 2) steps.push({ knob: rangeName, value: v });
+  }
+  const choiceName = Object.keys(K).find((k) => K[k].type === "choice" && (K[k].options || []).length > 1);
+  if (choiceName) {
+    const d = K[choiceName], cur = knobs[choiceName] ?? d.default, other = d.options.find((o) => o !== cur);
+    if (other !== undefined) steps.push({ knob: choiceName, value: other });
+  }
+  return steps.slice(0, 3);
 }
 
 /**
@@ -183,18 +216,23 @@ export function shotsFor(style, plan, hero, name, brand) {
   // the title shot: low in the road, pushing down the street toward the word as it drops in
   const d = tm.dir || 1;
   const titleShot = (seconds, ramp, cut, at) => ({ id: "kt", kind: "dolly", seconds, time, fov: 44, ramp, cut, shake: 0.12, from: [tm.at[0] - 13 * d, 1.6, tm.at[2]], to: [tm.at[0] - 7.5 * d, 1.2, tm.at[2]], look: [tm.at[0] + 4 * d, 1.9, tm.at[2]], title: { text: word, at } });
+  // the rebuild: the camera holds close on the hero while one of its knobs is turned on camera and turned back
+  const rebuild = REBUILD_KINDS.includes(hero.asset) ? { placement: hero.id, steps: rebuildStepsFor(hero.asset, hero.knobs) } : undefined;
   if (style === "hype") return [
-    { id: "k0", kind: "orbit", seconds: 3, time, fov: 34, ramp: "quart", target: centre, radius: R * 1.1, height: R * 0.4, from: az - 42, to: az - 10 },
+    { id: "k0", kind: "orbit", seconds: 3.6, time, fov: 34, ramp: "quart", target: centre, radius: R * 1.1, height: R * 0.4, from: az - 42, to: az - 10, build: BUILD_SECONDS },
     { id: "k1", kind: "dolly", seconds: 2.4, time, fov: 52, ramp: "punch", cut: "whip", shake: 0.3, from: [1.5, 1.7, roadZ], to: [W - 9, 1.9, roadZ], look: [W + 10, 1.5, roadZ + 1.5], card: card("lower") },
-    { id: "k2", kind: "push", seconds: 2.2, time, fov: 46, ramp: "punch", cut: "zoom", target: [hc[0], 4.6, hc[2]], azimuth: az + 16, radius: [13, 8.5], height: [3.2, 2.6] },
+    // the rebuild shot frames the whole piece at its tallest (four floors and a roof), from across the road
+    rebuild ? { id: "k2", kind: "push", seconds: 3.4, time, fov: 54, ramp: "punch", cut: "zoom", target: [hc[0], 4.8, hc[2]], azimuth: az + 16, radius: [17, 13.5], height: [5.4, 4.6], rebuild }
+      : { id: "k2", kind: "push", seconds: 2.2, time, fov: 46, ramp: "punch", cut: "zoom", target: [hc[0], 4.6, hc[2]], azimuth: az + 16, radius: [13, 8.5], height: [3.2, 2.6] },
     titleShot(3, "smooth", "glitch", 0.95),
     { id: "k4", kind: "crane", seconds: 2.8, time: time === "night" ? "night" : "dusk", timeTo: "night", fov: 40, ramp: "expo", cut: "whip", target: [hc[0], 2, hc[2]], azimuth: az - 28, radius: [14, 25], height: [6, 19] },
     { id: "k5", kind: "static", seconds: 2.6, time: "night", fov: 40, cut: "flash", target: [hc[0], 1.2, hc[2]], azimuth: az + 34, radius: 9, height: 1.6, card: card("full") },
   ];
   const soft = style === "dream";
   return [
-    { id: "k0", kind: "orbit", seconds: soft ? 4.5 : 4, time, fov: 34, ramp: soft ? "smooth" : undefined, target: centre, radius: R * 1.15, height: R * 0.42, from: az - 40, to: az - 12 },
+    { id: "k0", kind: "orbit", seconds: soft ? 4.5 : 4, time, fov: 34, ramp: soft ? "smooth" : undefined, target: centre, radius: R * 1.15, height: R * 0.42, from: az - 40, to: az - 12, build: BUILD_SECONDS + 0.4 },
     { id: "k1", kind: "dolly", seconds: 3.5, time, fov: 50, ramp: "quart", from: [1.5, 1.9, roadZ], to: [W - 7, 1.9, roadZ], look: [W + 10, 1.5, roadZ + 1.5], card: card("lower") },
+    ...(rebuild ? [{ id: "k2", kind: "push", seconds: 3.4, time, fov: 52, ramp: "smooth", cut: "match", target: [hc[0], 4.8, hc[2]], azimuth: az + 14, radius: [17, 14], height: [5.4, 4.8], rebuild }] : []),
     titleShot(3.2, "smooth", soft ? "zoom" : "cut", 1.1),
     { id: "k3", kind: "crane", seconds: 3.5, time: time === "night" ? "night" : "dusk", timeTo: "night", fov: 40, ramp: "quart", cut: soft ? "zoom" : "cut", target: [hc[0], 2, hc[2]], azimuth: az - 24, radius: [15, 24], height: [9, 18] },
     { id: "k4", kind: "static", seconds: 2.8, time: "night", fov: 40, cut: soft ? "flash" : "cut", target: [hc[0], 1.2, hc[2]], azimuth: az + 34, radius: 9, height: 1.6, card: card("full") },
@@ -207,7 +245,7 @@ export function restyle(f, style) {
   const hero = heroOf(f.world);
   const name = f.signs[0]?.knobs?.text ? title(String(f.signs[0].knobs.text).toLowerCase()) : brandNameOf(f.brief, f.world.theme);
   const roof = f.signs.find((x) => x.asset === "wordmark-type")?.knobs || {};
-  return cleanFilm({ ...f, shots: shotsFor(style, f.world, hero, name, { ...f.brand, board: roof.background, boardInk: roof.ink }), edit: { style } });
+  return cleanFilm({ ...f, shots: shotsFor(style, f.world, hero, name, { ...f.brand, board: roof.background, boardInk: roof.ink }), edit: { ...f.edit, style } });
 }
 
 /** Validates a film: real assets, resolved knobs, finite numbers, shots inside limits. Never trusts the model. */
@@ -254,6 +292,21 @@ export function cleanFilm(f) {
       const a = catalog.getAsset(s.card.asset);
       if (a && a.format === "svg" && SIGN_ASSETS[a.id]?.card) out.card = { asset: a.id, title: a.title, author: a.author, price: a.price, knobs: resolveKnobs(a.params, s.card.knobs || {}), layout: s.card.layout === "lower" ? "lower" : "full", ...(s.card.sub ? { sub: String(s.card.sub).slice(0, 40) } : {}), ...(s.card.name ? { name: String(s.card.name).slice(0, 24) } : {}), scrim: clamp(s.card.scrim ?? (s.card.layout === "lower" ? 0 : 0.5), 0, 0.9), fade: clamp(s.card.fade ?? 0.5, 0, 2) };
     }
+    // the street assembles during the first shot only, for at most the shot's length
+    if (!shots.length && Number(s.build) > 0) out.build = clamp(s.build, 0.6, seconds);
+    // a rebuild: a real placement, real knobs of its program, at most three steps, each a legal value
+    if (s.rebuild && ids.has(s.rebuild.placement)) {
+      const p = plan.placements.find((x) => x.id === s.rebuild.placement), a = catalog.getAsset(p.asset);
+      const steps = [];
+      for (const st of (Array.isArray(s.rebuild.steps) ? s.rebuild.steps : []).slice(0, 12)) {
+        if (steps.length >= 3) break;
+        const d = a?.params?.knobs?.[st?.knob];
+        if (!d || d.type === "text" || d.type === "color") continue;
+        const v = resolveKnobs(a.params, { ...p.knobs, [st.knob]: st.value })[st.knob];
+        if (v !== p.knobs[st.knob] && !steps.some((x) => x.knob === st.knob && x.value === v)) steps.push({ knob: st.knob, value: v });
+      }
+      if (steps.length) out.rebuild = { placement: p.id, steps };
+    }
     shots.push(out);
   }
   if (!shots.length) shots.push({ id: "k0", kind: "orbit", seconds: 4, time: plan.time, target: [plan.size[0] / 2, 1.5, plan.size[1] / 2], radius: [40, 40], height: [20, 20], from: 140, to: 170 });
@@ -263,7 +316,7 @@ export function cleanFilm(f) {
   // one title per film: keep the first
   let titled = false;
   for (const s of shots) { if (s.title && titled) delete s.title; if (s.title) titled = true; }
-  const edit = { style: STYLES.includes(f.edit?.style) ? f.edit.style : "clean" };
+  const edit = { style: STYLES.includes(f.edit?.style) ? f.edit.style : "clean", look: LOOKS.includes(f.edit?.look) ? f.edit.look : "none" };
   return { title: String(f.title || plan.title || plan.prompt || "Untitled film").slice(0, 80), brief: String(f.brief || "").slice(0, 400), brand, world: plan, signs, shots, edit, fps: FPS, format, size: FORMATS[format], weather, music, seconds: Math.round(total * 100) / 100 };
 }
 
@@ -322,10 +375,12 @@ const DIRECT_TOOL = {
           shake: { type: "number", description: "0-1 handheld shake for the shot" },
           hits: { type: "array", items: { type: "number" }, description: "seconds into the shot where the camera takes an impact" },
           title: { type: "object", properties: { text: { type: "string" }, at: { type: "number" } }, description: "a 3D extruded title that drops into the street in front of the hero and slams down at `at` seconds. One per film; put it on a push toward the hero's kerb." },
+          build: { type: "number", description: "first shot only: seconds over which the street assembles piece by piece, each piece landing as its stock program and rebuilding into its remix. 2-3 is right; omit to open on the finished street." },
+          rebuild: { type: "object", properties: { placement: { type: "string" }, steps: { type: "array", items: { type: "object", properties: { knob: { type: "string" }, value: {} }, required: ["knob", "value"] } } }, description: "turn one piece's knobs on camera: the camera should hold close on this placement while each step (a range or choice knob set to a value) rebuilds it; it returns to its remix at the end. Up to 3 steps, e.g. floors 1 then floors 4 then roof flat." },
           card: { type: "object", properties: { asset: { type: "string" }, layout: { type: "string", enum: ["full", "lower"], description: "full: centred over a scrim (end card). lower: a lower-third title at the bottom left while the shot plays" }, sub: { type: "string", description: "one short line under the name, e.g. the place" }, knobs: { type: "object", additionalProperties: true }, scrim: { type: "number" }, fade: { type: "number" } } },
         }, required: ["kind", "seconds"] },
       },
-      edit: { type: "object", properties: { style: { type: "string", enum: STYLES } }, description: "the finish: hype (punchy, contrasty, glitch and RGB split on cuts), clean (calm, straight), dream (soft bloom, shallow focus)" },
+      edit: { type: "object", properties: { style: { type: "string", enum: STYLES }, look: { type: "string", enum: LOOKS } }, description: "the finish: style hype (punchy, contrasty, glitch and RGB split on cuts), clean (calm, straight), dream (soft bloom, shallow focus); look is a film-wide shader grade: none, toon (cel bands and an ink outline), pixel, dither (print-like Bayer dither), ps1 (vertex snap, low-fi), palette (every pixel one of the brand's colours). Only when the brief asks for that kind of picture." },
       weather: { type: "string", enum: WEATHER, description: "what is in the air: blossom petals, snow, rain, autumn leaves, rolling fog, or nothing" },
       music: { type: "object", properties: { mood: { type: "string", enum: Object.keys(MOODS) } }, description: "the generated soundtrack's mood: warm (major pentatonic plucks), bright (quicker, major), cool (slower, minor)" },
       say: { type: "string", description: "One sentence to the person about the film you cut" },
@@ -339,13 +394,14 @@ export async function direct(film, request) {
   if (!config.anthropicKey) return null;
   const client = new Anthropic({ apiKey: config.anthropicKey });
   const hero = heroOf(film.world);
-  const pieces = film.world.placements.filter((p) => !["town-plaza", "town-road"].includes(p.asset)).map((p) => ({ id: p.id, asset: p.asset, cell: [Math.floor(p.at[0] / CELL), Math.floor(p.at[2] / CELL)], rot: p.rot, front_seen_from_azimuth: frontAzimuth(p) }));
+  const knobsOf = (p) => { const K = catalog.getAsset(p.asset)?.params?.knobs || {}; return Object.fromEntries(Object.entries(K).filter(([, k]) => k.type === "range" || k.type === "choice").map(([n, k]) => [n, k.type === "range" ? [k.min, k.max] : k.options])); };
+  const pieces = film.world.placements.filter((p) => !["town-plaza", "town-road"].includes(p.asset)).map((p) => ({ id: p.id, asset: p.asset, cell: [Math.floor(p.at[0] / CELL), Math.floor(p.at[2] / CELL)], rot: p.rot, front_seen_from_azimuth: frontAzimuth(p), ...(REBUILD_KINDS.includes(p.asset) ? { knobs: knobsOf(p), set: Object.fromEntries(Object.entries(p.knobs).filter(([n]) => knobsOf(p)[n])) } : {}) }));
   const signAssets = Object.entries(SIGN_ASSETS).map(([id, s]) => { const a = catalog.getAsset(id); return a ? { asset: id, title: a.title, text_knob: s.text, text_knobs: Object.entries(a.params.knobs).filter(([, k]) => k.type === "text").map(([k]) => k), roof: s.roof !== false, card: !!s.card, price: a.price } : null; }).filter(Boolean);
   const [W, D] = film.world.size;
   const msg = await client.messages.create({
     model: config.directorModel || config.agentModel,
     max_tokens: 3000,
-    system: `You direct short films shot inside toy-block streets built from parametric 3D pieces, dressed with 2D design assets as signs. The street is alive: the tram runs its rails and parked cars drive by, and weather can fall through the air. The world is ${W} x ${D} m (x across, z deep, y up); the road runs along x at z ${2 * CELL}..${3 * CELL}; buildings face it from rows z ${CELL}..${2 * CELL} and ${3 * CELL}..${4 * CELL}. Cameras: azimuth 0 looks toward -z from +z, 180 looks toward +z. A piece's front is seen from its front_seen_from_azimuth. Keep cameras above y 1.2. A camera at street level must stay inside the road (z between 12.5 and 17.5), so a radius from a building on the far row is at most 9 m; wider views go above the roofs (height 9+). Window lights glow at night; one night shot near the end always lands. End on a static shot with a card that carries the brand name. Total under 18 seconds, 4-6 shots. Cut like an After Effects editor: ramp moves (expo, punch), whip or zoom through cuts, one 3D title that slams in with a hit, a flash into the end card. Match the edit style to the brief. Write sign copy in the brand's voice: short, specific, no slogans with "elevate" or "seamless". If the brief is a parody (a San Francisco founder, a startup that just raised), be funny in the deadpan way the Bay Area talks about itself: posters like "NOW HIRING 10X BARISTAS" or "POST-SEED, PRE-PRODUCT", never mean, never about real people or real companies. Always answer by calling write_film.`,
+    system: `You direct short films shot inside toy-block streets built from parametric 3D pieces, dressed with 2D design assets as signs. The street is alive: the tram runs its rails and parked cars drive by, and weather can fall through the air. The world is ${W} x ${D} m (x across, z deep, y up); the road runs along x at z ${2 * CELL}..${3 * CELL}; buildings face it from rows z ${CELL}..${2 * CELL} and ${3 * CELL}..${4 * CELL}. Cameras: azimuth 0 looks toward -z from +z, 180 looks toward +z. A piece's front is seen from its front_seen_from_azimuth. Keep cameras above y 1.2. A camera at street level must stay inside the road (z between 12.5 and 17.5), so a radius from a building on the far row is at most 9 m; wider views go above the roofs (height 9+). Window lights glow at night; one night shot near the end always lands. End on a static shot with a card that carries the brand name. Total under 22 seconds, 5-7 shots. Cut like an After Effects editor: ramp moves (expo, punch), whip or zoom through cuts (match carries the eye line across a cut), one 3D title that slams in with a hit, a flash into the end card. Every piece is a program with knobs, and the film should show it: open with build on the first shot (the street assembles piece by piece), and give one close shot on the hero a rebuild (its floors or roof turned on camera; the knobs are listed per piece). Match the edit style to the brief. Write sign copy in the brand's voice: short, specific, no slogans with "elevate" or "seamless". If the brief is a parody (a San Francisco founder, a startup that just raised), be funny in the deadpan way the Bay Area talks about itself: posters like "NOW HIRING 10X BARISTAS" or "POST-SEED, PRE-PRODUCT", never mean, never about real people or real companies. Always answer by calling write_film.`,
     tools: [DIRECT_TOOL],
     messages: [{ role: "user", content: `Brief: ${request}\n\nHero piece: ${hero.id} (${hero.asset}) at ${JSON.stringify(hero.at)} rot ${hero.rot}.\nPieces: ${JSON.stringify(pieces)}\nSign assets: ${JSON.stringify(signAssets)}\nTitle mount (where a 3D title lands): ${JSON.stringify(titleMountOf(film.world))}\nCurrent film: ${JSON.stringify({ title: film.title, edit: film.edit, brand: film.brand, signs: film.signs.map((s) => ({ asset: s.asset, placement: s.placement, where: s.where, knobs: s.knobs })), shots: film.shots })}` }],
   });
@@ -366,11 +422,36 @@ export async function save(film, extra = {}) {
 }
 export const get = (id) => store.get("films", id);
 
-/** A film with everything the player needs: the parts of every piece, the mounts of every sign, the bill. */
+/**
+ * A film with everything the player needs: the parts of every piece, the mounts of every sign, the bill. When the
+ * street assembles on camera, each placement also carries its stock program (default knobs) to land as; when a shot
+ * rebuilds a piece, every step of the walk is built here too, with its roofline, so the roof sign can ride it.
+ */
 export async function hydrate(film) {
-  const keys = [...new Set(film.world.placements.map((p) => p.asset + "|" + JSON.stringify(p.knobs)))];
-  const parts = await Promise.all(keys.map(async (k) => (await catalog.buildAsync(catalog.getAsset(k.slice(0, k.indexOf("|"))), JSON.parse(k.slice(k.indexOf("|") + 1)))).parts));
+  const key = (asset, knobs) => asset + "|" + JSON.stringify(knobs);
+  const keys = [...new Set(film.world.placements.map((p) => key(p.asset, p.knobs)))];
+  const building = film.shots.some((s) => s.build);
+  const stockOf = (p) => key(p.asset, resolveKnobs(catalog.getAsset(p.asset)?.params, {}));
+  if (building) for (const p of film.world.placements) { const k = stockOf(p); if (!keys.includes(k)) keys.push(k); }
+  const rebuilds = {};
+  for (const s of film.shots) {
+    if (!s.rebuild) continue;
+    const p = film.world.placements.find((x) => x.id === s.rebuild.placement);
+    if (!p) continue;
+    const steps = s.rebuild.steps.map((st) => ({ ...st, key: key(p.asset, { ...p.knobs, [st.knob]: st.value }) }));
+    for (const st of steps) if (!keys.includes(st.key)) keys.push(st.key);
+    rebuilds[s.id] = { placement: p.id, steps };
+  }
+  const built = await Promise.all(keys.map(async (k) => (await catalog.buildAsync(catalog.getAsset(k.slice(0, k.indexOf("|"))), JSON.parse(k.slice(k.indexOf("|") + 1)))).parts));
   const byKey = Object.fromEntries(keys.map((k, i) => [k, i]));
+  const top = (i) => bounds(built[i])[1][1];
+  for (const r of Object.values(rebuilds)) {
+    const p = film.world.placements.find((x) => x.id === r.placement), K = catalog.getAsset(p.asset)?.params?.knobs || {};
+    r.top = top(byKey[key(p.asset, p.knobs)]);
+    // each step carries its knob's definition (label, range or options), so the player can draw the knob turning
+    r.steps = r.steps.map(({ key: k, ...st }) => ({ ...st, part: byKey[k], top: top(byKey[k]), def: { type: K[st.knob]?.type, label: K[st.knob]?.label || st.knob, min: K[st.knob]?.min, max: K[st.knob]?.max, step: K[st.knob]?.step, options: K[st.knob]?.options } }));
+  }
   const signs = await Promise.all(film.signs.map(async (s) => ({ ...s, mount: await mountSign(s, film.world) })));
-  return { ...film, parts, titleMount: titleMountOf(film.world), musicUrl: film.music ? `/api/films/${film.id}/music.wav` : null, placements: film.world.placements.map((p) => ({ id: p.id, asset: p.asset, at: p.at, rot: p.rot, part: byKey[p.asset + "|" + JSON.stringify(p.knobs)] })), signs, bill: billOf(film) };
+  const placements = film.world.placements.map((p) => ({ id: p.id, asset: p.asset, at: p.at, rot: p.rot, part: byKey[key(p.asset, p.knobs)], ...(building && byKey[stockOf(p)] !== byKey[key(p.asset, p.knobs)] ? { stock: byKey[stockOf(p)] } : {}) }));
+  return { ...film, parts: built, rebuilds, titleMount: titleMountOf(film.world), musicUrl: film.music ? `/api/films/${film.id}/music.wav` : null, placements, signs, bill: billOf(film) };
 }
