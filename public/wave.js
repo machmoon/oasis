@@ -174,7 +174,7 @@ export function mountWave(container, opts = {}) {
   const state = { k: 1, from: null, shown: null };
   let dim = false, buffer = null, anim = null, tl = null, tlDur = 0;
   const colors = () => {
-    const ink = tok("--ink", "#15171C"), muted = tok("--line-strong", "#C9CED8");
+    const ink = tok("--ink", "#15171C"), muted = tok("--muted", "#6B7280");
     return { waveColor: dim ? muted : ink, progressColor: tok("--accent", "#E08A1E"), cursorColor: tok("--accent", "#E08A1E") };
   };
   const plugins = [];
@@ -254,7 +254,7 @@ export function mountLive(container) {
       const f0 = Math.exp(lo + ((hi - lo) * i) / n), f1 = Math.exp(lo + ((hi - lo) * (i + 1)) / n);
       const b0 = Math.floor((f0 / (sr / 2)) * freq.length), b1 = Math.max(b0 + 1, Math.ceil((f1 / (sr / 2)) * freq.length));
       let m = -Infinity; for (let b = b0; b < b1 && b < freq.length; b++) if (freq[b] > m) m = freq[b];
-      const v = Math.max(0, Math.min(1, (m + 92) / 78)); out[i] = v * 0.5; energy += v;
+      const v = Math.max(0, Math.min(1, (m + 92) / 78)); out[i] = v * 0.92; energy += v;
     }
     let peak = 0; for (let i = 0; i < time.length; i++) peak = Math.max(peak, Math.abs(time[i]));
     quiet = peak < 1e-4 && energy < 0.01 ? quiet + 1 : 0;
