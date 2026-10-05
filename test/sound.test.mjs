@@ -10,6 +10,8 @@ process.env.OASIS_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "oasis-sound-
 process.env.PAYPAL_CLIENT_ID = "test";
 process.env.PAYPAL_CLIENT_SECRET = "test";
 process.env.ANTHROPIC_API_KEY = ""; // the kit planner falls back to keywords: the order path never needs a model
+// The harness corpus (test/corpus.mjs) is CPU-bound: give this file's render pool every core but one.
+process.env.OASIS_RENDER_WORKERS ||= String(Math.max(1, os.availableParallelism() - 1));
 const { renderSound, inspect } = await import("../server/sandbox.js");
 const sound = await import("../server/sound.js");
 const catalog = await import("../server/catalog.js");
@@ -17,7 +19,6 @@ const commerce = await import("../server/commerce.js");
 const kits = await import("../server/kits.js");
 const store = await import("../server/store.js");
 const { createApp } = await import("../server/app.js");
-const { measure } = await import("../factory/harness-sound.mjs");
 
 let server, base;
 before(async () => {
@@ -47,10 +48,21 @@ test("sandbox: sound programs cannot use Math.random, import modules, run too lo
   assert.throws(() => renderSound("export const meta={}; export const params={knobs:{}}; export function build(){ while(true){} }", {}), /interrupted|failed/);
 });
 
-test("every sound in the catalogue passes the harness: knobs matter, seeds differ, no clipping, no silence", () => {
-  const sounds = catalog.allAssets().filter((a) => a.format === "sound");
-  assert.ok(sounds.length >= 5);
-  for (const a of sounds.slice(0, 8)) { const rep = measure(a.source); assert.deepEqual(rep.errors, [], `${a.id}: ${rep.errors.join(" | ")}`); }
+// The whole catalogue, across the worker pool, with passing reports cached by content hash (see test/corpus.mjs).
+let corpusHarness;
+const harnessAll = () => (corpusHarness ||= import("./corpus.mjs").then(({ harnessCorpus }) => harnessCorpus(catalog.allAssets().filter((a) => a.format === "sound"))));
+
+test("every sound in the catalogue passes the harness: knobs matter, seeds differ, no clipping, no silence", async (t) => {
+  assert.ok(catalog.allAssets().filter((a) => a.format === "sound").length >= 5);
+  const r = await harnessAll();
+  t.diagnostic(`${r.measured} measured, ${r.cached} unchanged since a passing run (cache)`);
+  assert.deepEqual(r.correctness, []);
+});
+
+test("every sound in the catalogue renders within the harness's time budget", async (t) => {
+  const r = await harnessAll();
+  for (const n of r.notes) t.diagnostic(n);
+  assert.deepEqual(r.timing, []);
 });
 
 test("the preview watermark changes a paid render and leaves a licensed one alone", async () => {
