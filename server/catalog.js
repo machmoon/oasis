@@ -132,12 +132,12 @@ export function resolveInput(a, input) {
 }
 
 /** Same as render, but on the worker pool: the HTTP preview path. */
-export async function renderAsync(a, input = {}) {
+export async function renderAsync(a, input = {}, opts = {}) {
   const values = resolveInput(a, input);
-  const key = a.id + JSON.stringify(values);
+  const key = a.id + JSON.stringify(values) + (opts.night ? "N" : "");
   let svg = cache.get(key);
   if (!svg) {
-    svg = await renderInPool(a.source, values);
+    svg = await renderInPool(a.source, values, opts);
     if (cache.size > 500) cache.delete(cache.keys().next().value);
     cache.set(key, svg);
   }

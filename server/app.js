@@ -62,9 +62,10 @@ export async function createApp() {
     res.json({ ...catalog.summary(a, { withKnobs: true }), parent: a.forkedFrom ? catalog.summary(catalog.getAsset(a.forkedFrom) || { ...a, params: {} }) : null, children: catalog.allAssets().filter((x) => x.forkedFrom === a.id).map((x) => catalog.summary(x)) });
   }));
 
+  // ?night=1 draws a block asset's sheet after dark (lit parts glow), the way the kit grid shows it on hover.
   app.get("/api/assets/:id/render.png", wrap(async (req, res) => {
     const a = mustAsset(req.params.id);
-    const { svg } = await catalog.renderAsync(a, parseKnobs(req));
+    const { svg } = await catalog.renderAsync(a, parseKnobs(req), { night: req.query.night === "1" });
     res.set("Content-Type", "image/png").set("Cache-Control", "public, max-age=300").send(await catalog.toPng(svg, Math.min(1024, Number(req.query.w) || 640)));
   }));
   app.get("/api/assets/:id/render.svg", wrap(async (req, res) => {

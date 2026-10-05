@@ -74,7 +74,11 @@ export function createViewer(el, { time = "day", ground = true, autoRotate = fal
     // shift: move the subject left (-) or right (+) on screen, as a fraction of its size, to clear side panels
     const target = center.clone().add(new THREE.Vector3(1, 0, -1).normalize().multiplyScalar(-shift * radius));
     if (!keepAngle) camera.position.set(target.x - dist * 0.6, target.y + dist * 0.68, target.z - dist * 0.42);
-    else camera.position.copy(target).add(camera.position.clone().sub(controls.target).normalize().multiplyScalar(dist));
+    else {
+      // the direction must be read before the position is overwritten, or every reframe looks straight down
+      const dir = camera.position.clone().sub(controls.target).normalize();
+      camera.position.copy(target).addScaledVector(dir, dist);
+    }
     controls.target.copy(target);
     camera.near = dist / 100; camera.far = dist * 20; camera.updateProjectionMatrix();
     const span = Math.max(size.x, size.z) + 4;

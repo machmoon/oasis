@@ -1,0 +1,31 @@
+// Screenshots a kit card mid-hover (the sheet flipping to a rebuilt variant), plus the asset page in dark mode and on a phone.
+// node scripts/shot-kit-hover.mjs <outDir> <base>
+import { chromium } from "playwright";
+const [,, outDir, base = "http://localhost:8792"] = process.argv;
+const b = await chromium.launch();
+const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } });
+const p = await ctx.newPage();
+p.on("pageerror", (e) => console.log("pageerror", e.message));
+await p.goto(`${base}/#/kit`, { waitUntil: "networkidle" }); await p.waitForTimeout(1500);
+const card = p.locator('.k-card[data-id="town-shop"]');
+await card.hover(); await p.waitForTimeout(900);
+await card.screenshot({ path: `${outDir}/kit-hover-1.png` });
+await p.waitForTimeout(1400);
+await card.screenshot({ path: `${outDir}/kit-hover-2.png` });
+await p.click('.k-chip[data-f="author"][data-v="parkline"]'); await p.waitForTimeout(800);
+await p.screenshot({ path: `${outDir}/kit-filter-parkline.png` });
+await ctx.close();
+const dark = await b.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: "dark" });
+const d = await dark.newPage();
+await d.goto(`${base}/#/a/town-pagoda`, { waitUntil: "networkidle" }); await d.waitForTimeout(2500);
+await d.screenshot({ path: `${outDir}/asset-dark.png` });
+await dark.close();
+const phone = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+const m = await phone.newPage();
+await m.goto(`${base}/#/a/town-shop`, { waitUntil: "networkidle" }); await m.waitForTimeout(2500);
+await m.screenshot({ path: `${outDir}/asset-phone.png`, fullPage: true });
+await m.goto(`${base}/#/kit`, { waitUntil: "networkidle" }); await m.waitForTimeout(1500);
+await m.screenshot({ path: `${outDir}/kit-phone.png` });
+await phone.close();
+await b.close();
+console.log("done");

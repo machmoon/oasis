@@ -50,14 +50,14 @@ function pump() {
       workers.push(spawn());
       pump();
     }, DEADLINE_MS);
-    w.postMessage({ id: job.id, op: job.op, source: job.source, values: job.values });
+    w.postMessage({ id: job.id, op: job.op, source: job.source, values: job.values, opts: job.opts });
   }
 }
 
-export function renderInPool(source, values) {
+export function renderInPool(source, values, opts = {}) {
   if (!workers.length) for (let i = 0; i < SIZE; i++) workers.push(spawn());
   return new Promise((resolve, reject) => {
-    queue.push({ id: ++seq, source, values, resolve, reject });
+    queue.push({ id: ++seq, source, values, opts, resolve, reject });
     pump();
   });
 }
