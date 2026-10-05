@@ -70,9 +70,10 @@ p { text-wrap: pretty; }
 .link:hover { text-decoration-color: var(--accent); }
 
 /* ---------- home: the hero is the product running ---------- */
-/* The hero sits on the street's sky, which is light by day in either theme and dark at night: it carries its own
-   surface tokens and flips them with .night, so the theme never decides the ink over the picture. */
-.hero { --hero-ink: #15171C; --hero-ink-2: #40454F; --hero-muted: #6B7280; --ink: #15171C; --ink-2: #40454F; --muted: #6B7280; --bg: #F6F7F9; --surface: #FFFFFF; --sunk: #EEF0F4; --line: #E2E5EB; --line-strong: #C9CED8; --ok: #1F7A4D; --shadow-color: 24 32 54; position: relative; min-height: clamp(560px, calc(100svh - 64px), 880px); background: var(--sky, var(--sunk)); color: var(--hero-ink); overflow: hidden; transition: background 1.2s var(--ease-in-out); isolation: isolate; }
+/* The hero follows the theme like every other band: its ink and surfaces are the page tokens, so in dark mode the band
+   goes dark with the header (the spectrogram keeps its own black panel in sound.css). .night still pins the dark set
+   for a film beat that wants night whatever the theme. */
+.hero { --hero-ink: var(--ink); --hero-ink-2: var(--ink-2); --hero-muted: var(--muted); position: relative; min-height: clamp(560px, calc(100svh - 64px), 880px); background: var(--sky, var(--sunk)); color: var(--hero-ink); overflow: hidden; transition: background 1.2s var(--ease-in-out); isolation: isolate; }
 .hero.night { --hero-ink: #F2F4F8; --hero-ink-2: #D2D8E4; --hero-muted: #9AA4B8; --ink: #EDEEF2; --ink-2: #C4C9D4; --muted: #8F96A5; --bg: #0F1115; --surface: #171A20; --sunk: #1F232B; --line: #272B34; --line-strong: #3A404C; --ok: #4CC08A; --shadow-color: 0 0 0; }
 .hero-stage { position: absolute; inset: 0; z-index: 0; }
 .hero-stage canvas { display: block; width: 100%; height: 100%; }
