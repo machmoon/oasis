@@ -1,90 +1,83 @@
 # Oasis
 
-**Tagline:** Oasis turns a one-line brief into a brand film built from creators' 3D and 2D assets, and one PayPal order pays every creator in it.
+**Tagline:** Oasis is a registry of sounds written as code. Describe a vibe, get a kit of sounds tuned to it, and one PayPal order pays every creator in it.
 
 ## Inspiration
 
-91% of businesses use video to market themselves, and 63% already use AI video tools (Wyzowl, 2026). Those tools
-hand back pixels: no licence, no record of whose work went in, nobody paid. Hana runs a ramen shop and needs a
-15-second teaser. Mika makes the 3D shop fronts that a film like that is built from, and has never been paid when one
-of them appears in an ad.
+A game needs three hundred footsteps that match, and today it gets three hundred copies of one file. Sound libraries
+sell files; the thing a game or a film actually wants is the *sound*, with the surface, the weight, the wetness and
+a fresh take every time. And the person who designed that footstep is paid once, when the pack sells, if at all.
 
-We wanted the film and the payment to be the same object: every piece in the film is a licensable asset by a named
-creator, and paying for the film pays all of them, in one PayPal order.
+We wanted to sell the program, not the file: every sound a small program with typed knobs, rendered at the call site,
+licensed per program, with the creator paid from every order that includes it. Then we folded in the Crate idea
+(*describe the vibe you're going for and get straight to playing*): one line in, a tuned kit out.
 
 ## What it does
 
-**Type a brief, get a cut.** "A 15-second teaser for Momiji Ramen on a Kyoto market street at dusk." Oasis lays out a
-street from creators' parametric 3D pieces, hangs 2D design assets on it as signs in the brand's colours (a roof
-board, a poster), strings lanterns, and cuts the film like an After Effects editor: speed-ramped camera moves, a whip
-pan with real motion blur, a zoom-through, a glitch cut, the brand's name as a 3D title that drops into the street
-and slams down with a camera hit, dusk fading to night as the windows come on, and an end-card lockup with the
-brand's monogram. The first cut plays instantly; Claude re-directs it in the background and its cut swaps in.
+**Every sound is a program.** `footstep.mjs` exports `meta`, `params` (surface, weight, pace, wetness, seed) and
+`build(knobs, ctx)`, which returns PCM samples from pure math over a seeded PRNG. The same knobs give the same
+samples in the server's QuickJS sandbox, in a browser Worker and in a licensed import, and a different seed is a
+different take. The sound page shows it: turn a knob, the waveform and spectrogram redraw, a take plays, the import
+line updates with the knobs at the call site, and a walk of 300 seeds is 300 different dots on one timeline.
 
-**Edit it like an editor.** A Premiere-style workspace: a multi-track timeline (camera clips as filmstrips,
-transitions, titles, light, the soundtrack's waveform), an inspector with a speed-ramp graph per shot, transition and
-shake controls, three edit styles (Hype, Clean, Dream), 16:9, 9:16 and 1:1, and a director you can talk to.
+**Describe the vibe, get a kit.** "Rainy cyberpunk alley footsteps and UI clicks." Claude reads the registry and picks
+six to ten programs, tunes their knobs to the scene (wet concrete, heavy, seed per part) and names them like a sample
+pack. Until the kit is paid for every preview carries a soft watermark tick.
 
-**Clay until it is paid for.** Before licensing the street is clay and the signs say PREVIEW. Pay with PayPal, approve,
-and the colour sweeps through the street piece by piece while each creator's payout lands. Then render the MP4 (every
-frame is a function of the film, so the server's render matches the preview frame for frame).
+**Pay with PayPal, every part turns clean.** The kit's bill is one PayPal Orders v2 order with an itemised line per
+program; a second part on the same program is covered. On capture each creator's share is booked and the kit page
+shows every part's module URL and clean WAV. Shares go out through PayPal Payouts after the refund window.
 
-**One order, many payees.** The film's bill is one PayPal Orders v2 order with an itemised line for every paid piece,
-sign and mark. On capture each creator's share is booked and paid out through PayPal Payouts.
-
-**Agents can run the same loop.** Over MCP (`make_film`, `get_film`, `buy_assets`), an agent makes and licenses a film
-inside a budget a human approved once in PayPal (Vault); an order over the budget is refused before PayPal is called.
-
-## An agent ran a whole campaign
-
-To see how far an agent could take it, we gave Claude only Oasis's MCP tools and one paragraph: it's Friday, six clients need a launch film tonight, one in each world, and the films should make people laugh. Claude invented the clients and wrote every joke. It made a ramen shop so calm a slurp takes a minute, insurance for chips stolen by seagulls, a matchmaker for lonely mittens ("Left, 38, seeks right. Likes cocoa."), and an AI startup that does nothing ("We shipped nothing. Retention is incredible."). Those six films have 33 shots, 25 transitions and 355 placed pieces, and each one was licensed in its own PayPal sandbox order, for $279 in total.
-
-A second run made four throwback films from late-1990s internet memes, such as a mitten shop braced for Y2K and a surf shack whose sign never quite hits the corner. Both transcripts are in the repo ([docs/campaign-friday.md](https://github.com/machmoon/oasis/blob/main/docs/campaign-friday.md) and [docs/campaign-y2k.md](https://github.com/machmoon/oasis/blob/main/docs/campaign-y2k.md)).
+**Agents run the same loop.** Over MCP (`search_assets`, `preview_asset` returns the WAV and a spectrogram,
+`make_kit`, `buy_assets`), an agent makes and licenses a kit inside a budget a human approved once in PayPal
+(Vault); an order over the budget is refused before PayPal is called. An unlicensed `import` gets HTTP 402 in the
+x402 v2 shape, and a browser import gets a placeholder tick of the real length.
 
 ## How we built it
 
-- **An edit engine on three.js** (`public/film-fx.js`): Penner easings for speed ramps (from ai/easings.net), camera
-  shake after pmndrs/drei's CameraShake but seeded so it lands on the same frame every render, sub-frame motion blur
-  after Remotion's CameraMotionBlur, three's DigitalGlitch and glfx.js's zoom blur for transitions, UnrealBloom and
-  Bokeh passes, ACES filmic tone mapping, a gradient sky from three's hemisphere-light example, and a 3D title in Anton
-  (SIL OFL) converted to three's typeface format with a port of facetype.js, built glyph by glyph so it can be tracked.
-- **Deterministic rendering:** the server opens the film's page in headless Chromium, seeks every frame and pipes
-  them to ffmpeg, the way Remotion renders a composition. The soundtrack is synthesised from the film's seed.
-- **Claude as director** (Sonnet 5.5, one typed `write_film` tool): it rewrites the brand copy, signs and shot list;
-  the server validates every value (`cleanFilm`) and never trusts the model.
-- **PayPal** ([PAYPAL.md](https://github.com/machmoon/oasis/blob/main/PAYPAL.md)): Orders v2 via
-  `@paypal/paypal-server-sdk` with itemised `DIGITAL_GOODS`; server-side capture that checks the amount and currency
-  and refunds on a mismatch; `PayPal-Request-Id` idempotency; signed webhooks; refunds that revoke licences; Payouts
-  for creator shares; Vault setup tokens for agent budgets.
+- **The sound contract and DSP kit** (`factory/CONTRACT-SOUND.md`, `public/sound-dsp.js`): RBJ cookbook biquads,
+  pink and brown noise from Tone.js's `Noise.ts`, Karplus-Strong as Tone.js's `PluckSynth.ts` builds it, the
+  envelope and sweep stages of jsfxr's `sfxr.js`, a Schroeder reverb, and the layering idioms of Farnell's *Designing
+  Sound* (a body, a contact layer, air). `Math.random` throws in the sandbox; only the host's two modules resolve.
+- **Server renders** (`server/sound.js`, `server/png.js`): WAV, waveform, spectrogram, a catalogue card, measured
+  numbers, a per-seed walk (300 takes in 1.4 s on the worker pool), and the preview watermark.
+- **The factory** (`factory/factory-sound.mjs`): Claude plans twelve kits (358 briefs), writes each program inside
+  the kit's room and a creator's voice, reviews its own renders as pictures, a harness measures the program across
+  its knobs and seeds (length, peak, RMS, silence, clipping, every knob's audible effect, waveform correlation
+  between seeds, render ms), and an independent grader listens through the pictures. Lessons feed back into the prompt.
+- **PayPal** ([PAYPAL.md](PAYPAL.md)): Orders v2 via `@paypal/paypal-server-sdk` with itemised `DIGITAL_GOODS`;
+  server-side capture that checks the amount and currency and refunds on a mismatch; `PayPal-Request-Id`
+  idempotency; signed webhooks; refunds that revoke licences; Payouts for creator shares; Vault setup tokens for
+  agent budgets.
 
 ## Proof
 
-- **Real sandbox orders for films**, created by the Studio's own checkout (`POST /api/films/:id/checkout`, then
-  `/claim`): 4RP48008TN547052G ($36.00), 5AJ62778LN069470H and 9EY72208CR7286120 ($27.00 each), all captured and
-  split across five creators. For unattended runs the order is approved with one of PayPal's published sandbox test
-  cards instead of a person in PayPal's window; capture, the amount check and the licence are the normal code path.
-- The earlier end-to-end sandbox run (mandate refusal, capture, refund revoking a licence, Payouts batch) is in
-  [docs/SANDBOX-RUN.md](https://github.com/machmoon/oasis/blob/main/docs/SANDBOX-RUN.md).
-- 46/46 tests pass, including price tampering, the capture race, amount-mismatch refunds, refund revocation, budgets,
-  and that the director's junk (unknown transitions, out-of-range hits, a second title) is dropped.
-- The catalogue: 22 parametric 3D programs and 68 2D design assets from 7 creator accounts (sandbox accounts).
+- **A real sandbox order for a kit**, created by the kit page's own checkout (`POST /api/kits/:id/checkout`, then
+  `/claim`): 9SS52993P3394003X ($23.00), captured and split across three creators (foleyroom $10.80, stormfront
+  $7.20, quietmachine $2.70). The order was approved with one of PayPal's published sandbox test cards instead of a
+  person in PayPal's window; capture, the amount check and the licences are the normal code path.
+- 55/55 tests pass, including the sandbox refusing `Math.random`, imports and over-long renders; determinism; the
+  watermark; the CDN gate; and a kit order through checkout, capture and claim.
+- The catalogue is growing as the factory runs; `GET /api/config` reports the live count and `/llms.txt` lists every
+  sound with its kit and creator.
 
 ## Challenges we ran into
 
-- **One NaN pixel blacked out whole frames.** A degenerate normal on a bevel produced a NaN that bloom blurred across
-  the picture; a pass now makes the HDR image finite before anything spreads it.
-- **The title kept hiding behind the set.** On a market street there is often no clear spot; the planner now shoots
-  the title from whichever end of the street is clear, and cheats the set for that one shot when neither is.
-- **Waiting on a model is dead air.** The procedural cut plays at once and Claude's cut replaces it.
+- **Grading sound without ears.** The grader sees pictures and numbers. Left to its own verdict it rejected nearly
+  everything; the bar is now the scores (every score at least 5, average at least 6.5) on top of a harness that has
+  already proven the program renders, every knob matters and seeds differ.
+- **Interpreted DSP.** Per-sample loops in QuickJS are 50-100x slower than V8, so the sandbox's clock is 6 s, the
+  pool's 8 s, previews render at 22.05 kHz, and free programs render in a browser Worker instead.
+- **Autoplay.** Sound needs a gesture, so the hero runs silent until Listen is pressed, then plays every render.
 
 ## What we learned
 
-- Payment is most convincing when you can see it: clay turning to colour says "this was paid for" faster than any
-  receipt.
+- "Clay until paid" works for sound too: a soft tick on every preview that lifts the moment the order lands says
+  "this was paid for" faster than any receipt.
 - For agentic commerce the right primitive is not "the agent has a card": the human approves a budget once in PayPal,
   the server enforces it, and every creator is paid from the same order.
 
 ## What's next
 
 More kits from more creators, PayPal Commerce Platform multiparty settlement so the split happens at capture, and
-films longer than a teaser.
+stereo and longer loops.
