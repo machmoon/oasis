@@ -65,33 +65,64 @@ export function renderInWorker(source, knobs, sr = 44100) {
 }
 
 // ---------- pictures ----------
+// The waveform is drawn the way wavesurfer.js draws playback (src/renderer.ts renderProgress: the played part is a
+// second colour clipped to the playhead, plus a cursor line): ink for what is still to come, the accent for what has
+// played. The spectrogram is painted one pixel per frame and bin into an ImageData and drawn scaled through the
+// browser's bilinear filter, as wavesurfer's spectrogram plugin paints (src/spectrogram-setup.ts: paintColumnPixels
+// into an ImageData, createImageBitmap, drawImage at canvas size), through the Roseus colour map Audacity ships as
+// its default spectrogram scheme (public/spectrogram-roseus.js names the files). The picture carries its own light
+// (near-black at silence) so it reads the same in the light and dark themes, like the model sheet does.
+import { ROSEUS, ROSEUS_LUT } from "/spectrogram-roseus.js";
 export { analyse };
 const css = (name, fallback) => getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
-/** Draws a min/max waveform into a canvas; `at` (0..1) draws a playhead. */
-export function drawWave(canvas, wave, { at = null, color = null, line = null, dim = false } = {}) {
-  const dpr = devicePixelRatio || 1, w = canvas.clientWidth || 300, h = canvas.clientHeight || 120;
-  if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) { canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); }
-  const g = canvas.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
-  const mid = h / 2;
-  g.fillStyle = line || css("--line", "#E1E4EA"); g.fillRect(0, mid, w, 1);
-  if (!wave?.length) return;
-  g.fillStyle = color || css("--ink", "#131313"); if (dim) g.globalAlpha = 0.35;
-  const cols = wave.length, bw = w / cols;
-  for (let c = 0; c < cols; c++) { const [lo, hi] = wave[c]; const y0 = mid - hi * (mid - 4), y1 = mid - lo * (mid - 4); g.fillRect(c * bw, y0, Math.max(1, bw - 0.4), Math.max(1, y1 - y0)); }
-  g.globalAlpha = 1;
-  if (at !== null) { g.fillStyle = css("--accent", "#0070E0"); g.fillRect(at * w - 1, 0, 2, h); }
-}
-const heat = (v) => { const t = v / 255; return t < 0.5 ? `rgb(${255 - 121 * t * 2 | 0},${255 - 120 * t * 2 | 0},${255 - 12 * t * 2 | 0})` : `rgb(${134 + 109 * (t - 0.5) * 2 | 0},${135 - 100 * (t - 0.5) * 2 | 0},${243 - 180 * (t - 0.5) * 2 | 0})`; };
-/** Draws a spectrogram (frames × bins, 0..255) with low frequencies at the bottom. */
-export function drawSpec(canvas, spec, { at = null } = {}) {
+/** The spectrogram's own background, so a frame around it can match. */
+export const SPEC_BG = `rgb(${ROSEUS[0].join(" ")})`;
+function fit(canvas) {
   const dpr = devicePixelRatio || 1, w = canvas.clientWidth || 300, h = canvas.clientHeight || 120;
   if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) { canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); }
   const g = canvas.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0);
-  g.fillStyle = "#fff"; g.fillRect(0, 0, w, h);
+  return { g, w, h };
+}
+/** Draws a min/max waveform into a canvas; `at` (0..1) paints the played part in the accent and draws a cursor. */
+export function drawWave(canvas, wave, { at = null, color = null, line = null, dim = false } = {}) {
+  const { g, w, h } = fit(canvas); g.clearRect(0, 0, w, h);
+  const mid = h / 2;
+  g.fillStyle = line || css("--line", "#E1E4EA"); g.fillRect(0, mid, w, 1);
+  if (!wave?.length) return;
+  const ink = color || css("--ink", "#131313"), accent = css("--accent", "#E08A1E");
+  const cols = wave.length, bw = w / cols, pad = Math.max(3, h * 0.06);
+  g.globalAlpha = dim ? 0.38 : 1;
+  for (let c = 0; c < cols; c++) {
+    const [lo, hi] = wave[c]; const y0 = mid - hi * (mid - pad), y1 = mid - lo * (mid - pad);
+    g.fillStyle = at !== null && (c + 0.5) / cols <= at ? accent : ink;
+    g.fillRect(c * bw, y0, Math.max(1, bw - 0.4), Math.max(1, y1 - y0));
+  }
+  g.globalAlpha = 1;
+  if (at !== null) { g.fillStyle = accent; g.fillRect(Math.round(at * w) - 1, 0, 2, h); }
+}
+const specCache = new WeakMap();
+/** Paints a spectrogram (frames × bins, 0..255, low bins first) into an offscreen canvas, once per spec. */
+function specImage(spec) {
+  if (specCache.has(spec)) return specCache.get(spec);
+  const frames = spec.length, bins = spec[0].length;
+  const img = new ImageData(frames, bins), d = img.data;
+  for (let f = 0; f < frames; f++) for (let b = 0; b < bins; b++) {
+    const v = Math.max(0, Math.min(255, spec[f][b] | 0)), o = ((bins - 1 - b) * frames + f) * 4;
+    d[o] = ROSEUS_LUT[v * 3]; d[o + 1] = ROSEUS_LUT[v * 3 + 1]; d[o + 2] = ROSEUS_LUT[v * 3 + 2]; d[o + 3] = 255;
+  }
+  const off = document.createElement("canvas"); off.width = frames; off.height = bins;
+  off.getContext("2d").putImageData(img, 0, 0);
+  specCache.set(spec, off);
+  return off;
+}
+/** Draws a spectrogram with low frequencies at the bottom; `at` (0..1) draws a cursor. */
+export function drawSpec(canvas, spec, { at = null } = {}) {
+  const { g, w, h } = fit(canvas);
+  g.fillStyle = SPEC_BG; g.fillRect(0, 0, w, h);
   if (!spec?.length) return;
-  const frames = spec.length, bins = spec[0].length, fw = w / frames, bh = h / bins;
-  for (let f = 0; f < frames; f++) for (let b = 0; b < bins; b++) { const v = spec[f][b]; if (v < 8) continue; g.fillStyle = heat(v); g.fillRect(f * fw, h - (b + 1) * bh, fw + 0.5, bh + 0.5); }
-  if (at !== null) { g.fillStyle = css("--accent", "#0070E0"); g.fillRect(at * w - 1, 0, 2, h); }
+  g.imageSmoothingEnabled = true; g.imageSmoothingQuality = "high";
+  g.drawImage(specImage(spec), 0, 0, w, h);
+  if (at !== null) { g.fillStyle = "rgb(255 255 255 / .85)"; g.fillRect(Math.round(at * w) - 1, 0, 2, h); }
 }
 /** Animates a playhead across the pictures while a take plays. */
 export function playhead(buffer, started, draw) {
