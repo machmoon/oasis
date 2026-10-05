@@ -80,6 +80,49 @@ export function createAsset() {
 `;
 }
 
+// ---------- sound programs ----------
+// A licensed sound import is the program plus the sound runtime (public/sound-runtime.js: knobs, the DSP kit, Web
+// Audio glue): createSound(knobs) returns samples, and play(ctx, knobs) puts them through the page's AudioContext.
+export function licensedSoundModule(a, lic) {
+  return `// ${a.title} by ${a.author}, from Oasis (${config.baseUrl}/#/a/${a.id})
+// Licensed: ${lic.token.slice(0, 8)}... (order ${lic.orderId}). This module is a program: set the knobs at the call site and
+// every call is a fresh render; change the seed and it is a different take of the same sound.
+import { renderProgram, toAudioBuffer, play as playBuffer, dsp } from "${config.baseUrl}/cdn/sound-runtime.mjs";
+
+${a.source.trim()}
+
+const mod = { meta, params, build };
+/** { sr, samples: Float32Array, values }. Knobs: ${Object.keys(a.params?.knobs || {}).join(", ")}. */
+export function createSound(knobs = {}, sr = 44100) {
+  const r = renderProgram(mod, knobs, sr);
+  r.oasis = { id: ${JSON.stringify(a.id)}, author: ${JSON.stringify(a.author)}, licence: ${JSON.stringify(lic.token)} };
+  return r;
+}
+/** Renders with the context's sample rate and plays at once (or at \`when\` seconds from now). Returns the source node. */
+export function play(ctx, knobs = {}, opts = {}) {
+  const { samples, sr } = createSound(knobs, ctx.sampleRate);
+  return playBuffer(ctx, toAudioBuffer(ctx, samples, sr), opts);
+}
+export { dsp };
+`;
+}
+
+/** Unlicensed browser import of a sound: a soft placeholder tick of the real length, so a scene still runs and is heard to be unlicensed. */
+export function placeholderSoundModule(a) {
+  return `// ${a.title} by ${a.author}: NOT LICENSED. createSound() returns a placeholder tick of the real length.
+// Get a licence (agents: POST ${config.baseUrl}/api/buy, or retry this URL with x402) and import ?lic=<licence>.
+import { toAudioBuffer, play as playBuffer } from "${config.baseUrl}/cdn/sound-runtime.mjs";
+console.warn(${JSON.stringify(`Oasis: "${a.title}" is unlicensed, so it plays as a placeholder tick. $${a.price.toFixed(2)} to ${a.author}.`)});
+export const meta = ${JSON.stringify({ title: a.title, author: a.author, licensed: false, duration: a.duration })};
+export function createSound(knobs = {}, sr = 44100) {
+  const n = Math.round(${a.duration} * sr), samples = new Float32Array(n);
+  for (let i = 0; i < Math.min(n, sr * 0.08); i++) samples[i] = 0.2 * Math.sin(2 * Math.PI * 2400 * i / sr) * Math.exp(-i / (sr * 0.02));
+  return { sr, samples, values: knobs, oasis: { id: ${JSON.stringify(a.id)}, licensed: false } };
+}
+export function play(ctx, knobs = {}, opts = {}) { const { samples, sr } = createSound(knobs, ctx.sampleRate); return playBuffer(ctx, toAudioBuffer(ctx, samples, sr), opts); }
+`;
+}
+
 /** Settles an x402 retry: the payload carries a funded mandate token; one vaulted PayPal order buys the licence. */
 export async function settle(a, header, { agentName } = {}) {
   const p = unb64(header);

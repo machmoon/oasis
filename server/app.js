@@ -20,6 +20,7 @@ import * as paypal from "./paypal.js";
 import * as film from "./film.js";
 import * as filmRender from "./film-render.js";
 import { musicFor } from "./film-music.js";
+import * as sound from "./sound.js";
 
 export async function createApp() {
   await catalog.load();
@@ -62,9 +63,58 @@ export async function createApp() {
     res.json({ ...catalog.summary(a, { withKnobs: true }), parent: a.forkedFrom ? catalog.summary(catalog.getAsset(a.forkedFrom) || { ...a, params: {} }) : null, children: catalog.allAssets().filter((x) => x.forkedFrom === a.id).map((x) => catalog.summary(x)) });
   }));
 
+  // ---------- sounds: the program renders to samples; the server serves WAV, pictures and numbers ----------
+  // A paid sound's preview carries the watermark (a soft tick, a lowpass) unless the request names a licence for it.
+  const soundOf = async (req, a, { licensed = false } = {}) => {
+    const r = await catalog.soundAsync(a, parseKnobs(req), { sr: req.query.sr === "44100" ? 44100 : undefined });
+    let clean = licensed || a.price <= 0;
+    if (!clean && req.query.lic) { const lic = await commerce.license(String(req.query.lic)).catch(() => null); clean = !!lic && lic.assetId === a.id; }
+    return { ...r, samples: clean ? r.samples : sound.watermark(r.samples, r.sr), watermarked: !clean };
+  };
+  const mustSound = (id) => { const a = mustAsset(id); if (a.format !== "sound") throw Object.assign(new Error(`${id} is not a sound`), { status: 404 }); return a; };
+  const sendWav = (res, { samples, sr, watermarked }, name) => res.set({ "Content-Type": "audio/wav", "Cache-Control": "no-cache", "Content-Disposition": `inline; filename="${name}.wav"`, "X-Oasis-Watermarked": watermarked ? "1" : "0" }).send(sound.toWav(samples, sr));
+  app.get("/api/assets/:id/render.wav", wrap(async (req, res) => sendWav(res, await soundOf(req, mustSound(req.params.id)), req.params.id)));
+  app.get("/api/assets/:id/sound.json", wrap(async (req, res) => {
+    const a = mustSound(req.params.id);
+    const r = await soundOf(req, a);
+    res.set("Cache-Control", "no-cache").json({ id: a.id, values: r.values, watermarked: r.watermarked, ...sound.analyse(r.samples, r.sr) });
+  }));
+  app.get("/api/assets/:id/waveform.png", wrap(async (req, res) => {
+    const r = await soundOf(req, mustSound(req.params.id));
+    res.set("Content-Type", "image/png").set("Cache-Control", "public, max-age=300").send(sound.waveformPng(sound.analyse(r.samples, r.sr, { cols: 320 }), Math.min(1280, Number(req.query.w) || 640), Math.min(640, Number(req.query.h) || 200)));
+  }));
+  app.get("/api/assets/:id/spectrogram.png", wrap(async (req, res) => {
+    const r = await soundOf(req, mustSound(req.params.id));
+    res.set("Content-Type", "image/png").set("Cache-Control", "public, max-age=300").send(sound.spectrogramPng(sound.analyse(r.samples, r.sr), Math.min(1280, Number(req.query.w) || 640), Math.min(640, Number(req.query.h) || 160)));
+  }));
+  // A walk: the same program rendered once per seed and laid along a timeline, the "300 variants" demo. Returns one
+  // WAV; ?json=1 returns each take's numbers instead, for the scatter plot.
+  const walkLimit = rateLimit({ windowMs: 60_000, limit: 30, standardHeaders: "draft-8", legacyHeaders: false });
+  app.post("/api/sounds/:id/walk", walkLimit, wrap(async (req, res) => {
+    const a = mustSound(req.params.id);
+    const n = Math.max(1, Math.min(300, Number(req.body?.count) || 24)), gap = Math.max(0.05, Math.min(2, Number(req.body?.gap) || 0.28));
+    const base = catalog.resolveInput(a, req.body?.knobs || {});
+    const seedKnob = a.params.knobs.seed;
+    const seeds = Array.from({ length: n }, (_, i) => (seedKnob ? seedKnob.min + ((Number(req.body?.from) || 100) + i) % (seedKnob.max - seedKnob.min + 1) : 0));
+    const takes = await Promise.all(seeds.map((seed) => catalog.soundAsync(a, seedKnob ? { ...base, seed } : base)));
+    const sr = takes[0].sr, total = new Float32Array(Math.min(sr * 30, Math.round((n * gap + 1) * sr)));
+    const { mix } = await import("../public/sound-dsp.js");
+    const stats = takes.map((t, i) => { mix(total, t.samples, i * gap, 0.8, sr); const an = sound.analyse(t.samples, sr, { cols: 8, bins: 16 }); return { seed: seeds[i], at: Math.round(i * gap * 1000) / 1000, peak: an.peak, rms: an.rms, centroid: an.centroid, seconds: an.seconds }; });
+    if (req.query.json === "1") return res.json({ id: a.id, knobs: base, sr, seconds: total.length / sr, takes: stats });
+    const clean = a.price <= 0 || (req.body?.lic && (await commerce.license(String(req.body.lic)).catch(() => null))?.assetId === a.id);
+    for (let i = 0; i < total.length; i++) total[i] = Math.max(-1, Math.min(1, total[i]));
+    res.set("X-Oasis-Takes", JSON.stringify(stats.map((s) => [s.at, s.peak, s.centroid])).slice(0, 7000));
+    sendWav(res, { samples: clean ? total : sound.watermark(total, sr), sr, watermarked: !clean }, `${a.id}-walk`);
+  }));
+
   // ?night=1 draws a block asset's sheet after dark (lit parts glow), the way the kit grid shows it on hover.
   app.get("/api/assets/:id/render.png", wrap(async (req, res) => {
     const a = mustAsset(req.params.id);
+    if (a.format === "sound") {
+      // a sound's sheet: its waveform over its spectrogram
+      const r = await soundOf(req, a);
+      return res.set("Content-Type", "image/png").set("Cache-Control", "public, max-age=300").send(sound.cardPng(sound.analyse(r.samples, r.sr, { cols: 320 }), Math.min(1024, Number(req.query.w) || 640)));
+    }
     const { svg } = await catalog.renderAsync(a, parseKnobs(req), { night: req.query.night === "1" });
     res.set("Content-Type", "image/png").set("Cache-Control", "public, max-age=300").send(await catalog.toPng(svg, Math.min(1024, Number(req.query.w) || 640)));
   }));
@@ -152,6 +202,12 @@ export async function createApp() {
   }));
 
   async function sendFormat(res, a, knobs, fmt) {
+    if (a.format === "sound") {
+      if (fmt === "mjs") return res.set("Content-Type", "text/javascript; charset=utf-8").set("Content-Disposition", `attachment; filename="${a.id}.mjs"`).send(a.source);
+      if (fmt !== "wav") throw Object.assign(new Error("Sounds download as WAV (44.1 kHz) or as their program (.mjs)"), { status: 400 });
+      const r = await catalog.soundAsync(a, knobs, { sr: 44100 });
+      return res.set({ "Content-Type": "audio/wav", "Content-Disposition": `attachment; filename="${a.id}.wav"` }).send(sound.toWav(r.samples, r.sr));
+    }
     if (fmt === "glb") {
       if (a.format !== "blocks") throw Object.assign(new Error("GLB is available for 3D block assets"), { status: 400 });
       const { parts } = await catalog.buildAsync(a, knobs);
@@ -363,24 +419,29 @@ export async function createApp() {
     res.set({ "Content-Type": "text/javascript; charset=utf-8", "Access-Control-Allow-Origin": "*", "Cache-Control": "public, max-age=300" });
     res.sendFile(new URL("../public/blocks-runtime.js", import.meta.url).pathname);
   });
+  for (const f of ["sound-dsp", "sound-runtime"]) app.get(`/cdn/${f}.mjs`, (req, res) => {
+    res.set({ "Content-Type": "text/javascript; charset=utf-8", "Access-Control-Allow-Origin": "*", "Cache-Control": "public, max-age=300" });
+    res.sendFile(new URL(`../public/${f}.js`, import.meta.url).pathname);
+  });
   app.get("/cdn/:id.mjs", wrap(async (req, res) => {
     const a = mustAsset(req.params.id);
-    if (a.format !== "blocks") throw Object.assign(new Error(`${a.id} is not a 3D asset`), { status: 404 });
+    if (a.format !== "blocks" && a.format !== "sound") throw Object.assign(new Error(`${a.id} is not importable: only 3D pieces and sounds are`), { status: 404 });
+    const licensed = (lic) => (a.format === "sound" ? registry.licensedSoundModule(a, lic) : registry.licensedModule(a, lic));
     res.set({ "Access-Control-Allow-Origin": "*", "Access-Control-Expose-Headers": "PAYMENT-REQUIRED, PAYMENT-RESPONSE", Vary: "Sec-Fetch-Dest, PAYMENT-SIGNATURE" });
     const js = (body) => res.set({ "Content-Type": "text/javascript; charset=utf-8", "Cache-Control": "private, no-store" }).send(body);
     if (req.query.lic) {
       const lic = await commerce.license(String(req.query.lic)).catch((e) => { throw Object.assign(new Error(e.message), { status: e.status === 410 ? 410 : 403 }); });
       if (lic.assetId !== a.id) throw Object.assign(new Error("That licence is for a different asset"), { status: 403 });
-      return js(registry.licensedModule(a, lic));
+      return js(licensed(lic));
     }
-    if (a.price <= 0) return js(registry.licensedModule(a, { token: "free", orderId: "free" }));
+    if (a.price <= 0) return js(licensed({ token: "free", orderId: "free" }));
     const sig = req.get("PAYMENT-SIGNATURE");
     if (sig) {
       const { lic, response } = await registry.settle(a, sig, { agentName: req.get("X-Agent-Name") });
       res.set("PAYMENT-RESPONSE", response);
-      return js(registry.licensedModule(a, await commerce.license(lic.token)));
+      return js(licensed(await commerce.license(lic.token)));
     }
-    if (req.get("Sec-Fetch-Dest") === "script") return js(await registry.placeholderModule(a));
+    if (req.get("Sec-Fetch-Dest") === "script") return js(a.format === "sound" ? registry.placeholderSoundModule(a) : await registry.placeholderModule(a));
     const pr = registry.paymentRequired(a);
     res.status(402).set("PAYMENT-REQUIRED", registry.headerOf(pr)).json(pr);
   }));
@@ -421,6 +482,13 @@ export async function createApp() {
   app.get("/api/licenses/:token/download.:fmt", wrap(async (req, res) => {
     const lic = await commerce.license(req.params.token);
     await sendFormat(res, mustAsset(lic.assetId), lic.knobs, req.params.fmt);
+  }));
+  // A licensed sound at any knobs, clean: the licence is to the program, not to one take of it.
+  app.get("/api/licenses/:token/render.wav", wrap(async (req, res) => {
+    const lic = await commerce.license(req.params.token);
+    const a = mustSound(lic.assetId);
+    if (!req.query.p) req.query.p = JSON.stringify(lic.knobs || {});
+    sendWav(res, await soundOf(req, a, { licensed: true }), a.id);
   }));
 
   app.get("/api/ledger", wrap(async (req, res) => {

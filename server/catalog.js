@@ -3,21 +3,25 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { rasterize } from "./raster.js";
-import { inspect, renderSource } from "./sandbox.js";
-import { renderInPool, buildInPool } from "./pool.js";
+import { inspect, renderSource, renderSound, SOUND_SR } from "./sandbox.js";
+import { renderInPool, buildInPool, soundInPool } from "./pool.js";
 import { resolveKnobs, applyPreset, brandKnobs } from "./knobs.js";
 import * as store from "./store.js";
 
 const ASSET_DIR = new URL("../assets/", import.meta.url).pathname;
+// Sound programs (factory/CONTRACT-SOUND.md) live beside the 2D and 3D assets; the registry's front door is sounds.
+const SOUND_DIR = new URL("../sounds/", import.meta.url).pathname;
+export const SOUND_KINDS = ["sfx", "ambience", "ui", "impact", "foley", "music-loop"];
 const assets = new Map();
 let loadedForks = 0;
 
 function record(id, source, extra = {}) {
   const { meta, params } = inspect(source);
+  const format = meta.format === "sound" ? "sound" : meta.format === "blocks" || /export\s+function\s+build\s*\(/.test(source) ? "blocks" : "svg";
   return {
     id,
     title: meta.title || id,
-    kind: meta.kind || "illustration",
+    kind: meta.kind || (format === "sound" ? "sfx" : "illustration"),
     description: meta.description || "",
     tags: meta.tags || [],
     price: Math.max(0, Number(meta.price) || 0),
@@ -26,8 +30,10 @@ function record(id, source, extra = {}) {
     payoutEmail: meta.payout || null,
     credit: meta.credit || null,
     size: meta.size || [800, 600],
-    // "blocks": build(p) returns 3D parts (server/blocks.js); "svg": render(p) returns an SVG.
-    format: meta.format === "blocks" || /export\s+function\s+build\s*\(/.test(source) ? "blocks" : "svg",
+    // "sound": build(p, dsp) returns samples; "blocks": build(p) returns 3D parts (server/blocks.js); "svg": render(p).
+    format,
+    // nominal seconds of one render, from meta (the real length is whatever the program returns)
+    duration: format === "sound" ? Math.max(0.05, Math.min(4, Number(meta.duration) || 1)) : null,
     footprint: meta.footprint || null,
     worldKit: meta.kit || null,
     params,
@@ -41,12 +47,15 @@ function record(id, source, extra = {}) {
 
 export async function load() {
   assets.clear();
-  for (const f of fs.readdirSync(ASSET_DIR).filter((f) => f.endsWith(".mjs")).sort()) {
-    const id = f.replace(/\.mjs$/, "");
-    try {
-      assets.set(id, record(id, fs.readFileSync(path.join(ASSET_DIR, f), "utf8")));
-    } catch (e) {
-      console.warn(`skipping ${f}: ${e.message}`);
+  for (const dir of [ASSET_DIR, SOUND_DIR]) {
+    if (!fs.existsSync(dir)) continue;
+    for (const f of fs.readdirSync(dir).filter((f) => f.endsWith(".mjs")).sort()) {
+      const id = f.replace(/\.mjs$/, "");
+      try {
+        assets.set(id, record(id, fs.readFileSync(path.join(dir, f), "utf8")));
+      } catch (e) {
+        console.warn(`skipping ${f}: ${e.message}`);
+      }
     }
   }
   const seedDir = new URL("../seed/forks/", import.meta.url).pathname;
@@ -70,7 +79,7 @@ export const allAssets = () => [...assets.values()];
 export function summary(a, { withKnobs = false } = {}) {
   const s = {
     id: a.id, title: a.title, kind: a.kind, description: a.description, tags: a.tags,
-    price: a.price, author: a.author, credit: a.credit, size: a.size, format: a.format, footprint: a.footprint,
+    price: a.price, author: a.author, credit: a.credit, size: a.size, format: a.format, footprint: a.footprint, duration: a.duration,
     forkedFrom: a.forkedFrom, lineage: a.lineage, createdAt: a.createdAt,
     presets: Object.keys(a.params.presets || {}),
     knobCount: Object.keys(a.params.knobs || {}).length,
@@ -88,9 +97,10 @@ export function summary(a, { withKnobs = false } = {}) {
   return s;
 }
 
-export function search({ query = "", kind, maxPrice, freeOnly, limit = 24 } = {}) {
+export function search({ query = "", kind, format, maxPrice, freeOnly, limit = 24 } = {}) {
   const terms = String(query).toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length > 1);
   let list = allAssets();
+  if (format) list = list.filter((a) => a.format === format);
   if (kind) list = list.filter((a) => a.kind === kind);
   if (freeOnly) list = list.filter((a) => a.price === 0);
   if (maxPrice !== undefined && maxPrice !== null) list = list.filter((a) => a.price <= maxPrice);
@@ -158,6 +168,27 @@ export async function buildAsync(a, input = {}) {
   return { parts, values };
 }
 
+// Sound renders: Float32Array samples, cached by knobs (~90 KB each at 22.05 kHz for a one-second sound).
+const soundCache = new Map();
+const soundKey = (a, values, sr) => `${a.id}@${sr}${JSON.stringify(values)}`;
+/** Sound programs: samples for a remix, on the worker pool. */
+export async function soundAsync(a, input = {}, { sr = SOUND_SR } = {}) {
+  const values = resolveInput(a, input);
+  const key = soundKey(a, values, sr);
+  let samples = soundCache.get(key);
+  if (!samples) {
+    samples = await soundInPool(a.source, values, sr);
+    if (soundCache.size > 150) soundCache.delete(soundCache.keys().next().value);
+    soundCache.set(key, samples);
+  }
+  return { samples, sr, values };
+}
+/** Same, on the calling thread (tests and the factory). */
+export function sound(a, input = {}, { sr = SOUND_SR } = {}) {
+  const values = resolveInput(a, input);
+  return { samples: renderSound(a.source, values, { sr }), sr, values };
+}
+
 /** A paid asset's preview carries a tiled watermark until it is licensed. */
 export function watermark(svg, size) {
   const [w, h] = size;
@@ -188,4 +219,4 @@ export async function addFork(doc) {
 }
 
 export const newId = (prefix) => `${prefix}-${crypto.randomBytes(4).toString("hex")}`;
-export const stats = () => ({ assets: assets.size, forks: loadedForks });
+export const stats = () => ({ assets: assets.size, sounds: allAssets().filter((a) => a.format === "sound").length, forks: loadedForks });

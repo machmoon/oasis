@@ -1,19 +1,29 @@
 // Runs an asset program inside QuickJS (WebAssembly), so community and AI-written programs
 // never touch Node: no require, no fs, no network, a memory cap and a hard time limit.
+import fs from "node:fs";
 import { getQuickJS, shouldInterruptAfterDeadline } from "quickjs-emscripten";
 import { validateParts, projectSvg } from "./blocks.js";
 
 const QJS = await getQuickJS();
 const MEMORY_LIMIT = 48 * 1024 * 1024;
 const TIME_LIMIT_MS = 1500;
+// Sound programs run per-sample loops in an interpreter: a 2 s render at 22.05 kHz needs more wall clock than an SVG
+// (measured in QuickJS, see test/sound.test.mjs and the README's numbers; V8 does the same work in a few ms).
+export const SOUND_TIME_LIMIT_MS = 6000;
+export const SOUND_MAX_SECONDS = 4;
+export const SOUND_SR = 22050;
+// The DSP kit the program's build(knobs, ctx) receives: the same file the browser and the CDN import.
+const DSP_SOURCE = fs.readFileSync(new URL("../public/sound-dsp.js", import.meta.url), "utf8");
 
 export class AssetError extends Error {}
 
-function withModule(source, fn) {
+function withModule(source, fn, { timeLimit = TIME_LIMIT_MS, modules = null } = {}) {
   const rt = QJS.newRuntime();
   rt.setMemoryLimit(MEMORY_LIMIT);
   rt.setMaxStackSize(1024 * 1024);
-  rt.setInterruptHandler(shouldInterruptAfterDeadline(Date.now() + TIME_LIMIT_MS));
+  rt.setInterruptHandler(shouldInterruptAfterDeadline(Date.now() + timeLimit));
+  // Only the names the host registers resolve; an asset's own `import` of anything else fails to load.
+  if (modules) rt.setModuleLoader((name) => { if (!(name in modules)) throw new Error(`import of "${name}" is not allowed`); return modules[name]; });
   const vm = rt.newContext();
   try {
     const res = vm.evalCode(source, "asset.mjs", { type: "module" });
@@ -102,4 +112,49 @@ export function renderSource(source, values, opts = {}) {
     if (typeof svg !== "string" || !svg.trimStart().startsWith("<svg")) throw new AssetError("render must return an <svg> string");
     return svg;
   });
+}
+
+// ---------- sound programs ----------
+// The asset and the DSP kit are two modules the host registers; a driver module runs build(values, ctx), checks the
+// result and hands back the raw Float32Array buffer (no per-sample handles cross the sandbox boundary).
+const SOUND_DRIVER = `
+import * as dsp from "oasis:dsp";
+import * as asset from "oasis:asset";
+Math.random = () => { throw new Error("Math.random is not allowed: derive variation from the seed knob (ctx.rng)"); };
+export const meta = asset.meta;
+export const params = asset.params;
+export function render(values, sr, maxSeconds) {
+  if (typeof asset.build !== "function") throw new Error("module has no build function");
+  const out = asset.build(values, { sr, ...dsp });
+  const s = out && (out.samples || (out.length !== undefined ? out : null));
+  if (!s || !s.length) throw new Error("build() must return { samples: Float32Array } (mono, -1..1)");
+  if (s.length > maxSeconds * sr) throw new Error("sound is longer than " + maxSeconds + " s");
+  const f = s instanceof Float32Array ? s : Float32Array.from(s);
+  for (let i = 0; i < f.length; i++) if (!Number.isFinite(f[i])) throw new Error("sample " + i + " is not a finite number");
+  return f.buffer;
+}
+`;
+
+/** Runs a sound program: build(values, dsp) at sample rate sr; returns Float32Array samples (mono, -1..1). */
+export function renderSound(source, values, { sr = SOUND_SR, maxSeconds = SOUND_MAX_SECONDS } = {}) {
+  return withModule(SOUND_DRIVER, (vm, ns) => {
+    const fn = vm.getProp(ns, "render");
+    const json = vm.newString(JSON.stringify(values));
+    const parse = vm.getProp(vm.global, "JSON");
+    const parseFn = vm.getProp(parse, "parse");
+    const arg = vm.unwrapResult(vm.callFunction(parseFn, parse, json));
+    const srH = vm.newNumber(sr), maxH = vm.newNumber(maxSeconds);
+    json.dispose(); parseFn.dispose(); parse.dispose();
+    const out = vm.callFunction(fn, vm.undefined, arg, srH, maxH);
+    arg.dispose(); srH.dispose(); maxH.dispose(); fn.dispose();
+    if (out.error) {
+      const err = vm.dump(out.error);
+      out.error.dispose();
+      throw new AssetError(`build failed: ${err?.message || JSON.stringify(err)}`);
+    }
+    try {
+      const ab = vm.getArrayBuffer(out.value);
+      try { return new Float32Array(ab.value.buffer.slice(ab.value.byteOffset, ab.value.byteOffset + ab.value.byteLength)); } finally { ab.dispose(); }
+    } finally { out.value.dispose(); }
+  }, { timeLimit: SOUND_TIME_LIMIT_MS, modules: { "oasis:dsp": DSP_SOURCE, "oasis:asset": source } });
 }

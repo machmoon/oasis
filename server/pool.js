@@ -30,6 +30,8 @@ function spawn() {
 }
 
 const DEADLINE_MS = 3000;
+// Sound renders are per-sample loops in an interpreter (see sandbox.SOUND_TIME_LIMIT_MS); they get a longer clock.
+const SOUND_DEADLINE_MS = 8000;
 
 function pump() {
   for (const w of workers) {
@@ -38,18 +40,19 @@ function pump() {
     const job = queue.shift();
     w.busy = true;
     pending.set(job.id, job);
+    const deadline = job.op === "sound" ? SOUND_DEADLINE_MS : DEADLINE_MS;
     // QuickJS's own interrupt can't fire while a program thrashes the allocator, so the wall clock is
     // enforced from outside: a render that overruns gets its whole worker terminated and replaced.
     job.timer = setTimeout(() => {
       if (!pending.has(job.id)) return;
       pending.delete(job.id);
-      job.reject(Object.assign(new Error(`render exceeded ${DEADLINE_MS} ms`), { status: 422 }));
+      job.reject(Object.assign(new Error(`render exceeded ${deadline} ms`), { status: 422 }));
       workers.splice(workers.indexOf(w), 1);
       w.removeAllListeners();
       w.terminate();
       workers.push(spawn());
       pump();
-    }, DEADLINE_MS);
+    }, deadline);
     w.postMessage({ id: job.id, op: job.op, source: job.source, values: job.values, opts: job.opts });
   }
 }
@@ -67,6 +70,15 @@ export function inspectInPool(source) {
   if (!workers.length) for (let i = 0; i < SIZE; i++) workers.push(spawn());
   return new Promise((resolve, reject) => {
     queue.push({ id: ++seq, op: "inspect", source, resolve, reject });
+    pump();
+  });
+}
+
+/** Sound programs: build(values, dsp) off the main thread. Resolves to Float32Array samples. */
+export function soundInPool(source, values, sr) {
+  if (!workers.length) for (let i = 0; i < SIZE; i++) workers.push(spawn());
+  return new Promise((resolve, reject) => {
+    queue.push({ id: ++seq, op: "sound", source, values, opts: { sr }, resolve, reject });
     pump();
   });
 }
