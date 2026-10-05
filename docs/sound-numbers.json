@@ -1,0 +1,158 @@
+{
+ "at": "2026-10-05T06:04:23.309Z",
+ "sounds": 8,
+ "kits": 1,
+ "creators": 4,
+ "kinds": {
+  "foley": 1,
+  "music-loop": 1,
+  "ambience": 3,
+  "sfx": 2,
+  "ui": 1
+ },
+ "knobsTotal": 47,
+ "knobsByType": {
+  "choice": 8,
+  "range": 33,
+  "toggle": 6
+ },
+ "renderMs": {
+  "min": 7,
+  "median": 304,
+  "max": 659
+ },
+ "seedCorrelation": {
+  "max": 0.946,
+  "median": 0.095
+ },
+ "factory": {
+  "builds": 15,
+  "rejected:grader": 10,
+  "published": 1,
+  "published:regrade": 2,
+  "rejected:regrade": 2,
+  "lessons": 34
+ },
+ "rows": [
+  {
+   "id": "footstep",
+   "title": "Footstep",
+   "kind": "foley",
+   "kit": null,
+   "author": "foleyroom",
+   "price": 3,
+   "knobs": 5,
+   "seconds": 0.45,
+   "ms": 41,
+   "peak": 0.697,
+   "rms": 0.128,
+   "centroid": 927,
+   "seedCorrelation": 0.934
+  },
+  {
+   "id": "kick-drum",
+   "title": "Kick Drum",
+   "kind": "music-loop",
+   "kit": null,
+   "author": "kickdrum",
+   "price": 2,
+   "knobs": 6,
+   "seconds": 0.71,
+   "ms": 21,
+   "peak": 0.92,
+   "rms": 0.345,
+   "centroid": 77,
+   "seedCorrelation": -0.163
+  },
+  {
+   "id": "rain-ambience",
+   "title": "Rain Bed",
+   "kind": "ambience",
+   "kit": null,
+   "author": "stormfront",
+   "price": 4,
+   "knobs": 5,
+   "seconds": 3,
+   "ms": 304,
+   "peak": 0.664,
+   "rms": 0.137,
+   "centroid": 2912,
+   "seedCorrelation": -0.007
+  },
+  {
+   "id": "rainy-awning-shelter-bed",
+   "title": "Awning Shelter",
+   "kind": "ambience",
+   "kit": "Rainy City Street",
+   "author": "stormfront",
+   "price": 4,
+   "knobs": 6,
+   "seconds": 3,
+   "ms": 483,
+   "peak": 0.72,
+   "rms": 0.177,
+   "centroid": 729,
+   "seedCorrelation": 0.095
+  },
+  {
+   "id": "rainy-car-pass-wet",
+   "title": "Wet Car Pass",
+   "kind": "sfx",
+   "kit": "Rainy City Street",
+   "author": "foleyroom",
+   "price": 3,
+   "knobs": 7,
+   "seconds": 3.39,
+   "ms": 647,
+   "peak": 0.9,
+   "rms": 0.115,
+   "centroid": 2477,
+   "seedCorrelation": 0.026
+  },
+  {
+   "id": "rainy-street-bed-steady",
+   "title": "Downtown Downpour",
+   "kind": "ambience",
+   "kit": "Rainy City Street",
+   "author": "stormfront",
+   "price": 4,
+   "knobs": 6,
+   "seconds": 3,
+   "ms": 659,
+   "peak": 0.664,
+   "rms": 0.156,
+   "centroid": 1252,
+   "seedCorrelation": 0.006
+  },
+  {
+   "id": "ui-click",
+   "title": "Soft Click",
+   "kind": "ui",
+   "kit": null,
+   "author": "quietmachine",
+   "price": 1,
+   "knobs": 6,
+   "seconds": 0.25,
+   "ms": 7,
+   "peak": 0.655,
+   "rms": 0.108,
+   "centroid": 1795,
+   "seedCorrelation": 0.147
+  },
+  {
+   "id": "wooden-door",
+   "title": "Wooden Door",
+   "kind": "sfx",
+   "kit": null,
+   "author": "foleyroom",
+   "price": 3,
+   "knobs": 6,
+   "seconds": 1.1,
+   "ms": 69,
+   "peak": 0.9,
+   "rms": 0.106,
+   "centroid": 607,
+   "seedCorrelation": 0.946
+  }
+ ]
+}
