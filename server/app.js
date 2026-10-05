@@ -306,6 +306,8 @@ export async function createApp() {
   app.post("/api/kits", kitLimit, wrap(async (req, res) => {
     const vibe = String(req.body?.vibe || "").slice(0, 300);
     if (!vibe.trim()) throw Object.assign(new Error("Say what the kit is for"), { status: 400 });
+    // quick: the keyword planner, not saved (the home hero's demo bill), so a page view never spends a model call
+    if (req.body?.quick) return res.json(kits.view({ id: null, ...kits.cleanKit(vibe, kits.planByKeywords(vibe)), licence: null }));
     res.json(kits.view(await kits.save(await kits.planKit(vibe))));
   }));
   app.get("/api/kits", wrap(async (req, res) => {
