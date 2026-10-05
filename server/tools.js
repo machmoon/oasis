@@ -14,6 +14,28 @@ export const previewUrl = (id, values, a) => {
   return `${config.baseUrl}/api/assets/${id}/render.svg${q}`;
 };
 
+// ---------- sounds: the registry's front door ----------
+const soundLine = (a) => ({
+  asset_id: a.id, title: a.title, kind: a.kind, kit: a.worldKit || null, author: a.author, price_usd: a.price, seconds: a.duration, description: a.description,
+  knobs: Object.keys(a.params.knobs || {}), preview_wav: `${config.baseUrl}/api/assets/${a.id}/render.wav`, card_png: `${config.baseUrl}/api/assets/${a.id}/render.png`,
+});
+/** Sound search: title, tags, kind and kit; falls back to the whole registry when nothing matches. */
+export function searchSounds({ query = "", kind, max_price, limit = 20 }) {
+  const all = catalog.search({ query, kind, format: "sound", maxPrice: max_price, limit: 400 });
+  const list = all.length || !query ? all : catalog.search({ query: "", kind, format: "sound", maxPrice: max_price, limit: 400 });
+  return list.slice(0, limit).map(soundLine);
+}
+/** Everything an agent needs to render one sound at the call site. */
+export function getSound({ asset_id }) {
+  const a = catalog.getAsset(asset_id);
+  if (!a || a.format !== "sound") throw new Error(`No sound "${asset_id}". Use search_assets first.`);
+  return {
+    ...soundLine(a), tags: a.tags, knobs: a.params.knobs, forked_from: a.forkedFrom,
+    how_to_import: `Buy a licence with buy_assets, then: import { createSound, play } from "<module url from buy_assets>"; play(audioContext, { ...knobs, seed: n }) renders and plays a fresh take; createSound(knobs, sampleRate) returns { sr, samples: Float32Array } for an engine. Without a licence the module plays a placeholder tick; over HTTP it answers 402.`,
+    render: `${config.baseUrl}/api/assets/${a.id}/render.wav?p=<url-encoded JSON knobs>  (paid sounds carry a preview watermark until licensed)`,
+  };
+}
+
 /** 3D registry search: what an agent building a scene needs to choose pieces. */
 export function search3d({ query = "", max_price, limit = 20 }) {
   const all = catalog.search({ query, maxPrice: max_price, limit: 200 }).filter((a) => a.format === "blocks");
@@ -148,6 +170,34 @@ export async function buyAssets({ items, mandate, agent_name }) {
     creators_paid: commerce.saleEvent(o).creators,
     budget: { spent_usd: m.spent_usd, remaining_usd: m.remaining_usd, of_usd: m.budget_usd },
     ledger: `${config.baseUrl}/#/ledger`,
+  };
+}
+
+// ---------- kits: a vibe becomes 6-10 tuned sound programs, licensed in one order ----------
+export async function makeKit({ vibe, mandate, agent_name }) {
+  const kits = await import("./kits.js");
+  let k = await kits.save(await kits.planKit(String(vibe || "").slice(0, 300)));
+  if (mandate) {
+    const items = kits.billItems(k);
+    const o = items.length ? await commerce.buyWithMandate(String(mandate), items, { agentName: agent_name ? String(agent_name).slice(0, 40) : "an MCP agent" }) : null;
+    k = await kits.save(k, { licence: kits.licenceOf(k, o, "mandate") });
+  }
+  return kitStatus(k);
+}
+export async function getKit({ kit_id }) {
+  const kits = await import("./kits.js");
+  const k = await kits.get(String(kit_id));
+  if (!k) throw new Error("Unknown kit_id");
+  return kitStatus(k);
+}
+async function kitStatus(k) {
+  const kits = await import("./kits.js");
+  const v = kits.view(k);
+  return {
+    kit_id: v.id, title: v.title, vibe: v.vibe, link: `${config.baseUrl}/#/kit/${v.id}`, planned_by: v.planner,
+    parts: v.items.map((l) => ({ name: l.name, asset_id: l.assetId, kind: l.kind, author: l.author, price_usd: l.price, knobs: l.knobs, reason: l.reason, preview_wav: l.preview, module: l.module, wav: l.wav })),
+    total_usd: v.total, creators: v.creators, licensed: v.licensed, order_id: v.licence?.orderId || null, creators_paid: v.licence?.creators || [],
+    next: v.licensed ? "Licensed: import each part's module (play(ctx, knobs)) or download its WAV." : "Unlicensed: previews carry a watermark tick. Pass the human's mandate to license the whole kit in one order, or open the link and pay with PayPal.",
   };
 }
 

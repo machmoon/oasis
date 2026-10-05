@@ -21,6 +21,7 @@ import * as film from "./film.js";
 import * as filmRender from "./film-render.js";
 import { musicFor } from "./film-music.js";
 import * as sound from "./sound.js";
+import * as kits from "./kits.js";
 
 export async function createApp() {
   await catalog.load();
@@ -297,6 +298,48 @@ export async function createApp() {
     res.json(orders.slice(0, 40).map(commerce.saleEvent).map((e, i) => ({ ...e, at: orders[i].createdAt })));
   }));
 
+  // Kits: a vibe becomes 6-10 tuned sound programs (server/kits.js), licensed in one PayPal order.
+  const kitLimit = rateLimit({ windowMs: 60_000, limit: 12, standardHeaders: "draft-8", legacyHeaders: false });
+  const mustKit = async (id) => { const k = await kits.get(id); if (!k) throw Object.assign(new Error("No such kit"), { status: 404 }); return k; };
+  app.post("/api/kits", kitLimit, wrap(async (req, res) => {
+    const vibe = String(req.body?.vibe || "").slice(0, 300);
+    if (!vibe.trim()) throw Object.assign(new Error("Say what the kit is for"), { status: 400 });
+    res.json(kits.view(await kits.save(await kits.planKit(vibe))));
+  }));
+  app.get("/api/kits", wrap(async (req, res) => {
+    const all = (await store.list("kits")).sort((a, b) => (!!b.licence - !!a.licence) || b.updatedAt.localeCompare(a.updatedAt)).slice(0, 24);
+    res.json(all.map((k) => ({ id: k.id, title: k.title, vibe: k.vibe, parts: k.items.length, total: k.total, creators: k.creators.length, licensed: !!k.licence, createdAt: k.createdAt })));
+  }));
+  app.get("/api/kits/:id", wrap(async (req, res) => res.set("Cache-Control", "no-cache").json(kits.view(await mustKit(req.params.id)))));
+  // Licensing a kit on a funded budget: every paid part, once, in one vaulted order.
+  app.post("/api/kits/:id/license", buyLimit, wrap(async (req, res) => {
+    const k = await mustKit(req.params.id);
+    if (k.licence) return res.json(kits.view(k));
+    const items = kits.billItems(k);
+    const mandate = String(req.body?.mandate || (req.get("authorization") || "").replace(/^Bearer\s+/i, ""));
+    const o = items.length ? await commerce.buyWithMandate(mandate, items, { agentName: String(req.body?.agent_name || "Oasis Kits").slice(0, 40) }) : null;
+    res.json(kits.view(await kits.save(k, { licence: kits.licenceOf(k, o, "mandate") })));
+  }));
+  // Licensing a kit through PayPal Checkout: one Orders v2 order for every paid part, approved by the person in
+  // PayPal's own window. The claim token comes back once, to the browser that started it.
+  app.post("/api/kits/:id/checkout", buyLimit, wrap(async (req, res) => {
+    const k = await mustKit(req.params.id);
+    if (k.licence) throw Object.assign(new Error("This kit is already licensed"), { status: 409 });
+    const o = await commerce.createCheckout(kits.billItems(k), { returnUrl: `${config.baseUrl}/checkout/return?kit=${encodeURIComponent(k.id)}`, cancelUrl: `${config.baseUrl}/#/kit/${encodeURIComponent(k.id)}` });
+    res.json({ order_id: o.id, approve_url: o.approveUrl, claim_token: o.claimToken, total_usd: o.total });
+  }));
+  app.post("/api/kits/:id/claim", buyLimit, wrap(async (req, res) => {
+    const k = await mustKit(req.params.id);
+    if (k.licence) return res.json(kits.view(k));
+    let o = await store.get("orders", String(req.body?.order_id || ""));
+    if (!commerce.ownsOrder(o, String(req.body?.claim_token || ""))) throw Object.assign(new Error("Unknown order, or wrong claim token"), { status: 404 });
+    if (o.status !== "COMPLETED") { try { o = await commerce.capture(o.id); } catch (e) { console.warn("kit claim capture", e.message); } }
+    if (o.status !== "COMPLETED") throw Object.assign(new Error(`The PayPal order is ${String(o.status || "not approved").toLowerCase()} yet`), { status: 409 });
+    const paid = new Set(o.items.map((i) => i.assetId));
+    if (!kits.billItems(k).every((i) => paid.has(i.assetId))) throw Object.assign(new Error("That order does not cover this kit"), { status: 409 });
+    res.json(kits.view(await kits.save(k, { licence: { ...kits.licenceOf(k, o, "checkout"), captureId: o.captureId || null } })));
+  }));
+
   // Films: a brief becomes a short film shot in a world of kit pieces, dressed with 2D assets (server/film.js).
   const filmLimit = rateLimit({ windowMs: 60_000, limit: 12, standardHeaders: "draft-8", legacyHeaders: false });
   const mustFilm = async (id) => {
@@ -421,7 +464,7 @@ export async function createApp() {
   });
   for (const f of ["sound-dsp", "sound-runtime"]) app.get(`/cdn/${f}.mjs`, (req, res) => {
     res.set({ "Content-Type": "text/javascript; charset=utf-8", "Access-Control-Allow-Origin": "*", "Cache-Control": "public, max-age=300" });
-    res.sendFile(new URL(`../public/${f}.js`, import.meta.url).pathname);
+    res.sendFile(new URL(`../public/${f}.js`, import.meta.url).pathname, { dotfiles: "allow" }); // a checkout under a dot-directory is still served
   });
   app.get("/cdn/:id.mjs", wrap(async (req, res) => {
     const a = mustAsset(req.params.id);
@@ -593,9 +636,9 @@ export async function createApp() {
     } catch (e) {
       console.warn("capture on return", e.message);
     }
-    // a film's checkout comes back to its Studio page, which claims the licence with its claim token
-    const filmId = String(req.query.film || "");
-    res.redirect(filmId ? `/#/film/${encodeURIComponent(filmId)}` : `/#/order/${encodeURIComponent(id)}`);
+    // a kit's or a film's checkout comes back to its page, which claims the licence with its claim token
+    const filmId = String(req.query.film || ""), kitId = String(req.query.kit || "");
+    res.redirect(kitId ? `/#/kit/${encodeURIComponent(kitId)}` : filmId ? `/#/film/${encodeURIComponent(filmId)}` : `/#/order/${encodeURIComponent(id)}`);
   }));
 
   // Assets published after the build (new forks) have no pre-rendered preview: render them live.

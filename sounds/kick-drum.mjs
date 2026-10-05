@@ -15,15 +15,17 @@ export const params = { knobs: {
 } };
 export function build(p, c) {
   const sr = c.sr, r = c.rng(p.seed * 211 + 3);
-  const tail = { punchy: 0.25, deep: 0.5, boxy: 0.14, 808: 0.9 }[p.character] * (0.4 + p.length * 1.2);
+  // the seed is the drummer: a slightly different tuning, decay and beater each hit, so a pattern breathes
+  const tune = p.tune * (0.985 + r() * 0.03);
+  const tail = { punchy: 0.25, deep: 0.5, boxy: 0.14, 808: 0.9 }[p.character] * (0.4 + p.length * 1.2) * (0.92 + r() * 0.16);
   const n = c.seconds(tail * 3 + 0.05, sr), out = new Float32Array(n);
-  const start = p.tune * (2 + 6 * p.drop), fall = 0.02 + 0.06 * p.drop;
-  const body = c.osc("sine", (t) => p.tune + (start - p.tune) * Math.exp(-t / fall), n, sr, { phase: r() * 0.1 });
+  const start = tune * (2 + 6 * p.drop), fall = (0.02 + 0.06 * p.drop) * (0.9 + r() * 0.2);
+  const body = c.osc("sine", (t) => tune + (start - tune) * Math.exp(-t / fall), n, sr, { phase: r() * 0.1 });
   c.multiply(body, c.env(n, 0.001, tail, sr));
   c.mix(out, body, 0, 1, sr);
   const clickF = { punchy: 2500, deep: 900, boxy: 1800, 808: 600 }[p.character];
   c.mix(out, c.burst(r, 0.012, "bp", clickF * (0.9 + r() * 0.2), 1.2, 0.0005, 0.003, sr), 0.0005 + r() * 0.001, 0.5 + 0.3 * p.drop, sr);
-  if (p.character === "boxy") c.mix(out, c.ring([[p.tune * 3.1, 0.4], [p.tune * 5.3, 0.2]], 0.12, 0.03, sr), 0.002, 0.5, sr);
+  if (p.character === "boxy") c.mix(out, c.ring([[tune * 3.1, 0.4], [tune * 5.3, 0.2]], 0.12, 0.03, sr), 0.002, 0.5, sr);
   c.finish(out, 0.92, 1 + 3 * p.drive);
   c.fade(out, 4, sr);
   return { samples: out };

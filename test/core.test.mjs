@@ -9,7 +9,10 @@ import { royaltySplit } from "../server/commerce.js";
 await catalog.load();
 
 test("every catalogue asset loads and renders at defaults", () => {
-  for (const a of catalog.allAssets()) assert.match(catalog.render(a, {}).svg, /^<svg/, a.id);
+  for (const a of catalog.allAssets()) {
+    if (a.format === "sound") assert.ok(catalog.sound(a, {}).samples.length > 100, a.id);
+    else assert.match(catalog.render(a, {}).svg, /^<svg/, a.id);
+  }
 });
 
 test("knob values are clamped, snapped and validated against the schema", () => {

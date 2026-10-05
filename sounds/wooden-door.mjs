@@ -15,13 +15,16 @@ export const params = { knobs: {
 } };
 export function build(p, c) {
   const sr = c.sr, r = c.rng(p.seed * 613 + 11);
-  const n = c.seconds(1.2, sr), out = new Float32Array(n), big = 0.7 + 0.6 * p.size;
+  // an open is the latch and the creak; a close or slam adds the thump, so the take is only as long as it needs
+  const n = c.seconds(p.action === "open" ? 0.7 + 0.4 * (1 - p.force) : p.action === "close" ? 1.1 : 0.9, sr), out = new Float32Array(n), big = 0.7 + 0.6 * p.size;
   const creak = (at, dur, gainAmt) => {
     const m = c.seconds(dur, sr), f0 = (140 - 60 * p.size) * (0.9 + r() * 0.2);
     const saw = c.osc("saw", (t) => f0 * (1 + 0.25 * Math.sin(t * 7 + r() * 6) * p.age + 0.1 * Math.sin(t * 31)), m, sr);
     const bp = c.biquad("bp", 900 + 700 * p.age, 3, sr), e = c.env(m, dur * 0.3, dur * 0.4, sr);
     for (let i = 0; i < m; i++) saw[i] = bp(saw[i]) * e[i] * (0.6 + 0.4 * Math.sin(i / sr * 23 + r()));
-    c.mix(out, saw, at, gainAmt * p.age, sr);
+    c.mix(out, saw, at, gainAmt * (0.25 + 0.75 * p.age), sr);
+    // the air the door moves: a slow filtered whoosh under the hinge
+    c.mix(out, c.burst(r, dur, "lp", 300 + 400 * p.size, 0.8, dur * 0.35, dur * 0.3, sr), at, 0.35 * (0.5 + p.force), sr);
   };
   const latch = (at, g) => { c.mix(out, c.ring([[1800 * (1 - 0.3 * p.size), 1], [3400, 0.4]], 0.05, 0.008, sr), at, g, sr); c.mix(out, c.burst(r, 0.01, "hp", 2000, 0.8, 0.0005, 0.003, sr), at, g, sr); };
   const thump = (at, g) => { c.mix(out, c.ring([[70 / big, 1], [140 / big, 0.4], [310 / big, 0.15]], 0.35, 0.05 + 0.06 * p.size, sr), at, g, sr); c.mix(out, c.burst(r, 0.04, "lp", 500, 0.8, 0.001, 0.015, sr), at, g * 0.8, sr); };

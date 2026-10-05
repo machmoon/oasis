@@ -25,7 +25,7 @@ test("unsigned PayPal webhooks are rejected before anything is trusted", async (
 test("MCP lists the registry tools", async () => {
   const r = await fetch(`${base}/mcp`, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }) });
   const j = await r.json();
-  assert.deepEqual(j.result.tools.map((t) => t.name).sort(), ["buy_assets", "get_asset", "get_budget", "get_film", "make_film", "preview_asset", "search_assets"]);
+  assert.deepEqual(j.result.tools.map((t) => t.name).sort(), ["buy_assets", "get_asset", "get_budget", "get_kit", "make_kit", "preview_asset", "search_assets"]);
 });
 
 test("paid assets cannot be downloaded without a licence; free ones can", async () => {

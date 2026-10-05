@@ -168,13 +168,16 @@ test("HTTP: licensing a film needs a funded mandate", async () => {
   assert.equal(g.licensed, false, "nothing changed");
 });
 
-test("llms.txt and MCP list the film tools", async () => {
+// The films stay reachable over HTTP; the pitch (llms.txt, MCP) is the sound registry and its kits.
+test("films stay reachable over HTTP while llms.txt and MCP pitch the sound registry", async () => {
   const txt = await (await fetch(`${base}/llms.txt`)).text();
-  assert.match(txt, /make_film \{brief, mandate\?/);
+  assert.match(txt, /make_kit \{vibe, mandate\?/);
+  assert.doesNotMatch(txt, /make_film/);
   const r = await fetch(`${base}/mcp`, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }) });
   const j = await r.json();
   const names = j.result.tools.map((t) => t.name);
-  assert.ok(names.includes("make_film") && names.includes("get_film"));
+  assert.ok(names.includes("make_kit") && names.includes("get_kit") && !names.includes("make_film"));
+  assert.equal((await fetch(`${base}/api/films`)).status, 200);
 });
 
 test("the soundtrack is a program: same seed, same bytes, a real WAV", async () => {
