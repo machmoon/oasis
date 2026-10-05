@@ -22,7 +22,7 @@ function distance(x, y) {
   return d + shape / n * 4;
 }
 
-export function measure(src, { sr = SOUND_SR } = {}) {
+export function measure(src, { sr = SOUND_SR, timeLimit } = {}) {
   // knobEffects: one row per knob with the loudest-changing extreme and how far it moved, so the publish page can
   // offer a play button per knob and say what the harness heard.
   const report = { errors: [], warnings: [], renders: 0, slowestMs: 0, knobs: 0, deadKnobs: [], subtleKnobs: [], knobEffects: [], seedSimilarity: null, defaults: null };
@@ -37,7 +37,7 @@ export function measure(src, { sr = SOUND_SR } = {}) {
     const values = resolveKnobs(params, input);
     const t = performance.now();
     let s;
-    try { s = renderSound(src, values, { sr }); } catch (e) { report.errors.push(`${label}: ${e.message}`); return null; }
+    try { s = renderSound(src, values, timeLimit ? { sr, timeLimit } : { sr }); } catch (e) { report.errors.push(`${label}: ${e.message}`); return null; }
     const ms = performance.now() - t;
     report.renders++;
     report.slowestMs = Math.max(report.slowestMs, Math.round(ms));

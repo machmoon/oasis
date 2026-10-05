@@ -136,7 +136,8 @@ export function render(values, sr, maxSeconds) {
 `;
 
 /** Runs a sound program: build(values, dsp) at sample rate sr; returns Float32Array samples (mono, -1..1). */
-export function renderSound(source, values, { sr = SOUND_SR, maxSeconds = SOUND_MAX_SECONDS } = {}) {
+// timeLimit defaults to the production limit; only the corpus tests pass a longer one (see test/corpus.mjs).
+export function renderSound(source, values, { sr = SOUND_SR, maxSeconds = SOUND_MAX_SECONDS, timeLimit = SOUND_TIME_LIMIT_MS } = {}) {
   return withModule(SOUND_DRIVER, (vm, ns) => {
     const fn = vm.getProp(ns, "render");
     const json = vm.newString(JSON.stringify(values));
@@ -156,5 +157,5 @@ export function renderSound(source, values, { sr = SOUND_SR, maxSeconds = SOUND_
       const ab = vm.getArrayBuffer(out.value);
       try { return new Float32Array(ab.value.buffer.slice(ab.value.byteOffset, ab.value.byteOffset + ab.value.byteLength)); } finally { ab.dispose(); }
     } finally { out.value.dispose(); }
-  }, { timeLimit: SOUND_TIME_LIMIT_MS, modules: { "oasis:dsp": DSP_SOURCE, "oasis:asset": source } });
+  }, { timeLimit, modules: { "oasis:dsp": DSP_SOURCE, "oasis:asset": source } });
 }
