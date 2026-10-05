@@ -85,8 +85,57 @@ test("signs mount on the roof ridge or at the kerb of a real piece", async () =>
   assert.ok(roof.mount.at[1] > 3, "a roof sign sits above the building");
   assert.equal(kerb.mount.at[1], 0);
   assert.ok(kerb.mount.post > 0);
-  assert.equal(h.parts.length, new Set(f.world.placements.map((p) => p.asset + JSON.stringify(p.knobs))).size);
+  const remixes = new Set(f.world.placements.map((p) => p.asset + JSON.stringify(p.knobs))).size;
+  assert.ok(h.parts.length >= remixes, "every remix is built once");
   assert.ok(h.placements.every((p) => h.parts[p.part]));
+});
+
+test("the street assembles and a knob turns on camera: build, stock programs, rebuild steps, the look", async () => {
+  const f = await film.planFilm(BRIEF);
+  assert.equal(f.shots[0].build, film.BUILD_SECONDS, "the first shot assembles the street");
+  const rb = f.shots.find((s) => s.rebuild);
+  assert.ok(rb, "one shot turns a knob on camera");
+  assert.equal(rb.rebuild.placement, film.heroOf(f.world).id, "on the hero");
+  assert.ok(rb.rebuild.steps.length >= 1 && rb.rebuild.steps.length <= 3);
+  assert.ok(rb.rebuild.steps.some((s) => s.knob === "floors"), "floors is the knob that reads");
+  const h = await film.hydrate({ ...f, id: "t" });
+  const stocked = h.placements.filter((p) => p.stock !== undefined);
+  assert.ok(stocked.length > 10, "remixed pieces land as their stock program first");
+  assert.ok(stocked.every((p) => h.parts[p.stock] && p.stock !== p.part));
+  const r = h.rebuilds[rb.id];
+  assert.ok(r && r.steps.every((s) => h.parts[s.part] && Number.isFinite(s.top) && s.def.label), "every step is built, with its roofline and knob definition");
+  assert.ok(r.steps.find((s) => s.knob === "floors").top !== r.top, "more floors, a higher roof");
+  // junk: a knob the program does not have, a colour (not a walk), a value outside the range, an unknown placement
+  const hero = film.heroOf(f.world), otherRoof = hero.knobs.roof === "gable" ? "flat" : "gable";
+  const c = film.cleanFilm({ ...f, shots: [{ kind: "static", seconds: 3, target: [0, 1, 0], azimuth: 0, radius: 10, height: 5, build: 99, rebuild: { placement: rb.rebuild.placement, steps: [{ knob: "nope", value: 1 }, { knob: "wall", value: "#000000" }, { knob: "floors", value: 99 }, { knob: "roof", value: hero.knobs.roof }, { knob: "roof", value: otherRoof }] } }, { kind: "static", seconds: 2, target: [0, 1, 0], azimuth: 0, radius: 10, height: 5, build: 2, rebuild: { placement: "nope", steps: [{ knob: "floors", value: 2 }] } }] });
+  assert.equal(c.shots[0].build, 3, "the build fits the shot");
+  assert.deepEqual(c.shots[0].rebuild.steps.map((s) => s.knob), ["floors", "roof"], "only real, non-colour knobs that change something survive");
+  assert.equal(c.shots[0].rebuild.steps[0].value, 5, "clamped to the knob's range");
+  assert.equal(c.shots[1].build, undefined, "only the first shot assembles");
+  assert.equal(c.shots[1].rebuild, undefined, "an unknown placement is dropped");
+  // the look: the brief picks it, the director may set it, junk falls back
+  assert.equal(f.edit.look, "none");
+  assert.equal((await film.planFilm('a pixel-art teaser for "Momiji Ramen" in Kyoto')).edit.look, "pixel");
+  assert.equal(film.lookOf("a cel-shaded anime launch"), "toon");
+  assert.equal(film.lookOf("a Game Boy ad"), "palette");
+  assert.equal(film.cleanFilm({ ...f, edit: { style: "hype", look: "sepia" } }).edit.look, "none");
+  assert.equal(film.restyle({ ...f, edit: { style: "hype", look: "dither" } }, "clean").edit.look, "dither", "a restyle keeps the look");
+  assert.ok(film.cleanFilm({ ...f, shots: [f.shots[0], { ...f.shots[1], cut: "match" }] }).shots[1].cut === "match");
+});
+
+test("the soundtrack carries the cut: events land on whips, the title and the rebuild, and stay deterministic", async () => {
+  const music = await import("../server/film-music.js");
+  const f = await film.planFilm(BRIEF);
+  const ev = music.eventsOf(f);
+  const kinds = new Set(ev.map((e) => e.kind));
+  for (const k of ["whoosh", "riser", "hit", "tick", "click", "glitch"]) assert.ok(kinds.has(k), `has a ${k}`);
+  const title = f.shots.find((s) => s.title), tStart = f.shots.slice(0, f.shots.indexOf(title)).reduce((a, s) => a + s.seconds, 0);
+  assert.ok(ev.some((e) => e.kind === "hit" && Math.abs(e.t - (tStart + title.title.at)) < 1e-9), "the hit is on the slam's frame");
+  assert.ok(ev.every((e, i) => i === 0 || e.t >= ev[i - 1].t) && ev.every((e) => e.t >= 0));
+  const a = music.toWav(music.compose({ seed: "momiji", mood: "warm", seconds: 4, events: ev.filter((e) => e.t < 4) }));
+  const b = music.toWav(music.compose({ seed: "momiji", mood: "warm", seconds: 4, events: ev.filter((e) => e.t < 4) }));
+  assert.ok(a.equals(b));
+  assert.ok(!a.equals(music.toWav(music.compose({ seed: "momiji", mood: "warm", seconds: 4 }))), "the events are audible");
 });
 
 test("HTTP: a film is created, served with its bill, and its art is watermarked until licensed", async () => {

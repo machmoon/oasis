@@ -65,7 +65,8 @@ const hash = (s) => [...String(s)].reduce((h, c) => (Math.imul(h, 31) + c.charCo
  */
 export function shakeAt(t, amount, hits, seed) {
   let k = amount * amount * 0.6;
-  for (const h of hits) if (t >= h) k += Math.exp(-(t - h) * 7) * 1.0;
+  // a hit is a second, or { t, k } for a softer one (a piece landing, a knob turning)
+  for (const h of hits) { const ht = typeof h === "number" ? h : h.t, hk = typeof h === "number" ? 1 : h.k ?? 1; if (t >= ht) k += Math.exp(-(t - ht) * 7) * hk; }
   if (k <= 1e-4) return [0, 0, 0];
   const s = (seed % 1000) / 10, f = 7.5;
   return [0.045 * k * noise.noise(t * f, s, 1.7), 0.035 * k * noise.noise(s, t * f, 4.1), 0.05 * k * noise.noise(t * f * 0.8, 9.3, s)];
@@ -77,13 +78,13 @@ const EditShader = {
     tDiffuse: { value: null }, uRes: { value: new THREE.Vector2(1280, 720) }, uFrame: { value: 0 },
     uRGB: { value: 0 }, uAngle: { value: 0 }, uGlitch: { value: 0 }, uZoom: { value: 0 }, uFlash: { value: 0 }, uFade: { value: 0 },
     uGrain: { value: 0.04 }, uVignette: { value: 0.35 }, uContrast: { value: 1 }, uSat: { value: 1 }, uLift: { value: 0 },
-    uTint: { value: new THREE.Vector3(1, 1, 1) }, uTintAmt: { value: 0 },
+    uTint: { value: new THREE.Vector3(1, 1, 1) }, uTintAmt: { value: 0 }, uBlur: { value: new THREE.Vector2(0, 0) },
   },
   vertexShader: /* glsl */ `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
   fragmentShader: /* glsl */ `
     uniform sampler2D tDiffuse; uniform vec2 uRes; uniform float uFrame;
     uniform float uRGB, uAngle, uGlitch, uZoom, uFlash, uFade, uGrain, uVignette, uContrast, uSat, uLift, uTintAmt;
-    uniform vec3 uTint;
+    uniform vec3 uTint; uniform vec2 uBlur;
     varying vec2 vUv;
     float rand(vec2 co) { return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453); }
     vec3 split(vec2 p, float amount, float angle) {
@@ -112,6 +113,16 @@ const EditShader = {
           acc += texture2D(tDiffuse, p + toCentre * pc * uZoom).rgb * w; total += w;
         }
         c = acc / total;
+      } else if (dot(uBlur, uBlur) > 0.0) {
+        // the whip's smear: a directional blur along the pan (glfx.js src/filters/blur/triangleblur.js), on top of
+        // the sub-frame samples, so a fast pan reads as one streak and not as a stack of ghosts
+        vec3 acc = vec3(0.0); float total = 0.0;
+        float off = rand(p * uRes + uFrame) - 0.5;
+        for (float t = -8.0; t <= 8.0; t++) {
+          float pc = (t + off) / 8.0; float w = 1.0 - abs(pc);
+          acc += texture2D(tDiffuse, p + uBlur * pc).rgb * w; total += w;
+        }
+        c = acc / total;
       } else {
         float amt = uRGB + uGlitch * 0.005 * (0.5 + seed);
         c = amt > 0.0 ? split(p, amt, uAngle + seed * 6.2831 * step(0.001, uGlitch)) : texture2D(tDiffuse, p).rgb;
@@ -133,12 +144,100 @@ const EditShader = {
     }`,
 };
 
+// ---------- looks: a film-wide shader grade ----------
+// After Polyfork's shader looks (polyfork.dev/blog/six-shader-looks-and-which-ones-you-can-keep), where each is a
+// per-model viewer toggle. Here a look is chosen once for the film. Two passes carry them:
+// - ToonShader, before bloom, in linear light: the lit colour is posterised into bands, and an outline is drawn where
+//   depth breaks (a Sobel on the depth buffer, after three's SobelOperatorShader, with the width in pixels as their
+//   post says an outline should be).
+// - LookOutShader, after the sRGB output: pixelation (sample a coarser grid: render small, scale up), ordered
+//   dithering (a 4x4 Bayer matrix on the final sRGB values, their "at least four levels"), and palette reduction
+//   (nearest of up to eight colours in OKLab, Bjorn Ottosson's conversion, as their reduction matches colours).
+// - PS1 is a vertex-stage patch on the set's materials (patchLook): the projected position is snapped to a coarse
+//   clip-space grid after projection, "not in world space, which gives a permanently mangled model".
+export const LOOKS = {
+  none: {},
+  toon: { bands: 4, outline: 1.6 },
+  pixel: { pixel: 6 },
+  dither: { pixel: 2, levels: 5, dither: 1 },
+  ps1: { snap: 160, pixel: 3, levels: 12, dither: 0.6 },
+  palette: { pixel: 4, palette: true, dither: 1 },
+};
+const ToonShader = {
+  uniforms: { tDiffuse: { value: null }, tDepth: { value: null }, uRes: { value: new THREE.Vector2(1, 1) }, uBands: { value: 4 }, uOutline: { value: 1.6 }, uNear: { value: 0.1 }, uFar: { value: 600 }, uInk: { value: new THREE.Color("#141821") } },
+  vertexShader: EditShader.vertexShader,
+  fragmentShader: /* glsl */ `
+    uniform sampler2D tDiffuse, tDepth; uniform vec2 uRes; uniform float uBands, uOutline, uNear, uFar; uniform vec3 uInk;
+    varying vec2 vUv;
+    float lin(vec2 p) { float d = texture2D(tDepth, p).x; return (2.0 * uNear) / (uFar + uNear - d * (uFar - uNear)); }
+    void main() {
+      vec4 c = texture2D(tDiffuse, vUv);
+      float l = dot(c.rgb, vec3(0.2126, 0.7152, 0.0722));
+      if (l > 1e-4) { float q = (floor(pow(l, 0.6) * uBands) + 0.5) / uBands; c.rgb *= pow(q, 1.0 / 0.6) / l; }
+      vec2 px = uOutline / uRes;
+      float z = lin(vUv);
+      float e = abs(lin(vUv + vec2(px.x, 0.0)) - z) + abs(lin(vUv - vec2(px.x, 0.0)) - z) + abs(lin(vUv + vec2(0.0, px.y)) - z) + abs(lin(vUv - vec2(0.0, px.y)) - z);
+      float edge = smoothstep(0.0025, 0.009, e / max(z, 0.02));
+      c.rgb = mix(c.rgb, uInk, edge * 0.92);
+      gl_FragColor = c;
+    }`,
+};
+const LookOutShader = {
+  uniforms: { tDiffuse: { value: null }, uRes: { value: new THREE.Vector2(1, 1) }, uPixel: { value: 0 }, uLevels: { value: 0 }, uDither: { value: 0 }, uPalN: { value: 0 }, uPal: { value: Array.from({ length: 8 }, () => new THREE.Vector3()) } },
+  vertexShader: EditShader.vertexShader,
+  fragmentShader: /* glsl */ `
+    uniform sampler2D tDiffuse; uniform vec2 uRes; uniform float uPixel, uLevels, uDither; uniform int uPalN; uniform vec3 uPal[8];
+    varying vec2 vUv;
+    vec3 oklab(vec3 c) {
+      vec3 lin = pow(c, vec3(2.2));
+      float l = 0.4122214708 * lin.r + 0.5363325363 * lin.g + 0.0514459929 * lin.b;
+      float m = 0.2119034982 * lin.r + 0.6806995451 * lin.g + 0.1073969566 * lin.b;
+      float s = 0.0883024619 * lin.r + 0.2817188376 * lin.g + 0.6299787005 * lin.b;
+      float l_ = pow(l, 1.0 / 3.0), m_ = pow(m, 1.0 / 3.0), s_ = pow(s, 1.0 / 3.0);
+      return vec3(0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_, 1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_, 0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_);
+    }
+    void main() {
+      vec2 p = vUv;
+      if (uPixel > 0.0) p = (floor(vUv * uRes / uPixel) + 0.5) * uPixel / uRes;
+      vec3 c = texture2D(tDiffuse, p).rgb;
+      if (uDither > 0.0) {
+        // 4x4 Bayer, indexed by the (coarse) pixel
+        vec2 cell = uPixel > 0.0 ? floor(vUv * uRes / uPixel) : floor(vUv * uRes);
+        int ix = int(mod(cell.x, 4.0)), iy = int(mod(cell.y, 4.0));
+        float m[16]; m[0]=0.0; m[1]=8.0; m[2]=2.0; m[3]=10.0; m[4]=12.0; m[5]=4.0; m[6]=14.0; m[7]=6.0; m[8]=3.0; m[9]=11.0; m[10]=1.0; m[11]=9.0; m[12]=15.0; m[13]=7.0; m[14]=13.0; m[15]=5.0;
+        float b = (m[iy * 4 + ix] + 0.5) / 16.0 - 0.5;
+        float amt = uPalN > 0 ? 0.08 : (uLevels > 0.0 ? 1.0 / uLevels : 0.0);
+        c += b * amt * uDither;
+      }
+      if (uLevels > 0.0) c = floor(clamp(c, 0.0, 1.0) * uLevels + 0.5) / uLevels;
+      if (uPalN > 0) {
+        vec3 lab = oklab(clamp(c, 0.0, 1.0)); float best = 1e9; vec3 pick = c;
+        for (int i = 0; i < 8; i++) { if (i >= uPalN) break; vec3 d = oklab(uPal[i]) - lab; float dist = dot(d, d); if (dist < best) { best = dist; pick = uPal[i]; } }
+        c = pick;
+      }
+      gl_FragColor = vec4(c, 1.0);
+    }`,
+};
+/** PS1 vertex snapping on a material: patched once, keyed, so it survives three's program cache. */
+export function patchLook(material, lookName) {
+  const look = LOOKS[lookName];
+  if (!look?.snap || material.userData.look === lookName) return;
+  material.userData.look = lookName;
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.uSnap = { value: new THREE.Vector2(look.snap, Math.round(look.snap * 9 / 16)) };
+    shader.vertexShader = "uniform vec2 uSnap;\n" + shader.vertexShader.replace("#include <project_vertex>", "#include <project_vertex>\n gl_Position.xy = floor(gl_Position.xy / gl_Position.w * uSnap) / uSnap * gl_Position.w;");
+  };
+  material.customProgramCacheKey = () => `look-${lookName}`;
+  material.needsUpdate = true;
+}
+
 /**
- * The finishing chain for one renderer: scene -> bloom -> depth of field -> edit shader -> sRGB output.
- * Returns render(params), which draws one finished picture into the renderer's canvas.
+ * The finishing chain for one renderer: scene -> (toon) -> bloom -> depth of field -> edit shader -> sRGB output
+ * -> (pixel, dither, palette). Returns render(params), which draws one finished picture into the renderer's canvas.
  */
-export function createFinish(renderer, scene, camera, W, H, styleName) {
+export function createFinish(renderer, scene, camera, W, H, styleName, { look: lookName = "none", palette = [], ink } = {}) {
   const style = STYLES[styleName] || STYLES.clean;
+  const look = LOOKS[lookName] || LOOKS.none;
   const composer = new EffectComposer(renderer);
   composer.setPixelRatio(1);
   composer.setSize(W, H);
@@ -151,19 +250,45 @@ export function createFinish(renderer, scene, camera, W, H, styleName) {
     fragmentShader: /* glsl */ `uniform sampler2D tDiffuse; varying vec2 vUv;
       void main() { vec4 c = texture2D(tDiffuse, vUv); bool bad = any(isnan(c)) || any(isinf(c)); gl_FragColor = bad ? vec4(0.0, 0.0, 0.0, 1.0) : min(c, vec4(64.0)); }`,
   }));
+  // toon reads the depth buffer: one extra depth-only render of the scene per frame, into its own target
+  let toon = null, depthRT = null;
+  const depthMat = new THREE.MeshDepthMaterial({ depthPacking: THREE.BasicDepthPacking });
+  if (look.bands) {
+    depthRT = new THREE.WebGLRenderTarget(W, H, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, depthTexture: new THREE.DepthTexture(W, H, THREE.UnsignedIntType) });
+    toon = new ShaderPass(ToonShader);
+    toon.uniforms.tDepth.value = depthRT.depthTexture;
+    toon.uniforms.uRes.value.set(W, H);
+    toon.uniforms.uBands.value = look.bands;
+    toon.uniforms.uOutline.value = look.outline * (Math.min(W, H) / 1080);
+    toon.uniforms.uNear.value = camera.near; toon.uniforms.uFar.value = camera.far;
+    if (ink) toon.uniforms.uInk.value.set(ink);
+    composer.addPass(toon);
+  }
   const bloom = new UnrealBloomPass(new THREE.Vector2(W, H), style.bloom, 0.55, 0.82);
   composer.addPass(bloom);
   const bokeh = new BokehPass(scene, camera, { focus: 20, aperture: 0.0002, maxblur: 0.006 });
-  bokeh.enabled = style.dof > 0;
+  bokeh.enabled = style.dof > 0 && !look.pixel; // a pixel look has no shallow focus: every pixel is a decision
   composer.addPass(bokeh);
   const edit = new ShaderPass(EditShader);
   edit.uniforms.uRes.value.set(W, H);
   composer.addPass(edit);
   composer.addPass(new OutputPass());
+  if (look.pixel || look.levels || look.palette) {
+    const out = new ShaderPass(LookOutShader);
+    out.uniforms.uRes.value.set(W, H);
+    out.uniforms.uPixel.value = (look.pixel || 0) * (Math.min(W, H) / 1080);
+    out.uniforms.uLevels.value = look.levels || 0;
+    out.uniforms.uDither.value = look.dither || 0;
+    const pal = look.palette ? palette.slice(0, 8) : [];
+    out.uniforms.uPalN.value = pal.length;
+    pal.forEach((hex, i) => { const c = new THREE.Color(hex); out.uniforms.uPal.value[i].set(c.r, c.g, c.b); });
+    composer.addPass(out);
+  }
   const u = edit.uniforms;
   return {
     style,
-    /** p: { frame, dark, focus, rgb, angle, glitch, zoom, flash, fade, tint, tintAmt } */
+    look: lookName,
+    /** p: { frame, dark, focus, rgb, angle, glitch, zoom, flash, fade, tint, tintAmt, blur } */
     render(p) {
       bloom.strength = style.bloom + (style.bloomNight - style.bloom) * p.dark + (p.flash || 0) * 0.6;
       bloom.threshold = 1.0 - p.dark * 0.25; // only what is brighter than white glows: windows and signs at night
@@ -187,9 +312,19 @@ export function createFinish(renderer, scene, camera, W, H, styleName) {
       u.uLift.value = style.lift;
       u.uTint.value.set(...(p.tint || [1, 1, 1]));
       u.uTintAmt.value = p.tintAmt || 0;
+      u.uBlur.value.set(...(p.blur || [0, 0]));
+      if (toon) {
+        // depth of the meshes only: points (weather) and lines (clay edges) are not surfaces and draw no outline
+        const was = scene.overrideMaterial, hidden = [];
+        scene.traverse((o) => { if ((o.isPoints || o.isLine) && o.visible) { o.visible = false; hidden.push(o); } });
+        scene.overrideMaterial = depthMat;
+        renderer.setRenderTarget(depthRT); renderer.clear(); renderer.render(scene, camera); renderer.setRenderTarget(null);
+        scene.overrideMaterial = was;
+        for (const o of hidden) o.visible = true;
+      }
       composer.render();
     },
-    dispose() { composer.dispose?.(); },
+    dispose() { composer.dispose?.(); depthRT?.dispose(); },
   };
 }
 
@@ -202,6 +337,8 @@ export const TRANSITIONS = {
   zoom: { pre: 0.12, post: 0.16 },
   glitch: { pre: 0.06, post: 0.16 },
   flash: { pre: 0.04, post: 0.3 },
+  // a match cut: the incoming camera inherits the outgoing look direction and eases into its own
+  match: { pre: 0, post: 0.45 },
 };
 /**
  * The transition state at second t: which cut (if any) is near, its kind, how far into it (-1 before .. 0 on the cut
@@ -267,12 +404,26 @@ export async function makeTitle(text, { color = "#E5484D", side = "#1B1F2A", siz
   return g;
 }
 
-/** Where the title is at progress `secs` into its shot: it drops from the sky and slams down at `at`. */
+/**
+ * Where the title is at progress `secs` into its shot: it drops from the sky and slams down at `at`, and the slam has
+ * weight: a squash on landing, a shock ring that runs out across the road (0..1 over half a second), dust that
+ * rises and thins, and a chromatic kick that decays.
+ */
 export function titlePose(secs, at) {
   const fall = 0.42, k = Math.min(1, Math.max(0, (secs - (at - fall)) / fall));
   const drop = 1 - CURVES.build(k); // accelerate into the ground, like a thing falling
-  const settle = secs > at ? Math.exp(-(secs - at) * 9) * Math.sin((secs - at) * 30) * 0.08 : 0;
-  return { visible: secs >= at - fall, y: drop * 9, squash: 1 - settle, tilt: drop * 0.35 };
+  const since = secs - at;
+  const settle = since > 0 ? Math.exp(-since * 9) * Math.sin(since * 30) * 0.08 : 0;
+  const squash = since > 0 ? 1 - settle - Math.exp(-since * 18) * 0.16 : 1;
+  const ring = since > 0 ? Math.min(1, since / 0.55) : 0;
+  return { visible: secs >= at - fall, y: drop * 9, squash, tilt: drop * 0.35, ring: since > 0 ? CURVES.punch(ring) : 0, ringAlpha: since > 0 ? Math.max(0, 1 - ring) : 0, dust: since > 0 ? Math.min(1, since / 0.9) : 0, kick: since > 0 ? Math.exp(-since * 11) : 0 };
+}
+
+/** The build-in: when a placement lands, as a share 0..1 of the build window. Mirrored in server/film-music.js (landAt). */
+export function dropOrder(p, W) {
+  const ground = p.asset === "town-plaza" || p.asset === "town-road";
+  const h = (hash(p.id) % 1000) / 1000;
+  return ground ? 0.04 + 0.14 * h : 0.22 + 0.62 * Math.min(1, Math.max(0, p.at[0] / Math.max(1, W))) + 0.12 * h;
 }
 
 export const seedOf = (film) => hash(film.id || film.brief || "oasis");
