@@ -20,12 +20,39 @@ async function api(path, { method = "GET", body } = {}) {
   if (!r.ok) throw Object.assign(new Error(j.error || `Request failed (${r.status})`), { status: r.status });
   return j;
 }
-function toast(msg) {
+/** One toast at a time, inside the viewer (sonner's model: an icon, a line, an optional action; it moves with
+ *  transform and fades with opacity, see studio.css). kind: "ok" | "err" | "" */
+function toast(msg, { kind = "", action = null, label = "", ms = 3200, html = false } = {}) {
   let t = $("#studio-toast");
-  if (!t) { t = document.createElement("div"); t.id = "studio-toast"; t.className = "studio-toast"; t.setAttribute("role", "status"); document.body.appendChild(t); }
-  t.textContent = msg; t.classList.add("on");
-  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("on"), 3000);
+  const host = $(".stagewrap") || document.body;
+  if (!t) { t = document.createElement("div"); t.id = "studio-toast"; t.setAttribute("role", "status"); }
+  if (t.parentElement !== host) host.appendChild(t);
+  t.className = `studio-toast ${kind}`;
+  t.innerHTML = `${icon(kind === "ok" ? "check" : kind === "err" ? "warning" : "info")}<span>${html ? msg : esc(msg)}</span>${action ? `<button type="button" class="act">${esc(label)}</button>` : ""}`;
+  if (action) t.querySelector(".act").onclick = () => { t.classList.remove("on"); action(); };
+  requestAnimationFrame(() => t.classList.add("on"));
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("on"), ms);
 }
+/** The amount springs from 0 to its value (cult-ui rolling-number.tsx, reduced to one ease-out). */
+function countUp(el, to, ms = 700) {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) { el.textContent = usd(to); return; }
+  const start = performance.now();
+  const step = (now) => { const k = Math.min(1, (now - start) / ms), e = 1 - Math.pow(1 - k, 3); el.textContent = usd(to * e); if (k < 1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+/** halo-segmented's sliding thumb: one element moved under the pressed button. */
+function segThumb(seg) {
+  if (!seg) return;
+  let th = seg.querySelector(".thumb");
+  if (!th) { th = document.createElement("i"); th.className = "thumb"; th.setAttribute("aria-hidden", "true"); seg.prepend(th); }
+  const on = seg.querySelector("button.on");
+  if (!on) { th.style.width = "0"; return; }
+  th.style.width = `${on.offsetWidth}px`;
+  th.style.transform = `translateX(${on.offsetLeft}px)`;
+}
+const sliderFill = (el) => el.style.setProperty("--v", `${((el.value - el.min) / (el.max - el.min)) * 100}%`);
+const note = (kind, ic, title, text, acts = "") => `<div class="note ${kind} enter">${icon(ic)}<b>${esc(title)}</b><p>${esc(text)}</p>${acts ? `<div class="acts">${acts}</div>` : ""}</div>`;
+const skel = (n = 3) => `<div class="sk-stack"><div class="sk title"></div>${Array.from({ length: n }, () => `<div class="sk line"></div>`).join("")}</div>`;
 
 const EXAMPLES = [
   'a 15-second teaser for "Momiji Ramen" on a Kyoto market street at dusk',
@@ -73,8 +100,8 @@ export async function pageStudio(app, id) {
       <span class="sa-title" id="sa-title">Studio</span>
       <span class="grow"></span>
       <a class="sa-budget${budget?.token ? "" : " none"}" href="${budget?.id ? `#/budget/${esc(budget.id)}` : "#/budget"}" id="sa-budget">${icon("wallet")} <span>${budget?.token ? "PayPal budget" : "No budget yet"}</span></a>
-      <button class="b" id="share" type="button">${icon("link-simple")} Share</button>
-      <button class="b pri" id="export" type="button">${icon("export")} Export</button>
+      <button class="b" id="share" type="button">${icon("link-simple")} <span class="lbl">Share</span></button>
+      <button class="b pri" id="export" type="button">${icon("export")} <span class="lbl">Export</span></button>
     </header>
 
     <aside class="sa-left" aria-label="Brief and parts">
@@ -87,6 +114,7 @@ export async function pageStudio(app, id) {
           <div class="ex" id="examples">${EXAMPLES.map((e) => `<button type="button" data-ex="${esc(e)}">${esc(e.match(/"([^"]+)"/)?.[1] || e)}</button>`).join("")}</div>
           <button class="b pri big" id="direct" type="submit">${icon("sparkle")} Direct the film</button>
           <p class="director" id="director-chip" hidden><span class="spin" aria-hidden="true"></span>Claude is directing the cut. The first cut plays meanwhile.</p>
+          <div id="brief-err"></div>
         </form>
         <div id="say"></div>
       </section>
@@ -100,16 +128,16 @@ export async function pageStudio(app, id) {
           <input class="in" id="change-text" maxlength="300" placeholder="e.g. a faster opening">
         </form>
       </section>
-      <section class="pnl" id="parts"><div class="pnl-h">In this film</div></section>
+      <section class="pnl" id="parts"><div class="pnl-h">In this film</div>${skel(4)}</section>
     </aside>
 
     <section class="sa-view">
-      <div class="stagewrap"><div class="screen" id="screen"><div class="screen-empty" id="screen-empty">${icon("cube")}<span id="screen-note">Building the set</span></div></div></div>
+      <div class="stagewrap"><div class="screen" id="screen"><div class="screen-empty busy" id="screen-empty"><span class="spin" aria-hidden="true"></span><span id="screen-note">Building the set</span></div></div></div>
       <div class="transport">
         <button class="ib" id="to-start" aria-label="Go to start">${icon("skip-back")}</button>
         <button class="play" id="play" aria-label="Play">${icon("play")}</button>
         <button class="ib" id="to-end" aria-label="Go to end">${icon("skip-forward")}</button>
-        <span class="tc" id="tc">00:00:00 <span>/ 00:00:00</span></span><span class="fps" id="fps">30 fps</span><span class="state wait" id="vstate">Preview</span>
+        <span class="tc" id="tc">00:00:00 <span>/ 00:00:00</span></span><span class="fps" id="fps">30 fps</span><span class="sa-state wait" id="vstate">Preview</span>
         <span class="grow"></span>
         <div class="seg" id="formats" role="group" aria-label="Format">${["16:9", "9:16", "1:1"].map((k) => `<button type="button" data-f="${k}" title="${k === "16:9" ? "Landscape" : k === "9:16" ? "Vertical, for Reels and Shorts" : "Square"}">${k}</button>`).join("")}</div>
       </div>
@@ -125,9 +153,9 @@ export async function pageStudio(app, id) {
     </section>
 
     <aside class="sa-right" aria-label="Inspector and licence">
-      <section class="pnl" id="licence"></section>
-      <section class="pnl" id="inspect"><div class="pnl-h">Shot</div><p class="sub">Building…</p></section>
-      <section class="pnl" id="exportpnl"></section>
+      <section class="pnl" id="licence"><div class="pnl-h">Licence</div>${skel(3)}<div class="sk btn" style="margin-top:14px"></div></section>
+      <section class="pnl" id="inspect"><div class="pnl-h">Shot</div>${skel(3)}</section>
+      <section class="pnl" id="exportpnl"><div class="pnl-h">Export</div><div class="sk btn"></div></section>
     </aside>
   </div>`;
 
@@ -135,7 +163,7 @@ export async function pageStudio(app, id) {
   $("#brief").addEventListener("submit", async (e) => {
     e.preventDefault();
     const brief = $("#brief-text").value.trim();
-    if (!brief) { $("#brief-text").focus(); return toast("Say what the film is about"); }
+    if (!brief) { $("#brief-text").focus(); return toast("Say what the film is about", { kind: "err" }); }
     await makeFilm(brief);
   });
   $("#change").addEventListener("submit", async (e) => {
@@ -145,7 +173,7 @@ export async function pageStudio(app, id) {
     const inp = $("#change-text");
     inp.disabled = true; inp.value = "Directing…";
     try { await mountFilm(await api(`/api/films/${film.id}/direct`, { method: "POST", body: { request } })); inp.value = ""; }
-    catch (err) { toast(err.message); inp.value = request; }
+    catch (err) { toast(err.message, { kind: "err" }); inp.value = request; }
     inp.disabled = false;
   });
   $("#styles").addEventListener("click", async (e) => {
@@ -153,11 +181,11 @@ export async function pageStudio(app, id) {
     if (!b || !film || b.classList.contains("on")) return;
     markStyle(b.dataset.style);
     try { await mountFilm(await api(`/api/films/${film.id}/style`, { method: "POST", body: { style: b.dataset.style } }), { keep: true }); }
-    catch (err) { toast(err.message); markStyle(film.edit?.style); }
+    catch (err) { toast(err.message, { kind: "err" }); markStyle(film.edit?.style); }
   });
   $("#share").addEventListener("click", async () => {
     if (!film) return;
-    try { await navigator.clipboard.writeText(film.link); toast("Link copied"); } catch { toast(film.link); }
+    try { await navigator.clipboard.writeText(film.link); toast("Link copied", { kind: "ok" }); } catch { toast(film.link); }
   });
   $("#export").addEventListener("click", async () => {
     if (!film) return;
@@ -165,18 +193,30 @@ export async function pageStudio(app, id) {
     if (r.status === "done") { const a = document.createElement("a"); a.href = `/api/films/${film.id}/film.mp4`; a.download = `${film.title}.mp4`; a.click(); return; }
     if (r.status === "rendering" || r.status === "queued") return;
     if (!film.renderer) { $("#quick")?.click(); return; }
-    try { await api(`/api/films/${film.id}/render`, { method: "POST" }); film.render = { status: "queued", progress: 0 }; drawExport(film); poll(film.id); } catch (e) { toast(e.message); }
+    try { await api(`/api/films/${film.id}/render`, { method: "POST" }); film.render = { status: "queued", progress: 0 }; drawExport(film); poll(film.id); } catch (e) { toast(e.message, { kind: "err" }); }
   });
-  if (!pageStudio.keys) { addEventListener("keydown", keys); pageStudio.keys = true; }
+  if (!pageStudio.keys) { addEventListener("keydown", keys); addEventListener("resize", () => segThumb($("#formats"))); pageStudio.keys = true; }
 
   if (id) {
     try { await mountFilm(await api(`/api/films/${encodeURIComponent(id)}`)); }
-    catch { $("#screen-note").textContent = "That film doesn't exist."; }
+    catch (e) { screenFail(e.status === 404 ? "That film doesn't exist" : "The film could not load", e.status === 404 ? "It may have been removed, or the link has a typo." : e.message, `<a class="b pri" href="#/studio">Start a new film</a>`); }
   } else {
     // never an empty screen: the first example is laid out procedurally (no model call) while you type
     $("#brief-text").value = EXAMPLES[0];
-    try { await mountFilm(await api("/api/films", { method: "POST", body: { brief: EXAMPLES[0], direct: false } }), { example: true }); } catch (e) { $("#screen-note").textContent = e.message; }
+    try { await mountFilm(await api("/api/films", { method: "POST", body: { brief: EXAMPLES[0], direct: false } }), { example: true }); }
+    catch (e) { screenFail("The set could not build", e.message, `<button class="b pri" type="button" onclick="location.reload()">Try again</button>`); }
   }
+}
+
+/** The whole workspace says the same thing when there is no film: the screen explains, the panels go quiet. */
+function screenFail(title, text, acts = "") {
+  const screen = $("#screen");
+  if (screen) screen.innerHTML = `<div class="screen-empty" id="screen-empty">${note("err", "film-slate", title, text, acts)}</div>`;
+  $("#parts").innerHTML = `<div class="pnl-h">In this film</div><p class="inspect-empty">Nothing yet.</p>`;
+  $("#licence").innerHTML = `<div class="pnl-h">Licence</div><p class="inspect-empty">There is no film to license.</p>`;
+  $("#inspect").innerHTML = `<div class="pnl-h">Shot</div><p class="inspect-empty">Pick a shot on the timeline once the film is in.</p>`;
+  $("#exportpnl").innerHTML = "";
+  $("#sa-title").textContent = "Studio";
 }
 
 function keys(e) {
@@ -195,14 +235,18 @@ function markStyle(k) {
 async function makeFilm(brief) {
   // Never wait on the model: the procedural cut plays at once, Claude's cut replaces it when it is ready.
   const btn = $("#direct");
-  btn.disabled = true; btn.innerHTML = `${icon("hourglass")} Building the street…`;
+  btn.setAttribute("aria-busy", "true"); btn.innerHTML = `<span class="spin" aria-hidden="true"></span> Building the street…`;
+  $("#brief-err").innerHTML = "";
   try {
     const f = await api("/api/films", { method: "POST", body: { brief, direct: false } });
     history.replaceState(null, "", `#/film/${f.id}`); // the URL is the film; no hashchange, so the page stays mounted
     await mountFilm(f);
     directInBackground(f.id);
-  } catch (e) { toast(e.message); }
-  btn.disabled = false; btn.innerHTML = `${icon("sparkle")} Direct the film`;
+  } catch (e) {
+    $("#brief-err").innerHTML = note("err", "warning", "The street could not be built", e.message);
+    toast(e.message, { kind: "err" });
+  }
+  btn.removeAttribute("aria-busy"); btn.innerHTML = `${icon("sparkle")} Direct the film`;
 }
 
 async function directInBackground(id) {
@@ -211,9 +255,14 @@ async function directInBackground(id) {
   try {
     const next = await api(`/api/films/${id}/direct`, { method: "POST", body: { request: "Cut this film for the brief." } });
     if (film?.id !== id) return;
-    toast("Claude's cut is in.");
+    toast("Claude's cut is in.", { kind: "ok" });
     await mountFilm(next, { keep: true });
-  } catch (e) { if (e.status !== 503) toast(`The director could not cut this one: ${e.message}`); }
+  } catch (e) {
+    if (e.status !== 503 && film?.id === id) {
+      $("#say").innerHTML = note("err", "warning", "The director could not cut this one", e.message, `<button class="b" type="button" id="redirect">Try again</button>`);
+      $("#redirect")?.addEventListener("click", () => { $("#say").innerHTML = ""; directInBackground(id); });
+    }
+  }
   chip.hidden = true;
 }
 
@@ -224,7 +273,7 @@ async function mountFilm(f, { example = false, keep = false, reveal = false, swe
   player?.dispose(); player = null;
   sel = Math.min(sel, f.shots.length - 1);
   const screen = $("#screen");
-  screen.innerHTML = `<div class="screen-empty" id="screen-empty">${icon("cube")}<span id="screen-note">Building the set</span></div>`;
+  screen.innerHTML = `<div class="screen-empty busy" id="screen-empty"><span class="spin" aria-hidden="true"></span><span id="screen-note">Building the set</span></div>`;
   $("#say").innerHTML = f.say ? `<p class="say"><b>Director:</b> ${esc(f.say)}</p>` : "";
   if (!example) $("#brief-text").value = f.brief;
   $("#sa-title").innerHTML = `${esc(f.title)}<small>${f.seconds} s</small><small>${f.shots.length} shots</small><small>${f.size.join(" × ")}</small>`;
@@ -234,8 +283,8 @@ async function mountFilm(f, { example = false, keep = false, reveal = false, swe
   const pending = !f.licensed && store.get(`oasis.film.${f.id}`);
   if (pending?.order) {
     api(`/api/films/${f.id}/claim`, { method: "POST", body: { order_id: pending.order, claim_token: pending.claim } })
-      .then((next) => { store.set(`oasis.film.${f.id}`, null); toast(`Licensed. PayPal order ${next.licence.orderId}.`); mountFilm(next, { keep: true, reveal: true }); })
-      .catch((e) => { if (e.status === 404) store.set(`oasis.film.${f.id}`, null); });
+      .then((next) => { store.set(`oasis.film.${f.id}`, null); mountFilm(next, { keep: true, reveal: true }); })
+      .catch((e) => { if (e.status === 404) store.set(`oasis.film.${f.id}`, null); else toast(e.message, { kind: "err" }); });
   }
   drawBudget(f);
   drawParts(f);
@@ -254,23 +303,30 @@ async function mountFilm(f, { example = false, keep = false, reveal = false, swe
     window.__player = player; // for smoke tests
     window.__replayReveal = (ms) => mountFilm(film, { keep: true, reveal: true, sweepMs: ms || 2800 }); // for checks and demo takes
   } catch (e) {
-    $("#screen-note").textContent = `The set could not build: ${e.message}`;
+    screenFail("The set could not build", e.message, `<button class="b pri" type="button" onclick="location.reload()">Try again</button>`);
     return;
   }
   $("#screen-empty")?.remove();
   const vs = $("#vstate");
-  vs.className = `state ${f.licensed ? "live" : "wait"}`;
+  vs.className = `sa-state ${f.licensed ? "live" : "wait"}`;
   vs.textContent = f.licensed ? "Licensed" : "Preview";
   wireTransport();
   drawTimeline();
   drawInspector();
   drawWave();
   if (reveal) {
-    // the licence lands on screen: hold a wide shot of the street and let the colour sweep through it
+    // the licence lands on screen: hold a wide shot of the street, let the colour sweep through it, then the
+    // receipt lands line by line as each creator is paid
+    drawLicence(f, { paying: true });
     player.goto(Math.min(player.duration * 0.12, 1.2));
     await player.sweep(sweepMs);
-    $("#licence")?.classList.add("paid-in");
+    if (film !== f) return;
+    vs.classList.add("pop");
+    $("#sa-budget")?.classList.add("pop");
+    drawLicence(f, { land: true });
     player.play(player.time);
+    const n = (f.licence?.creators || []).length;
+    setTimeout(() => { if (film === f) toast(n ? `${n} creator${n > 1 ? "s" : ""} paid from one PayPal order.` : "Licensed.", { kind: "ok", ms: 4000 }); }, n * 160 + 500);
   } else if (keep) player.goto(Math.min(at, player.duration));
   else if (!matchMedia("(prefers-reduced-motion: reduce)").matches) player.buildIn().then(() => { if (player && !player.playing) player.play(0); });
 }
@@ -278,12 +334,17 @@ async function mountFilm(f, { example = false, keep = false, reveal = false, swe
 // ---------- transport ----------
 function wireTransport() {
   const play = $("#play");
-  $("#formats").querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.f === film.format));
-  $("#formats").onclick = async (e) => {
+  const seg = $("#formats");
+  seg.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.f === film.format));
+  segThumb(seg);
+  seg.onclick = async (e) => {
     const b = e.target.closest("button");
     if (!b || b.dataset.f === film.format) return;
+    const was = film.format;
+    seg.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b)); segThumb(seg);
     b.disabled = true;
-    try { await mountFilm(await api(`/api/films/${film.id}/format`, { method: "POST", body: { format: b.dataset.f } }), { keep: true }); } catch (err) { toast(err.message); b.disabled = false; }
+    try { await mountFilm(await api(`/api/films/${film.id}/format`, { method: "POST", body: { format: b.dataset.f } }), { keep: true }); }
+    catch (err) { toast(err.message, { kind: "err" }); b.disabled = false; seg.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x.dataset.f === was)); segThumb(seg); }
   };
   play.onclick = () => (player.playing ? player.pause() : player.play());
   $("#to-start").onclick = () => player.goto(0);
@@ -340,7 +401,7 @@ function selectClip() { document.querySelectorAll("#trk-cam .clip").forEach((el)
 
 async function drawWave() {
   const el = $("#trk-sound");
-  if (!film.musicUrl) { el.innerHTML = `<span class="fine" style="position:absolute;left:8px;top:50%;transform:translateY(-50%)">No soundtrack</span>`; return; }
+  if (!film.musicUrl) { el.innerHTML = `<span class="fine">No soundtrack</span>`; return; }
   el.innerHTML = `<canvas class="wave"></canvas>`;
   const cv = el.querySelector("canvas");
   try {
@@ -373,9 +434,9 @@ function drawInspector(focusCut = false) {
     </dl>
     <figure class="curvebox" aria-label="Speed graph">${curveSvg(ramp)}<figcaption><span>Position</span><span>Speed</span></figcaption></figure>
     <div class="pnl-h" style="margin-top:12px">Speed ramp</div>
-    <div class="chips" id="ramps">${Object.entries(RAMP).map(([k, n]) => `<button type="button" data-ramp="${k}" class="${k === ramp ? "on" : ""}">${n}</button>`).join("")}</div>
+    <div class="sa-chips" id="ramps">${Object.entries(RAMP).map(([k, n]) => `<button type="button" data-ramp="${k}" class="${k === ramp ? "on" : ""}">${n}</button>`).join("")}</div>
     ${sel > 0 ? `<div class="pnl-h" style="margin-top:14px" id="cut-h">Transition in</div>
-    <div class="chips" id="cuts">${Object.entries(CUT).map(([k, [n, ic]]) => `<button type="button" data-cutk="${k}" class="${k === cut ? "on" : ""}">${icon(ic)} ${n}</button>`).join("")}</div>` : ""}
+    <div class="sa-chips" id="cuts">${Object.entries(CUT).map(([k, [n, ic]]) => `<button type="button" data-cutk="${k}" class="${k === cut ? "on" : ""}">${icon(ic)} ${n}</button>`).join("")}</div>` : ""}
     <div class="pnl-h" style="margin-top:14px">Camera shake <span id="shake-v">${Math.round((s.shake || 0) * 100)}%</span></div>
     <input class="slider" type="range" id="shake" min="0" max="100" step="5" value="${Math.round((s.shake || 0) * 100)}" aria-label="Camera shake">`;
   if (focusCut) $("#cut-h")?.scrollIntoView({ block: "nearest" });
@@ -383,7 +444,8 @@ function drawInspector(focusCut = false) {
   box.querySelector("#ramps").onclick = (e) => { const b = e.target.closest("[data-ramp]"); if (b) patch({ ramp: b.dataset.ramp }); };
   box.querySelector("#cuts")?.addEventListener("click", (e) => { const b = e.target.closest("[data-cutk]"); if (b) patch({ cut: b.dataset.cutk }); });
   const sh = box.querySelector("#shake");
-  sh.oninput = () => { $("#shake-v").textContent = `${sh.value}%`; };
+  sliderFill(sh);
+  sh.oninput = () => { $("#shake-v").textContent = `${sh.value}%`; sliderFill(sh); };
   sh.onchange = () => patch({ shake: Number(sh.value) / 100 });
 }
 
@@ -409,7 +471,7 @@ async function patch(change) {
     drawTimeline();
     drawInspector();
     drawExport(film);
-  } catch (e) { toast(e.message); }
+  } catch (e) { toast(e.message, { kind: "err" }); }
 }
 
 // ---------- parts, licence, export ----------
@@ -427,69 +489,97 @@ function drawBudget(f) {
   const b = store.get("oasis.budget"), el = $("#sa-budget");
   const dev = f.licensed && /^DEV-/.test(f.licence?.orderId || "");
   el.classList.toggle("none", !f.licensed && !b?.token);
-  el.innerHTML = f.licensed ? `${icon("seal-check")} <span>${dev ? "Licensed locally (dev, no PayPal order)" : `Licensed in PayPal order ${esc(f.licence.orderId)}`}</span>` : b?.token ? `${icon("wallet")} <span>PayPal budget ready</span>` : `${icon("wallet")} <span>No budget yet</span>`;
+  el.classList.toggle("paid", !!f.licensed);
+  el.innerHTML = f.licensed ? `${icon("seal-check")} <span>${dev ? "Licensed locally, no PayPal order" : `Licensed, PayPal order <code>${esc(f.licence.orderId)}</code>`}</span>` : b?.token ? `${icon("wallet")} <span>PayPal budget ready</span>` : `${icon("wallet")} <span>No budget yet</span>`;
 }
 
-function drawLicence(f) {
+/** The licence panel has four states: the bill with a PayPal button (preview), the bill greyed while PayPal is
+ *  charged (paying), the receipt landing line by line after the colour sweep (land), and the receipt at rest. */
+function drawLicence(f, { paying = false, land = false } = {}) {
   const bill = f.bill, budget = store.get("oasis.budget"), by = (k) => bill.lines.filter((l) => l.price > 0 && l.kind === k).reduce((a, l) => a + l.price, 0);
-  const payees = [...new Set(bill.lines.filter((l) => l.price > 0).map((l) => l.author))]; // only creators with a paid piece are paid
-  const creators = payees.map((c, i) => `<span style="background:${AVATAR[i % AVATAR.length]}" title="${esc(c)}">${esc(c.slice(0, 1).toUpperCase())}</span>`).join("");
-  $("#licence").innerHTML = `<div class="pnl-h">Licence <span class="state ${f.licensed ? "live" : "wait"}">${f.licensed ? "Licensed" : "Preview"}</span></div>
-    <div class="bill">
-      <div class="row"><span>3D programs</span><b>${usd(by("3d"))}</b></div>
-      <div class="row"><span>2D signs and cards</span><b>${usd(by("2d"))}</b></div>
-      <div class="row tot"><span>One order</span><b>${usd(bill.total)}</b></div>
-    </div>
-    <div class="creators">${creators}<small>${payees.length} creators paid from one approval</small></div>
+  const paid = bill.lines.filter((l) => l.price > 0);
+  const payees = [...new Set(paid.map((l) => l.author))]; // only creators with a paid piece are paid
+  const face = (c) => { const a = paid.find((l) => l.author === c); return `<span class="face" title="${esc(c)}">${a ? `<img src="/api/assets/${encodeURIComponent(a.asset)}/render.png?w=52" alt="">` : esc(c.slice(0, 1).toUpperCase())}</span>`; };
+  const lic = f.licence || {}, dev = /^DEV-/.test(lic.orderId || "");
+  const rows = (lic.creators || []).map((c, i) => `<div class="po" style="--i:${i}"><span><i class="tick">${icon("check")}</i>${esc(c.author)}</span><b data-usd="${c.usd}">${land ? usd(0) : usd(c.usd)}</b></div>`);
+  if (lic.platformUsd) rows.push(`<div class="po fee" style="--i:${rows.length}"><span>Oasis platform fee, ${lic.platformPct}%</span><b data-usd="${lic.platformUsd}">${land ? usd(0) : usd(lic.platformUsd)}</b></div>`);
+  rows.push(`<div class="po sum" style="--i:${rows.length}"><span>PayPal order</span><b data-usd="${lic.total || 0}">${land ? usd(0) : usd(lic.total || 0)}</b></div>`);
+  $("#licence").innerHTML = `<div class="pnl-h">Licence <span class="sa-state ${f.licensed ? "live" : "wait"}${land ? " pop" : ""}">${f.licensed ? "Licensed" : paying ? "Paying" : "Preview"}</span></div>
     ${f.licensed
-      ? /^DEV-/.test(f.licence.orderId) ? `<p class="fine">Licensed with a local development licence. No PayPal order was placed.</p>` : `<p class="fine">PayPal order <code>${esc(f.licence.orderId)}</code></p>
-        <div class="payouts">${(f.licence.creators || []).map((c, i) => `<div class="po" style="--i:${i}"><span>${esc(c.author)}</span><b>${usd(c.usd)}</b></div>`).join("")}${f.licence.platformUsd ? `<div class="po fee" style="--i:${(f.licence.creators || []).length}"><span>Oasis platform fee, ${f.licence.platformPct}%</span><b>${usd(f.licence.platformUsd)}</b></div>` : ""}<div class="po sum"><span>PayPal order</span><b>${usd(f.licence.total)}</b></div></div>`
-      : `<div class="pay">${budget?.token
-          ? `<button class="ppbtn" id="license" type="button">License with <em>Pay<b>Pal</b></em> budget</button>`
-          : `<button class="ppbtn" id="checkout" type="button">Pay with <em>Pay<b>Pal</b></em></button><a class="link-sm" href="#/budget">Or give an agent a PayPal budget</a>`}
-         <p class="fine">The clay street turns to colour and every creator is paid.</p></div>`}`;
+      ? dev ? `<p class="fine">Licensed with a local development licence. No PayPal order was placed.</p>`
+        : `<div class="paid-head">${icon("seal-check")}<b>Paid in one PayPal order</b><code>${esc(lic.orderId)}</code></div>
+           <div class="sa-receipt${land ? " land" : ""}" id="receipt">${rows.join("")}</div>`
+      : `<div class="bill">
+          <div class="row"><span>3D programs</span><b>${usd(by("3d"))}</b></div>
+          <div class="row"><span>2D signs and cards</span><b>${usd(by("2d"))}</b></div>
+          <div class="row tot"><span>One order</span><b>${usd(bill.total)}</b></div>
+        </div>
+        <div class="sa-creators">${payees.map(face).join("")}<small>${payees.length} creators paid from one approval</small></div>
+        ${paying
+          ? `<div class="paying"><div class="po"><span><span class="spin" aria-hidden="true" style="margin-right:8px;vertical-align:-2px"></span>PayPal is confirming the order</span></div></div>`
+          : `<div class="sa-pay">${budget?.token
+              ? `<button class="ppbtn" id="license" type="button">License with <em>Pay<b>Pal</b></em> budget</button>`
+              : `<button class="ppbtn" id="checkout" type="button">Pay with <em>Pay<b>Pal</b></em></button><p class="alt">or <a href="#/budget">give an agent a PayPal budget</a></p>`}
+             <div id="pay-err"></div>
+             <p class="fine">The clay street turns to colour and every creator is paid.</p></div>`}`}`;
+  if (land) {
+    // the amounts count up as each line lands, the total last, so the money is seen to arrive
+    $("#receipt").querySelectorAll(".po b[data-usd]").forEach((b, i) => setTimeout(() => countUp(b, Number(b.dataset.usd), 650), i * 160 + 140));
+  }
+  const fail = (b, label, e) => {
+    b.removeAttribute("aria-busy"); b.innerHTML = label;
+    $("#pay-err").innerHTML = note("err", "warning", e.status === 503 ? "Checkout is not connected" : "PayPal could not take the order", e.message);
+    toast(e.message, { kind: "err" });
+  };
   $("#checkout")?.addEventListener("click", async () => {
-    const b = $("#checkout"); b.disabled = true; b.textContent = "Opening PayPal…";
+    const b = $("#checkout"); b.setAttribute("aria-busy", "true"); b.innerHTML = `<span class="spin" aria-hidden="true"></span> Opening PayPal…`; $("#pay-err").innerHTML = "";
     try {
       const o = await api(`/api/films/${f.id}/checkout`, { method: "POST" });
       store.set(`oasis.film.${f.id}`, { order: o.order_id, claim: o.claim_token });
       location.href = o.approve_url; // PayPal's own approval page; it returns to this film
-    } catch (e) { toast(e.message); b.disabled = false; b.innerHTML = `Pay with <em>Pay<b>Pal</b></em>`; }
+    } catch (e) { fail(b, `Pay with <em>Pay<b>Pal</b></em>`, e); }
   });
   $("#license")?.addEventListener("click", async () => {
-    const b = $("#license"); b.disabled = true; b.textContent = "Charging your PayPal budget…";
+    const b = $("#license"); b.setAttribute("aria-busy", "true"); b.innerHTML = `<span class="spin" aria-hidden="true"></span> Charging your PayPal budget…`; $("#pay-err").innerHTML = "";
     try {
       const next = await api(`/api/films/${f.id}/license`, { method: "POST", body: { mandate: budget.token, agent_name: "Oasis Studio" } });
-      toast(next.licence?.total ? `Licensed. PayPal order ${next.licence.orderId}.` : "Licensed.");
       await mountFilm(next, { keep: true, reveal: true });
-    } catch (e) { toast(e.message); b.disabled = false; b.innerHTML = `License with <em>Pay<b>Pal</b></em> budget`; }
+    } catch (e) { fail(b, `License with <em>Pay<b>Pal</b></em> budget`, e); }
   });
 }
 
+
 function drawExport(f) {
-  const r = f.render || { status: "idle" };
+  const r = f.render || { status: "idle" }, pct = Math.round((r.progress || 0) * 100), busy = r.status === "rendering" || r.status === "queued";
   const eb = $("#export");
-  eb.innerHTML = r.status === "done" ? `${icon("download-simple")} Download MP4` : r.status === "rendering" || r.status === "queued" ? `${icon("hourglass")} Rendering ${Math.round((r.progress || 0) * 100)}%` : `${icon("export")} Render MP4`;
+  eb.innerHTML = r.status === "done" ? `${icon("download-simple")} <span class="lbl">Download MP4</span>` : busy ? `<span class="spin" aria-hidden="true"></span> <span class="lbl">Rendering ${pct}%</span>` : `${icon("export")} <span class="lbl">Render MP4</span>`;
   $("#exportpnl").innerHTML = `<div class="pnl-h">Export <span>${f.size.join(" × ")}, ${f.fps} fps${f.music ? ", with sound" : ""}</span></div>
-    ${r.status === "done" ? `<a class="b pri big" href="/api/films/${f.id}/film.mp4" download="${esc(f.title)}.mp4">${icon("download-simple")} Download MP4</a><p class="fine" style="margin-top:8px">${(r.bytes / 1e6).toFixed(1)} MB, rendered frame by frame.</p>`
-      : r.status === "rendering" || r.status === "queued" ? `<div class="progress" role="progressbar" aria-valuenow="${Math.round((r.progress || 0) * 100)}"><i style="width:${Math.round((r.progress || 0) * 100)}%"></i></div><p class="fine" style="margin-top:8px">Rendering frame by frame with motion blur, ${Math.round((r.progress || 0) * 100)}%.</p>`
-      : r.status === "failed" ? `<p class="fine" style="color:#B42318">Render failed: ${esc(r.error)}</p><button class="b big" id="render" type="button">${icon("film-reel")} Try again</button>`
+    <div class="export-row">
+    ${r.status === "done" ? `<a class="b pri big" href="/api/films/${f.id}/film.mp4" download="${esc(f.title)}.mp4">${icon("download-simple")} Download MP4</a><p class="fine">${(r.bytes / 1e6).toFixed(1)} MB, rendered frame by frame.</p>`
+      : busy ? `<div class="sa-progress" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div><p class="fine">${r.status === "queued" ? "Queued for the renderer." : `Rendering frame by frame with motion blur, ${pct}%.`}</p>`
+      : r.status === "failed" ? note("err", "warning", "The render failed", r.error || "The renderer gave up on this one.", `<button class="b" id="render" type="button">${icon("arrow-counter-clockwise")} Try again</button>`)
       : f.renderer ? `<button class="b pri big" id="render" type="button">${icon("film-reel")} Render MP4</button>` : ""}
-    <button class="b big" id="quick" type="button" style="margin-top:8px">${icon("record")} Quick export (WebM)</button>`;
-  $("#render")?.addEventListener("click", async () => { try { await api(`/api/films/${f.id}/render`, { method: "POST" }); poll(f.id); } catch (e) { toast(e.message); } });
+    <button class="b big" id="quick" type="button">${icon("record")} Quick export (WebM)</button>
+    </div>`;
+  $("#render")?.addEventListener("click", async () => {
+    const b = $("#render"); b.setAttribute("aria-busy", "true");
+    try { await api(`/api/films/${f.id}/render`, { method: "POST" }); film.render = { status: "queued", progress: 0 }; drawExport(film); poll(f.id); }
+    catch (e) { b.removeAttribute("aria-busy"); toast(e.message, { kind: "err" }); }
+  });
   $("#quick")?.addEventListener("click", async () => {
     if (recording || !player) return;
     recording = true;
-    const b = $("#quick"); b.disabled = true; b.innerHTML = `${icon("record")} Recording one playthrough…`;
+    const b = $("#quick"); b.setAttribute("aria-busy", "true"); b.innerHTML = `<span class="spin" aria-hidden="true"></span> Recording one playthrough…`;
     try {
       const blob = await player.record();
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob); a.download = `${f.title}.webm`; a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
-    } catch (e) { toast(e.message); }
-    recording = false; b.disabled = false; b.innerHTML = `${icon("record")} Quick export (WebM)`;
+      toast("WebM saved.", { kind: "ok" });
+    } catch (e) { toast(e.message, { kind: "err" }); }
+    recording = false; b.removeAttribute("aria-busy"); b.innerHTML = `${icon("record")} Quick export (WebM)`;
   });
-  if (r.status === "rendering" || r.status === "queued") poll(f.id);
+  if (busy) poll(f.id);
 }
 
 function poll(id) {
@@ -498,9 +588,11 @@ function poll(id) {
     if (!film || film.id !== id) return;
     try {
       const f = await api(`/api/films/${id}`);
+      const was = film.render?.status;
       film = { ...film, render: f.render };
       drawExport(film);
-      if (f.render?.status === "done") toast("Your film is rendered.");
+      if (f.render?.status === "done" && was !== "done") toast("Your film is rendered.", { kind: "ok", ms: 6000, label: "Download", action: () => $("#export")?.click() });
+      else if (f.render?.status === "failed" && was !== "failed") toast("The render failed.", { kind: "err" });
     } catch {}
   }, 1500);
 }
