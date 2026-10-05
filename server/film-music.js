@@ -73,7 +73,7 @@ function sfx(L, R, total, events, r) {
       add(e.t, n, (t, u) => {
         const env = Math.sin(Math.PI * u) ** 1.6, cut = e.up ? 0.02 + 0.3 * u : 0.3 - 0.26 * u;
         const w = r() * 2 - 1; lp += cut * (w - lp); bp += 0.5 * (lp - bp);
-        const v = (lp - bp) * 2.2 * env * 0.5;
+        const v = (lp - bp) * 2.2 * env * 0.9;
         const pan = e.up ? 0.5 : 0.25 + 0.5 * u;
         return [v * (1 - pan) * 2, v * pan * 2];
       });

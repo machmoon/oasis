@@ -54,8 +54,15 @@ after a separate grader looked at renders from several angles and at night (`fac
 
 A film is a program too: `server/film.js` plans it (the street, the signs, the shots), Claude can redirect it through one
 typed `write_film` call that the server validates, and `public/film-player.js` draws frame N from the film alone. The
-The set is alive (the tram runs, cars drive, dusk fades into night inside a shot), weather falls by theme, and the
-soundtrack is synthesised from the film's seed (`server/film-music.js`: Karplus-Strong plucks over a pad) and muxed in.
+film shows what the asset system can do: the first shot assembles the street piece by piece, each piece landing as
+its stock program and rebuilding into its remix; one close shot turns a knob of the hero on camera (floors, then the
+roof) with a readout, the roof sign riding the new roofline; and the brief can ask for a look that the whole film
+wears (toon, pixel, dither, PS1, or the brand's own palette), after Polyfork's per-model shader looks but as a
+film-wide grade. The set is alive (the tram runs, cars drive, dusk fades into night inside a shot), the ground joins
+the street with hills (Polyfork's terrain arithmetic), weather falls by theme, the 3D title slams with a shock ring
+and a camera hit, whips smear, and the soundtrack is synthesised from the film's seed (`server/film-music.js`:
+Karplus-Strong plucks over a pad, with whooshes, risers and hits placed on the cut) and muxed in.
+[docs/FILM-GAP.md](docs/FILM-GAP.md) sets the film against Polyfork post by post.
 Formats: 16:9, 9:16 and 1:1 from the same cut. The server renders the way Remotion does (`remotion-dev/remotion`, `packages/renderer/src/render-frames.ts`): headless
 Chromium seeks every frame on `/film.html`, ffmpeg stitches them (`server/film-render.js`). Without Playwright or
 ffmpeg the studio still plays the film live and exports a WebM from the browser.
