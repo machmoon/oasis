@@ -337,7 +337,10 @@ export async function createApp() {
   app.get("/api/kits", wrap(async (req, res) => {
     // one row per kit name and per vibe: the list is licensed first, then newest, so a repeat take is dropped
     const seen = new Set(), key = (s) => String(s || "").trim().toLowerCase();
-    const all = (await store.list("kits")).filter((k) => k.planner !== "single" && k.items.length >= 4).sort((a, b) => (!!b.licence - !!a.licence) || b.updatedAt.localeCompare(a.updatedAt))
+    // the public feed shows kits worth hearing: paid ones, or ones whose vibe matched the registry for most parts
+    // (a keyword kit where nothing matched, or a vibe with markup in it, stays reachable by link but is not listed)
+    const listed = (k) => k.licence || (!/[<>]/.test(k.vibe) && (k.planner !== "keywords" || k.items.filter((l) => !/^nothing/.test(l.reason || "")).length >= Math.ceil(k.items.length * 0.75)));
+    const all = (await store.list("kits")).filter((k) => k.planner !== "single" && k.items.length >= 4 && listed(k)).sort((a, b) => (!!b.licence - !!a.licence) || b.updatedAt.localeCompare(a.updatedAt))
       .filter((k) => { const t = `t:${key(kits.tidyTitle(k.title))}`, v = `v:${key(k.vibe)}`; if (seen.has(t) || seen.has(v)) return false; seen.add(t); seen.add(v); return true; }).slice(0, 24);
     // the tile's picture: its first four parts as tuned in the kit (the same card render a part shows on the kit page)
     const card = (l) => `/api/assets/${encodeURIComponent(l.assetId)}/render.png?w=320${Object.keys(l.knobs || {}).length ? `&p=${encodeURIComponent(JSON.stringify(l.knobs))}` : ""}`;
@@ -346,6 +349,13 @@ export async function createApp() {
   // who is asking: the browser's claim token, or an agent's mandate (Bearer, as on /api/kits/:id/license)
   const kitCaller = (req) => ({ claim: req.get("x-claim-token") || req.body?.claim_token, mandate: req.body?.mandate || (req.get("authorization") || "").replace(/^Bearer\s+/i, "") || null });
   app.get("/api/kits/:id", wrap(async (req, res) => { const k = await mustKit(req.params.id); res.set("Cache-Control", "no-cache").json(kits.view(k, { owner: await kits.owns(k, kitCaller(req)) })); }));
+  // A licence belongs to whoever paid, so another buyer of the same kit gets their own copy of it (same parts, same
+  // knobs) to pay for, the way a Gumroad product sells to many buyers.
+  app.post("/api/kits/:id/copy", buyLimit, wrap(async (req, res) => {
+    const k = await mustKit(req.params.id);
+    const { id, licence, refunded, createdAt, updatedAt, ...rest } = k;
+    res.json(kits.view(await kits.save({ ...rest, copiedFrom: k.id, licence: null })));
+  }));
   // Licensing a kit on a funded budget: every paid part, once, in one vaulted order.
   app.post("/api/kits/:id/license", buyLimit, wrap(async (req, res) => {
     const k = await mustKit(req.params.id);

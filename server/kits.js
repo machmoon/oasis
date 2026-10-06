@@ -26,6 +26,42 @@ function catalogLines() {
  * matched, and one that matched nothing says so, so a thin kit reads as thin rather than as a confident plan. */
 const STOP = new Set(["a", "an", "the", "in", "at", "of", "with", "and", "for", "on", "to", "by", "my", "some", "kit", "sounds", "sound"]);
 const NEAR = { subway: ["train", "tunnel", "metro", "rumble", "echo"], station: ["train", "echo", "announcement"], tunnel: ["echo", "rumble", "drip"], haunted: ["horror", "ghost", "creak", "night"], spooky: ["horror", "ghost", "night"], creepy: ["horror", "creak"], scary: ["horror"], ocean: ["sea", "harbour", "wave", "gull"], sea: ["harbour", "wave"], beach: ["wave", "harbour", "gull"], city: ["street", "traffic", "rain"], urban: ["street", "traffic"], space: ["sci-fi", "console", "laser"], spaceship: ["sci-fi", "console", "servo"], robot: ["sci-fi", "servo", "console"], cyberpunk: ["neon", "rain", "sci-fi", "street"], medieval: ["market", "anvil", "tavern"], fantasy: ["tavern", "market", "magic"], cafe: ["office", "mug", "cup", "kitchen"], coffee: ["mug", "cup", "kitchen"], cooking: ["kitchen"], car: ["engine", "door", "car"], drive: ["car", "engine"], game: ["arcade", "coin", "blip"], retro: ["arcade", "chip", "pixel"], arcade: ["coin", "blip", "pixel"], drums: ["kick", "snare", "hat"], beat: ["kick", "snare", "hat"], woods: ["forest", "owl", "night"], forest: ["owl", "night", "wind"], lighthouse: ["harbour", "sea", "wind", "foghorn"], storm: ["rain", "thunder", "wind"], gong: ["bell", "toll", "chime"], temple: ["bell", "chime", "stone", "echo"], underwater: ["bubble", "water", "drip", "sea"], bubbles: ["bubble"], church: ["bell", "toll"], cave: ["drip", "echo", "stone"], ui: ["click", "interface", "toggle"], menu: ["click", "interface", "ui"] };
+// Words that turn knobs when Claude is not there to: each adjective names the knobs it moves (by key or label) and
+// which way. The idea is Freesound's and Splice's tag facets read backwards (a "heavy" tag implies a heavy setting);
+// the table is ours, kept short and literal.
+const ADJ = [
+  [["heavy", "big", "huge", "massive", "thick"], /weight|force|mass|size|heav|body/, 1],
+  [["light", "soft", "gentle", "quiet", "small", "tiny", "delicate"], /weight|force|intensity|size|hard|loud/, -1],
+  [["distant", "far", "faraway", "echoing", "cavernous", "hall"], /distance|room|reverb|space|tail|wet(?!ness)/, 1],
+  [["close", "dry", "tight", "intimate"], /distance|room|reverb|space|tail/, -1],
+  [["wet", "rainy", "rain", "soaked", "drizzle", "puddle"], /wetness|rain|drizzle|splash|slosh|moist/, 1],
+  [["storm", "stormy", "windy", "gusty", "wild"], /wind|gust|intensity|storm|rattle/, 1],
+  [["dark", "deep", "low", "midnight", "night", "muffled"], /bright|pitch|tone|cutoff|air/, -1],
+  [["bright", "high", "shiny", "sparkly", "crisp"], /bright|pitch|tone|cutoff|air|sparkle/, 1],
+  [["fast", "quick", "frantic", "rapid"], /pace|speed|rate|tempo/, 1],
+  [["slow", "lazy", "sluggish"], /pace|speed|rate|tempo/, -1],
+  [["rusty", "old", "dirty", "worn", "crunchy", "lofi", "gritty", "broken"], /rust|grit|crush|drive|dirt|wear|age|crackle|noise/, 1],
+  [["haunted", "creepy", "eerie", "spooky", "uneasy"], /eerie|wobble|detune|dissonan|creak/, 1],
+];
+/** Knob values the vibe's words imply for one sound: a choice whose option names a word, a range an adjective moves. */
+function tuneByWords(a, terms, own = terms) {
+  const out = {}, why = [];
+  for (const [key, d] of Object.entries(a.params.knobs || {})) {
+    if (key === "seed") continue;
+    const name = `${key} ${d.label || ""}`.toLowerCase();
+    if (d.type === "choice") {
+      const opt = d.options.find((o) => terms.some((t) => String(o).toLowerCase().split(/[^a-z0-9]+/).includes(t)));
+      if (opt !== undefined && opt !== d.default) { out[key] = opt; why.push(`${d.label || key} ${opt}`); }
+    } else if (d.type === "range") {
+      const hit = ADJ.find(([ws, rx]) => new RegExp(`\\b(?:${rx.source})`).test(name) && ws.some((w) => own.includes(w))); // only the person's own words move a range
+      if (!hit) continue;
+      const span = d.max - d.min, step = d.step || span / 100, v = Math.round((d.min + span * (hit[2] > 0 ? 0.8 : 0.2)) / step) * step;
+      out[key] = +Math.min(d.max, Math.max(d.min, v)).toFixed(4); why.push(`${d.label || key} ${hit[2] > 0 ? "up" : "down"} for "${hit[0].find((w) => own.includes(w))}"`);
+    }
+  }
+  return { knobs: out, why };
+}
+
 export function planByKeywords(vibe, { count = 8 } = {}) {
   // plurals match their singular ("footsteps" finds Footstep, "clicks" finds Click)
   const words = [...new Set(vibe.toLowerCase().split(/[^a-z0-9-]+/).filter((t) => t.length > 2 && !STOP.has(t)).map((t) => (t.length > 4 && t.endsWith("s") && !t.endsWith("ss") ? t.slice(0, -1) : t)))];
@@ -59,8 +95,10 @@ export function planByKeywords(vibe, { count = 8 } = {}) {
   while (titleWords.length && STOP.has(titleWords[0].toLowerCase())) titleWords.shift();
   const t4 = titleWords.slice(0, 4); while (t4.length > 1 && STOP.has(t4[t4.length - 1].toLowerCase())) t4.pop();
   const title = t4.map((w) => w[0].toUpperCase() + w.slice(1)).join(" ").replace(/[,:;.]+$/, "") || "Untitled Kit";
-  return { title, items: picked.map(([a, , hit], i) => ({ assetId: a.id, knobs: a.params.knobs.seed ? { seed: 1 + (hash(vibe + i) % 500) } : {}, name: a.title,
-    reason: (() => { const own = hit.filter((h) => words.includes(h)), near = hit.filter((h) => !words.includes(h)); return own.length ? `matched ${own.slice(0, 3).map((h) => `"${h}"`).join(", ")}${near.length ? `, near ${near.slice(0, 2).map((h) => `"${h}"`).join(", ")}` : ""}` : near.length ? `near words ${near.slice(0, 3).map((h) => `"${h}"`).join(", ")}` : "nothing in the registry matched; picked as the closest sound"; })() })) };
+  const raw = vibe.toLowerCase().split(/[^a-z0-9-]+/).filter(Boolean), allTerms = [...new Set([...raw, ...terms])];
+  return { title, items: picked.map(([a, , hit], i) => { const tune = tuneByWords(a, allTerms, raw); return { assetId: a.id, knobs: { ...tune.knobs, ...(a.params.knobs.seed ? { seed: 1 + (hash(vibe + i) % 500) } : {}) }, name: a.title,
+    tuned: tune.why,
+    reason: (() => { const own = hit.filter((h) => words.includes(h)), near = hit.filter((h) => !words.includes(h)); return own.length ? `matched ${own.slice(0, 3).map((h) => `"${h}"`).join(", ")}${near.length ? `, near ${near.slice(0, 2).map((h) => `"${h}"`).join(", ")}` : ""}` : near.length ? `near words ${near.slice(0, 3).map((h) => `"${h}"`).join(", ")}` : "nothing in the registry matched; picked as the closest sound"; })() }; }) };
 }
 
 const SYSTEM = `You are the sound supervisor for Oasis, a registry where every sound is a program with typed knobs. A person gives you a one-line vibe; you build them a kit of 6 to 10 sounds from the catalogue, each with knobs tuned to the vibe (materials, weight, wetness, distance, brightness, pitch, a different seed per part), so the kit plays as one place. Cover what the vibe asks for first, then round it out (a bed, a few one-shots, a UI or impact if it fits). Name each part the way a sample pack would ("Alley Step L", "Neon Click"). Keep the total modest.
@@ -69,7 +107,8 @@ Return JSON only: {"title":"2-4 words","items":[{"asset_id":"...","name":"...","
 
 /** How the last Claude call went, so /api/config and /api/status report a planner that answers, not a key that is set. */
 export const plannerHealth = { ok: null, error: null, at: null };
-export const plannerReady = () => !!config.anthropicKey && plannerHealth.ok !== false;
+// true or false once a call has answered; null (unknown) from boot until then, rather than claiming ready
+export const plannerReady = () => !config.anthropicKey ? false : plannerHealth.ok;
 
 /** Claude plans the kit from the vibe and the catalogue; falls back to keywords when no model is configured. */
 export async function planKit(vibe) {
@@ -103,7 +142,7 @@ export function cleanKit(vibe, plan, planner = "keywords") {
   const lines = items.map(({ a, it }, i) => {
     const values = catalog.resolveInput(a, it.knobs || {});
     const covered = seen.has(a.id); seen.add(a.id);
-    return { assetId: a.id, title: a.title, kind: a.kind, author: a.author, price: covered ? 0 : a.price, covered, knobs: diffFromDefaults(a.params, values), values, name: it.name || a.title, reason: it.reason || "", duration: a.duration, idx: i };
+    return { assetId: a.id, title: a.title, kind: a.kind, author: a.author, price: covered ? 0 : a.price, covered, knobs: diffFromDefaults(a.params, values), values, name: it.name || a.title, reason: it.reason || "", tuned: it.tuned || [], duration: a.duration, idx: i };
   });
   const total = Math.round(lines.reduce((s, l) => s + l.price, 0) * 100) / 100;
   const creators = [...new Set(lines.filter((l) => l.price > 0).map((l) => l.author))];

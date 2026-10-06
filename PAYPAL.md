@@ -204,8 +204,9 @@ order must be `COMPLETED` and created less than 14 days ago. `refund()` calls
 the mandate hold, cancels a held payout and revokes every licence on the order, so the licence's WAV downloads and
 `/cdn/<id>.mjs?lic=` answer 410 (tested: *refunds revoke every licence on the order*).
 
-Two limits: there is no refund button in the UI, only this endpoint; and a refunded kit keeps its `licence` record
-(`server/kits.js` does not clear it), so the kit page still shows it as licensed while its files answer 410.
+A kit paid by the refunded order loses its licence too (`markRefunded()` clears `kit.licence` and records the refund
+on the kit), so its page goes back to watermarked previews. One limit: there is no refund button in the UI, only
+this endpoint.
 
 ## What has actually run
 

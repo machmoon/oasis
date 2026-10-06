@@ -115,7 +115,7 @@ export async function pageKit(app, id) {
             ${paid ? `<dl class="r-facts"><div><dt>Captured</dt><dd>${new Date(k.licence.at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</dd></div><div><dt>PayPal order</dt><dd><code class="num">${esc(k.licence.orderId)}</code></dd></div>${k.licence.creators.map((c, i) => `<div><dt>${i ? "" : "Creators receive"}</dt><dd>${esc(c.author)} <span class="num">${usd(c.usd)}</span></dd></div>`).join("")}</dl><p class="r-note">Prices above are what the buyer paid; creators receive them less Oasis's 10% fee.</p>` : `<div class="r-paypal">${icon("paypal-logo")} Orders v2, itemised per part. Creator shares paid with PayPal Payouts.</div>`}
           </div>
           <button class="btn kv-packbtn" id="kv-pack" type="button">${icon("file-zip")} <span>Game pack: 8 takes of every sound${paid || k.total === 0 ? "" : " (preview)"}</span></button>
-          ${paid ? `<a class="btn" href="#/kits">${icon("sparkle")} Make another kit</a>` : k.total > 0 ? `<button class="pk-pp" id="kv-pay" type="button">Pay ${usd(k.total)} with <em>Pay<b>Pal</b></em></button><p class="fine" style="margin:0;font-size:13px;color:var(--muted)">PayPal sandbox. No real money moves. You approve in PayPal's window and come back here licensed.</p>
+          ${paid && !k.owner ? `<button class="btn primary" id="kv-copy-kit" type="button">${icon("copy")} License your own copy</button><p class="fine" style="margin:0;font-size:13px;color:var(--muted)">Someone else paid for this kit. Your copy has the same parts and knobs, and its own PayPal order.</p>` : paid ? `<a class="btn" href="#/kits">${icon("sparkle")} Make another kit</a>` : k.total > 0 ? `<button class="pk-pp" id="kv-pay" type="button">Pay ${usd(k.total)} with <em>Pay<b>Pal</b></em></button><p class="fine" style="margin:0;font-size:13px;color:var(--muted)">PayPal sandbox. No real money moves. You approve in PayPal's window and come back here licensed.</p>
             <div class="alt"><span>Or license it on a budget your agent holds:</span><div class="row"><input id="kv-mandate" placeholder="mdt_…"><button class="btn small" id="kv-lic" type="button">License</button></div></div>` : `<button class="btn primary" id="kv-free" type="button">${icon("seal-check")} Claim the free kit</button>`}
         </aside>
       </div>
@@ -128,7 +128,7 @@ export async function pageKit(app, id) {
       <span class="kv-n num" aria-hidden="true">${i + 1}</span>
       <button class="s-play" data-play="${i}" aria-label="Play ${esc(it.name)}">${icon("play")}</button>
       <div class="pic" data-wave="${i}"></div>
-      <div class="who"><b class="kv-name">${esc(it.name)}</b><span class="kv-meta">${esc(it.title !== it.name ? `${it.title} by ${it.author}` : `by ${it.author}`)}${it.reason && /^(matched|near|nothing)/.test(it.reason) ? `<em class="kv-why"> · ${esc(it.reason)}</em>` : ""}</span>${(() => { const shown = knobs.filter(([k, v]) => k !== "seed" && v !== false); return shown.length ? `<span class="kv-knobs" title="Knobs tuned for this kit">${shown.map(([k, v]) => `${esc(k)} <b>${esc(String(v))}</b>`).join(", ")}</span>` : ""; })()}
+      <div class="who"><b class="kv-name"${it.reason ? ` title="${esc(it.reason)}${it.tuned?.length ? `; ${esc(it.tuned.join(", "))}` : ""}"` : ""}>${esc(it.name)}</b><span class="kv-meta">${esc(it.title !== it.name ? `${it.title} by ${it.author}` : `by ${it.author}`)}${it.reason && /^nothing/.test(it.reason) ? `<em class="kv-why"> · nothing in the registry matched this vibe</em>` : ""}</span>${(() => { const shown = knobs.filter(([k, v]) => k !== "seed" && v !== false); return shown.length ? `<span class="kv-knobs" title="Knobs tuned for this kit">${shown.map(([k, v]) => `${esc(k)} <b>${esc(String(v))}</b>`).join(", ")}</span>` : ""; })()}
 </div>
       <span class="kv-acts"><a href="#/a/${esc(it.assetId)}${it.licence ? `?lic=${esc(it.licence)}` : ""}" title="Open with knobs" aria-label="Open ${esc(it.name)} with knobs">${icon("sliders-horizontal")}</a>${it.wav ? `<a href="${esc(it.wav)}" title="WAV, 44.1 kHz" aria-label="Download ${esc(it.name)} as WAV">${icon("download-simple")}</a><button type="button" class="kv-code" aria-expanded="false" aria-controls="kv-code-${i}" title="Import line" aria-label="Show the import line">${icon("code")}</button>` : ""}</span>
       <div class="amt num${paid || it.price === 0 ? " clean" : ""}">${it.covered ? "covered" : price(it.price)}<small>${it.covered ? "same program" : paid ? "" : it.price === 0 ? "free" : "preview"}</small></div>
@@ -255,6 +255,11 @@ export async function pageKit(app, id) {
       if (t === token) stop();
     });
     $("#kv-copy").addEventListener("click", () => copyLink($("#kv-url").value, $("#kv-copy")));
+    $("#kv-copy-kit")?.addEventListener("click", async (e) => {
+      e.currentTarget.disabled = true;
+      try { const c = await api(`/api/kits/${encodeURIComponent(k.id)}/copy`, { method: "POST", body: {} }); location.hash = `#/kit/${c.id}`; }
+      catch (err) { toast(err.message); e.currentTarget.disabled = false; }
+    });
     $("#kv-url").addEventListener("focus", (e) => e.target.select());
     $("#kv-pay")?.addEventListener("click", async () => {
       const b = $("#kv-pay"); b.setAttribute("aria-busy", "true"); b.innerHTML = `<span class="pk-spin" aria-hidden="true"></span> Opening PayPal…`;
