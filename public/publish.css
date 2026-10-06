@@ -48,7 +48,7 @@
 .pb-gate i { width: 8px; height: 8px; border-radius: 50%; background: transparent; align-self: center; grid-row: 1; transition: background var(--t), transform var(--t) var(--ease-spring); }
 .pb-gate .l { color: var(--ink); font-weight: var(--w-medium); }
 .pb-gate .v { grid-column: 2; font: var(--fs-xs) / 1.5 var(--font-mono); color: var(--muted); }
-.pb-gate:not(.ok):not(.warn):not(.fail) i { box-shadow: inset 0 0 0 1.5px var(--muted); opacity: .6; }
+.pb-gate:not(.ok):not(.warn):not(.fail) i { visibility: hidden; } /* before a run the list is criteria, not status (GitHub shows checks only once they run) */
 .pb-gate.ok i { background: var(--ok); transform: scale(1.15); }
 .pb-gate.warn i { background: var(--accent); }
 .pb-gate.warn .v { color: var(--accent-text); }

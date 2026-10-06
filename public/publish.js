@@ -64,7 +64,7 @@ export async function pagePublish(app) {
         <textarea id="pb-source" spellcheck="false" autocomplete="off" placeholder="export const meta = { title, kind, format: &quot;sound&quot;, … };
 export const params = { knobs: { …, seed } };
 export function build(p, ctx) { … return { samples }; }"></textarea>
-        <div class="pb-src-foot"><span class="pb-lines" id="pb-lines">0 lines</span><button class="btn primary" type="button" id="pb-check">${icon("waveform")} Check it</button></div>
+        <div class="pb-src-foot"><span class="pb-lines" id="pb-lines" hidden></span><button class="btn primary" type="button" id="pb-check">${icon("waveform")} Check it</button></div>
         <div class="pb-note err" id="pb-err" hidden role="alert"></div>
       </section>
       <aside class="pb-results" id="pb-results">
