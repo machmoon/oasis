@@ -37,7 +37,9 @@ export function paymentRequired(a) {
       amount: String(Math.round(a.price * 100)), // smallest unit, as x402 does: cents
       payTo: a.author,
       maxTimeoutSeconds: 60,
-      extra: { assetId: a.id, payload: "{ mandate: <funded Oasis mandate token> }", budget: `${config.baseUrl}/#/budget` },
+      // amount is in the asset's smallest unit (x402's convention); extra spells it out, and payTo is the creator's
+      // Oasis handle (the server pays them through PayPal Payouts), not an address a client can pay directly
+      extra: { assetId: a.id, amountUnit: "USD cents", display: `$${Number(a.price).toFixed(2)}`, payToIs: "the creator's Oasis handle; Oasis pays them via PayPal Payouts", payload: "{ mandate: <funded Oasis mandate token> }", budget: `${config.baseUrl}/#/budget` },
     }],
   };
 }
