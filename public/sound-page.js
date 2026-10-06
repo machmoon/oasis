@@ -129,7 +129,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
         <div class="a-program" id="sp-walk-code"></div>
       </div>
       <div class="sp-walk-stage" id="sp-walk">
-        <div class="sp-walk-head"><div id="sp-walk-n" class="seg"></div><span class="sp-legend"><span>higher = brighter</span><span>larger = louder</span></span><span class="sp-n" id="sp-walk-stat"></span></div>
+        <div class="sp-walk-head"><div id="sp-walk-n" class="seg"></div><span class="sp-legend"><span>higher = higher spectral centroid</span><span>larger = louder</span></span><span class="sp-n" id="sp-walk-stat"></span></div>
         <svg class="sp-walk-plot" id="sp-walk-plot" role="img" aria-label="Each take as a dot: time across, brightness up, size by level"></svg>
         <div class="sp-walk-foot"><button class="s-play big" id="sp-walk-play" aria-label="Play the walk" disabled>${icon("play")}</button><div class="sp-walk-waves"><div id="sp-walk-wave"></div><div id="sp-walk-mini"></div></div></div>
         <div class="sp-note" id="sp-walk-note"><span class="skel" style="width:160px;height:12px"></span></div>
@@ -225,7 +225,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
     const an = res.analysis;
     if ($("#a-dur")) $("#a-dur").textContent = +an.seconds.toFixed(2); // the header length follows the knobs, as the readout does
     // what a buyer reads (length, peak, brightness); the render time and RMS are a tooltip for the curious
-    $("#sp-readout").innerHTML = `<span>length <b>${an.seconds.toFixed(2)}</b> s</span><span>peak <b>${an.peak}</b></span><span>brightness <b>${an.centroid}</b> Hz</span>`;
+    $("#sp-readout").innerHTML = `<span>length <b>${an.seconds.toFixed(2)}</b> s</span><span>peak <b>${an.peak}</b></span><span>spectral centroid <b>${an.centroid}</b> Hz</span>`;
     $("#sp-readout").title = `RMS ${an.rms}; rendered in ${res.ms} ms${res.where === "worker" ? " in your browser" : ""}`;
     const wm = $("#sp-wm"); wm.hidden = false;
     wm.className = `sp-wm${res.watermarked ? "" : " clean"}`; wm.innerHTML = res.watermarked ? `${icon("waveform")} Preview watermark` : `${icon("seal-check")} ${a.price > 0 ? "Licensed, clean" : "Free, clean"}`;

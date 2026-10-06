@@ -537,3 +537,6 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
 .kv-miss.warn { color: var(--accent-text); }
 .kv-part .amt small.again { color: var(--accent-text); }
 #kv-pay[hidden] { display: none !important; } #kv-ppbtn { min-height: 45px; }
+.kv-bill details.alt > summary { cursor: pointer; list-style: none; color: var(--muted); font-size: var(--fs-sm); }
+.kv-bill details.alt > summary::-webkit-details-marker { display: none; }
+.kv-bill details.alt[open] > summary { margin-bottom: 8px; }
