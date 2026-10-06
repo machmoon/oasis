@@ -116,6 +116,8 @@ export async function creator(name) {
     if (!od) continue;
     o.agent = od.agentName || null; o.total = od.total; o.status = od.status; o.payoutAfter = od.payoutHold?.releaseAfter || null; o.payout = od.payoutHold?.status || null;
   }
+  const hold = {};
+  for (const id of Object.keys(byOrder)) hold[id] = (await store.get("orders", id))?.payoutHold?.status || null;
   const email = sounds.find((a) => a.payoutEmail)?.payoutEmail || rows.find((r) => r.email)?.email || null;
   const since = sounds.map((a) => a.createdAt).filter(Boolean).sort()[0] || null;
   return {
@@ -125,7 +127,8 @@ export async function creator(name) {
     since,
     sounds: sounds.map((a) => catalog.summary(a)),
     forks: forks.map((f) => ({ ...catalog.summary(f), royaltyCents: sum(royalty.filter((r) => r.assetId === f.id)) })),
-    earned: { cents: sum(rows), direct: sum(direct), royalties: sum(royalty), held: sum(rows.filter((r) => r.held)), orders: Object.keys(byOrder).length },
+    // held: waiting on a PayPal email, or on the order's refund window (payoutHold HELD); paidOut: the order's batch was SENT
+    earned: { cents: sum(rows), direct: sum(direct), royalties: sum(royalty), held: sum(rows.filter((r) => r.held || (r.email && hold[r.orderId] === "HELD"))), paidOut: sum(rows.filter((r) => r.email && hold[r.orderId] === "SENT")), orders: Object.keys(byOrder).length },
     orders,
   };
 }

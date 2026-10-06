@@ -552,13 +552,18 @@ export async function createApp() {
 
   app.get("/api/ledger", wrap(async (req, res) => {
     const rows = await store.list("ledger");
+    // A share is paid out only once releaseDuePayouts() has sent its order's batch (payoutHold.status SENT);
+    // until the 14-day refund window closes it is held, and a refund cancels it. Having a PayPal email is not enough.
+    const hold = Object.fromEntries((await store.list("orders")).map((o) => [o.id, o.payoutHold?.status || null]));
     const byAuthor = {};
     for (const r of rows) {
       const k = r.author;
-      byAuthor[k] ||= { author: k, cents: 0, sales: 0, paidOut: 0 };
+      byAuthor[k] ||= { author: k, cents: 0, sales: 0, paidOut: 0, held: 0 };
       byAuthor[k].cents += r.cents;
       byAuthor[k].sales += 1;
-      if (r.email) byAuthor[k].paidOut += r.cents;
+      if (r.role === "platform") continue;
+      if (r.email && hold[r.orderId] === "SENT") byAuthor[k].paidOut += r.cents;
+      else if (r.held || (r.email && hold[r.orderId] === "HELD")) byAuthor[k].held += r.cents;
     }
     res.json({ authors: Object.values(byAuthor).sort((a, b) => b.cents - a.cents), recent: rows.sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, 30) });
   }));

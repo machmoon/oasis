@@ -153,4 +153,7 @@ test("the ledger lists a kit checkout order, not only agent orders on a budget",
   const ledger = await (await fetch(`${base}/api/ledger`)).json();
   assert.ok(ledger.recent.some((r) => r.orderId === "KITORDER1"));
   for (const c of sale.creators) assert.ok(ledger.authors.find((a) => a.author === c.author)?.cents >= Math.round(c.usd * 100), c.author);
+  // Nothing in this run has been released past the refund window, so no share counts as paid out yet.
+  assert.equal(order.payoutHold?.status, "HELD", "the sandbox creators have PayPal emails, so their shares wait out the window");
+  for (const a of ledger.authors) assert.equal(a.paidOut, 0, `${a.author} is not paid out while the order is held`);
 });

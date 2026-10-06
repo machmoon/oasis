@@ -143,6 +143,8 @@ test("the creator page API: sounds, what the ledger paid them, the orders behind
   assert.equal(c.earned.direct, 225);
   assert.equal(c.earned.royalties, 120);
   assert.equal(c.earned.orders, 2);
+  assert.equal(c.earned.held, 225, "ORDER-A is still inside its refund window");
+  assert.equal(c.earned.paidOut, 0, "no order's payout batch has been sent");
   assert.equal(c.orders.length, 2);
   const a = c.orders.find((o) => o.orderId === "ORDER-A");
   assert.equal(a.agent, "scene-builder"); assert.equal(a.cents, 225); assert.equal(a.payout, "HELD");
