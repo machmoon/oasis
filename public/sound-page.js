@@ -6,7 +6,8 @@
 // the Roseus spectrogram under it, the old take morphing into the new one on every rebuild, and a live spectrum and
 // scope while it plays. Knobs are <oasis-knob> (public/knob.js, after webaudio-controls). The 300-take walk is a d3
 // scatter (d3-scale) over a zoomed wavesurfer walk with a Minimap and a Regions highlight of the take that is playing.
-import { audio, unlock, loadWav, toBuffer, play, renderInWorker, analyse } from "/audio.js";
+import { audio, unlock, loadWav, toBuffer, play, renderInWorker, analyse, setBusLook } from "/audio.js";
+import { LOOKS } from "/fx.js";
 import { mountWave, mountLive, WaveSurfer, Minimap, Regions, ROSEUS_STOPS, onTheme } from "/wave.js";
 import { scaleLinear, scaleLog, scaleSqrt } from "d3-scale";
 import "/knob.js";
@@ -108,7 +109,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
         </div>
         <div class="sp-foot">
           <div class="sp-readout" id="sp-readout" aria-live="polite"><span class="skel"></span><span class="skel" style="width:80px"></span></div>
-          <div class="sp-tools"><button class="btn small" id="sp-ab" aria-pressed="false" title="Play the defaults, then your remix">${icon("arrows-left-right")} A/B</button></div>
+          <div class="sp-tools"><label class="s-sel" title="Listen through a look. The WAV download stays dry; a kit's loop export on Pads keeps it."><span>Look</span><select id="sp-look">${LOOKS.map((l) => `<option value="${l.id}">${esc(l.label)}</option>`).join("")}</select></label><button class="btn small" id="sp-ab" aria-pressed="false" title="Play the defaults, then your remix">${icon("arrows-left-right")} A/B</button></div>
         </div>
         ${notes.length ? `<section class="sp-keys" id="sp-keys" aria-label="Play ${esc(a.title)} on a keyboard"></section>` : ""}
       </div>
@@ -162,7 +163,9 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
   const wave = mountWave($("#sp-ws"), { height: phone ? 128 : 184, spectrogram: phone ? 120 : 168, timeline: $("#sp-tl"), barWidth: phone ? 2 : 3, barGap: 1, barRadius: 2,
     onState: (on) => { setPlaying(on); if (!on && loop && current && wave.media.currentTime === 0) setTimeout(() => loop && wave.play(), 30); } });
   const live = mountLive($("#sp-live"));
-  const offRoute = () => { if (!stage.isConnected) { wave.destroy(); live.destroy(); removeEventListener("hashchange", offRoute); } };
+  // a look is for listening here; it comes off when the page does
+  $("#sp-look").addEventListener("change", (e) => { setBusLook(e.target.value); e.target.closest(".s-sel").classList.toggle("set", e.target.value !== "dry"); });
+  const offRoute = () => { if (!stage.isConnected) { wave.destroy(); live.destroy(); setBusLook("dry"); removeEventListener("hashchange", offRoute); } };
   addEventListener("hashchange", () => setTimeout(offRoute, 0));
   const log = [];
   const addLog = (entry) => { log.unshift(entry); log.length = Math.min(log.length, 6); $("#a-log").innerHTML = log.map((l) => `<li><b>${esc(l.what)}</b><span>${l.ms} ms · ${l.where}</span></li>`).join(""); };

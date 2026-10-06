@@ -4,6 +4,7 @@
 // same function the server measured with. Playback is one AudioBufferSourceNode per start, as Tone.js's Player does
 // (Tone/source/buffer/Player.ts _start: a fresh ToneBufferSource each time), so overlapping takes never cut each other.
 import { analyse } from "/sound-dsp.js";
+import { buildLook } from "/fx.js";
 
 let ctx = null;
 const listeners = new Set();
@@ -14,11 +15,20 @@ export function audio() {
 }
 export const unlocked = () => !!ctx && ctx.state === "running";
 export function onUnlock(f) { listeners.add(f); return () => listeners.delete(f); }
-let bus = null, tap = null;
-/** The master bus every take plays into: gain -> analyser -> speakers. */
+let bus = null, tap = null, post = null, look = null;
+/** The master bus every take plays into: gain -> (a look, public/fx.js) -> analyser -> speakers. */
 export function output() {
-  if (!bus) { const c = audio(); bus = c.createGain(); tap = c.createAnalyser(); tap.fftSize = 2048; tap.smoothingTimeConstant = 0.72; bus.connect(tap).connect(c.destination); }
+  if (!bus) { const c = audio(); bus = c.createGain(); post = c.createGain(); tap = c.createAnalyser(); tap.fftSize = 2048; tap.smoothingTimeConstant = 0.72; bus.connect(post); post.connect(tap).connect(c.destination); }
   return bus;
+}
+/** Puts a look on the master bus (or "dry" to take it off); what the analyser shows is what you hear. */
+export function setBusLook(id) {
+  output();
+  const old = look;
+  bus.disconnect();
+  look = id && id !== "dry" ? buildLook(audio(), id) : null;
+  if (look) { bus.connect(look.input); look.output.connect(post); } else bus.connect(post);
+  if (old) setTimeout(() => old.stop(), 60);
 }
 /** The AnalyserNode on the master bus (the live spectrum and scope read it). */
 export function analyser() { output(); return tap; }
