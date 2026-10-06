@@ -51,7 +51,7 @@ export async function pageAgents(app) {
   fetch("/api/stats/mcp").then((r) => r.json()).then((s) => {
     if (!$("#ag-stats")) return;
     const clients = Object.keys(s.clients || {});
-    $("#ag-stats").innerHTML = `<b class="num">${s.requests}</b> MCP requests since ${new Date(s.since).toLocaleDateString(undefined, { month: "short", day: "numeric" })}${clients.length ? `, from ${clients.map((c) => `<code>${esc(c)}</code>`).join(" and ")}` : ""}.`;
+    $("#ag-stats").innerHTML = `<b class="num">${s.requests}</b> MCP requests since ${new Date(s.since).toLocaleDateString(undefined, { month: "short", day: "numeric" })}${clients.length ? `, from ${clients.length} client${clients.length === 1 ? "" : "s"}` : ""}. Most are our own test clients so far.`;
     for (const [t, n] of Object.entries(s.tools || {})) { const el = document.querySelector(`.ag-n[data-tool="${t}"]`); if (el) el.textContent = n; }
   }).catch(() => { if ($("#ag-stats")) $("#ag-stats").textContent = "The MCP counter is not available."; });
   // the 402 is fetched when asked for (a 402 on page load reads as an error in every visitor's console)

@@ -88,15 +88,19 @@ export function planByKeywords(vibe, { count = 8 } = {}) {
   for (const e of scored) { if (picked.length >= count) break; if ((kinds[e[0].kind] || 0) >= (e[0].kind === "music" ? 1 : e[0].kind === "ambience" ? 2 : Math.ceil(count / 3))) continue; /* one music loop per kit at most: a loop matched on one shared word is the loosest pick */ picked.push(e); kinds[e[0].kind] = (kinds[e[0].kind] || 0) + 1; }
   // a part that matched nothing is not sold as part of the kit; only if the vibe matched almost nothing does the kit
   // fall back to the closest sounds, and then each says so
-  const matched = picked.filter((e) => e[2].length);
-  const final = matched.length >= 4 ? matched : picked.slice(0, Math.max(4, matched.length));
+  // parts that match the person's own words come first; near-word matches only top a thin kit up to four, and a
+  // part that matched nothing only appears when the vibe matched almost nothing (each says so in its reason)
+  const own = picked.filter((e) => e[2].some((h) => words.includes(h))), near = picked.filter((e) => e[2].length && !own.includes(e));
+  let final = own.length >= 4 ? own : [...own, ...near].slice(0, Math.max(4, own.length));
+  if (final.length < 4) final = [...final, ...picked.filter((e) => !final.includes(e))].slice(0, 4);
+  const unmatched = words.filter((w) => !all.some((a) => has(hays.get(a.id), w))); // the vibe's words the registry has nothing for
   picked.length = 0; picked.push(...final);
   const titleWords = vibe.split(/\s+/).filter(Boolean);
   while (titleWords.length && STOP.has(titleWords[0].toLowerCase())) titleWords.shift();
   const t4 = titleWords.slice(0, 4); while (t4.length > 1 && STOP.has(t4[t4.length - 1].toLowerCase())) t4.pop();
   const title = t4.map((w) => w[0].toUpperCase() + w.slice(1)).join(" ").replace(/[,:;.]+$/, "") || "Untitled Kit";
   const raw = vibe.toLowerCase().split(/[^a-z0-9-]+/).filter(Boolean), allTerms = [...new Set([...raw, ...terms])];
-  return { title, items: picked.map(([a, , hit], i) => { const tune = tuneByWords(a, allTerms, raw); return { assetId: a.id, knobs: { ...tune.knobs, ...(a.params.knobs.seed ? { seed: 1 + (hash(vibe + i) % 500) } : {}) }, name: a.title,
+  return { title, unmatched, items: picked.map(([a, , hit], i) => { const tune = tuneByWords(a, allTerms, raw); return { assetId: a.id, knobs: { ...tune.knobs, ...(a.params.knobs.seed ? { seed: 1 + (hash(vibe + i) % 500) } : {}) }, name: a.title,
     tuned: tune.why,
     reason: (() => { const own = hit.filter((h) => words.includes(h)), near = hit.filter((h) => !words.includes(h)); return own.length ? `matched ${own.slice(0, 3).map((h) => `"${h}"`).join(", ")}${near.length ? `, near ${near.slice(0, 2).map((h) => `"${h}"`).join(", ")}` : ""}` : near.length ? `near words ${near.slice(0, 3).map((h) => `"${h}"`).join(", ")}` : "nothing in the registry matched; picked as the closest sound"; })() }; }) };
 }
@@ -108,6 +112,14 @@ Return JSON only: {"title":"2-4 words","items":[{"asset_id":"...","name":"...","
 /** How the last Claude call went, so /api/config and /api/status report a planner that answers, not a key that is set. */
 export const plannerHealth = { ok: null, error: null, at: null };
 // true or false once a call has answered; null (unknown) from boot until then, rather than claiming ready
+/** One cheap call at boot (a 1-token reply) so the planner's status is known before a visitor finds out. */
+export async function probePlanner() {
+  if (!config.anthropicKey) return Object.assign(plannerHealth, { ok: false, error: "no ANTHROPIC_API_KEY", at: new Date().toISOString() });
+  client ||= new Anthropic({ apiKey: config.anthropicKey });
+  try { await client.messages.create({ model: config.directorModel, max_tokens: 1, messages: [{ role: "user", content: "ok" }] }); Object.assign(plannerHealth, { ok: true, error: null, at: new Date().toISOString() }); }
+  catch (e) { Object.assign(plannerHealth, { ok: false, error: e.error?.error?.message || e.message, at: new Date().toISOString() }); }
+  return plannerHealth;
+}
 export const plannerReady = () => !config.anthropicKey ? false : plannerHealth.ok;
 
 /** Claude plans the kit from the vibe and the catalogue; falls back to keywords when no model is configured. */
@@ -146,7 +158,7 @@ export function cleanKit(vibe, plan, planner = "keywords") {
   });
   const total = Math.round(lines.reduce((s, l) => s + l.price, 0) * 100) / 100;
   const creators = [...new Set(lines.filter((l) => l.price > 0).map((l) => l.author))];
-  return { title: plan.title || vibe, vibe, planner, items: lines, total, creators };
+  return { title: plan.title || vibe, vibe, planner, items: lines, total, creators, unmatched: plan.unmatched || [] };
 }
 
 export async function save(kit, extra = {}) {
@@ -187,7 +199,7 @@ export async function owns(kit, { claim, mandate } = {}) {
 export function view(kit, { owner = true } = {}) {
   const b = config.baseUrl;
   return {
-    id: kit.id, title: tidyTitle(kit.title), vibe: kit.vibe, planner: kit.planner, createdAt: kit.createdAt, total: kit.total, creators: kit.creators, licensed: !!kit.licence, owner: !!kit.licence && owner,
+    id: kit.id, title: tidyTitle(kit.title), vibe: kit.vibe, planner: kit.planner, createdAt: kit.createdAt, total: kit.total, creators: kit.creators, licensed: !!kit.licence, owner: !!kit.licence && owner, unmatched: kit.unmatched || [],
     licence: kit.licence ? { orderId: kit.licence.orderId, total: kit.licence.total, creators: kit.licence.creators, at: kit.licence.at, via: kit.licence.via } : null,
     items: kit.items.map((l) => {
       const q = Object.keys(l.knobs).length ? `?p=${encodeURIComponent(JSON.stringify(l.knobs))}` : "";

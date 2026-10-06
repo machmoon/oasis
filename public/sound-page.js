@@ -125,7 +125,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
     ${knobs.seed ? `<section class="sp-walk" id="sp-walk-sec">
       <div>
         <h2>Every seed is a take</h2>
-        <p class="lede">One program, many seeds, no two alike. Each dot is a take; click one to hear it.</p>
+        <p class="lede">One program, many seeds. Each dot is a take; click one to hear it.</p>
         <div class="a-program" id="sp-walk-code"></div>
       </div>
       <div class="sp-walk-stage" id="sp-walk">
@@ -372,7 +372,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
   // ----- fork with AI -----
   // a fork is written by Claude: when the server already knows the model is down, say so before anyone types
   fetch("/api/config").then((r) => r.json()).then((c) => {
-    if (c.agentReady !== false || !$("#fork-go")) return;
+    if (c.agentReady === true || !$("#fork-go")) return;
     $("#fork-go").disabled = true; $("#fork-note").textContent = "Forking needs Claude, which is offline on this server right now.";
   }).catch(() => {});
   $("#fork-form").addEventListener("submit", async (e) => {

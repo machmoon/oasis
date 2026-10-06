@@ -29,7 +29,7 @@ export async function issue({ description, maxTotalUsd, expiresInHours = 24, sku
   const m = {
     id: `mnd_${crypto.randomBytes(6).toString("hex")}`,
     tokenHash: hash(token), // only the hash is stored: a leaked data dir doesn't leak spendable tokens
-    natural_language_description: String(description || "Design assets for my project").slice(0, 300),
+    natural_language_description: String(description || "Sounds for my game").slice(0, 300),
     skus: Array.isArray(skus) && skus.length ? skus.map(String).slice(0, 50) : null,
     user_cart_confirmation_required: !funded,
     // funded mandates: { state: "awaiting_approval" | "active" | "closed", setupTokenId, paymentTokenId, payerEmail }

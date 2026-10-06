@@ -27,6 +27,7 @@ import * as publish from "./publish.js";
 export async function createApp() {
   await catalog.load();
   // real lengths for the lists, measured off the request path (skipped under node --test)
+  if (!process.env.NODE_TEST_CONTEXT) kits.probePlanner().then((h) => console.log(`planner ${h.ok ? "ready" : `down: ${h.error}`}`)).catch(() => {});
   if (!process.env.NODE_TEST_CONTEXT) setTimeout(() => catalog.measureLengths().then((n) => console.log(`measured ${n} sound lengths`)).catch(() => {}), 2000).unref();
   // The factory publishes new sound programs while the server runs: pick them up without a restart.
   if (process.env.OASIS_RELOAD_SECONDS !== "0") setInterval(() => catalog.load().catch((e) => console.warn("catalog reload", e.message)), (Number(process.env.OASIS_RELOAD_SECONDS) || 90) * 1000).unref();
@@ -321,7 +322,7 @@ export async function createApp() {
     const orders = (await store.list("orders")).filter((o) => o.status === "COMPLETED" && o.royalties?.length).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
     // the capture and the payout batch's state ride along, so the ledger shows the money moving, not only the order
     // an order that paid for a kit is named by the kit (Stripe names a payment by its product, not its line items)
-    const kitOf = new Map((await store.list("kits")).filter((k) => k.licence?.orderId).map((k) => [k.licence.orderId, { id: k.id, title: kits.tidyTitle(k.title) }]));
+    const kitOf = new Map((await store.list("kits")).filter((k) => k.licence?.orderId).map((k) => [k.licence.orderId, { id: k.id, title: kits.tidyTitle(k.title), parts: k.items.length }]));
     res.json(orders.slice(0, 40).map(commerce.saleEvent).map((e, i) => ({ ...e, at: orders[i].createdAt, captureId: orders[i].captureId || null, payout: orders[i].payoutHold?.status || null, kit: kitOf.get(orders[i].id) || null })));
   }));
 
@@ -353,7 +354,8 @@ export async function createApp() {
     // (a keyword kit where nothing matched, or a vibe with markup in it, stays reachable by link but is not listed)
     // keyword kits planned before whole-word matching (2558069) picked "platform" sounds for a subway; unlisted
     const KEYWORDS_FIXED = "2026-10-06T08:48:00Z";
-    const listed = (k) => k.licence || (!k.copiedFrom && !(k.planner === "keywords" && String(k.createdAt) < KEYWORDS_FIXED) && !/[<>]/.test(k.vibe) && (k.planner !== "keywords" || k.items.filter((l) => !/^nothing/.test(l.reason || "")).length >= Math.ceil(k.items.length * 0.75)));
+    const chargedTwice = (k) => { const seen = new Set(); return k.items.some((l) => l.price > 0 && (seen.has(l.assetId) || !seen.add(l.assetId))); };
+    const listed = (k) => (k.licence && !chargedTwice(k)) || (!k.licence && !k.copiedFrom && !(k.planner === "keywords" && String(k.createdAt) < KEYWORDS_FIXED) && !/[<>]/.test(k.vibe) && (k.planner !== "keywords" || k.items.filter((l) => !/^nothing/.test(l.reason || "")).length >= Math.ceil(k.items.length * 0.75)));
     const all = (await store.list("kits")).filter((k) => k.planner !== "single" && k.items.length >= 4 && listed(k)).sort((a, b) => (!!b.licence - !!a.licence) || b.updatedAt.localeCompare(a.updatedAt))
       .filter((k) => { const t = `t:${key(kits.tidyTitle(k.title))}`, v = `v:${key(k.vibe)}`; if (seen.has(t) || seen.has(v)) return false; seen.add(t); seen.add(v); return true; }).slice(0, 24);
     // the tile's picture: its first four parts as tuned in the kit (the same card render a part shows on the kit page)

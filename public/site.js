@@ -71,7 +71,7 @@ function saleRow(s, fresh = false) {
   const when = s.at ? new Date(s.at).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "";
   return `<div class="sale${fresh ? " new" : ""}">
     <div class="sale-top"><b class="amt num">${usd(s.total)}</b>${s.payout === "SENT" ? `<span class="sale-st">Paid out</span>` : ""}${s.funded ? `<span class="sale-st agent">Agent, on a budget</span>` : ""}<span class="sale-when">${esc(when)}</span></div>
-    <div class="what">${s.kit ? `<a href="#/kit/${esc(s.kit.id)}">${esc(s.kit.title)}</a> <span class="sale-n">· ${names.length} sound${names.length === 1 ? "" : "s"}</span>` : esc(list)}</div>
+    <div class="what">${s.kit ? `<a href="#/kit/${esc(s.kit.id)}">${esc(s.kit.title)}</a> <span class="sale-n">· ${s.kit.parts || names.length} sound${(s.kit.parts || names.length) === 1 ? "" : "s"}</span>` : esc(list)}</div>
     <div class="split">Creators receive ${s.creators.map((c) => `${esc(c.author)} <b class="num">${usd(c.usd)}</b>`).join(", ")}${held ? `<span class="sale-held">, held until ${new Date(s.payoutAfter).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>` : ""}</div>
     <div class="ids">PayPal order ${esc(s.orderId)}${s.captureId ? `, capture ${esc(s.captureId)}` : ""}${s.payout === "SENT" ? ", Payouts batch sent" : ""}</div></div>`;
 }
