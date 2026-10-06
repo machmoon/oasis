@@ -482,7 +482,7 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
    on their own row */
 @media (max-width: 599px) {
   .sp-foot { grid-template-columns: 1fr; }
-  .sp-readout { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 16px; }
+  .sp-readout { display: flex; flex-wrap: wrap; gap: 4px 16px; }
   .sp-tools { justify-content: flex-start; }
 }
 

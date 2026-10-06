@@ -145,10 +145,10 @@ async function pageBudget(id) {
     </div>
     <form class="pk-panel" id="bform" novalidate>
       <div class="pk-field"><label id="amt-l">Amount</label><div class="pk-seg wide" id="amts" role="group" aria-labelledby="amt-l">${[10, 25, 50, 100].map((n) => `<button type="button" data-v="${n}" class="num">$${n}</button>`).join("")}</div></div>
-      <div class="pk-field"><label for="desc">What is it for?</label><input class="pk-in" type="text" id="desc" maxlength="200" value="Sounds for a rainy city street scene"><span class="help">Shown to you in PayPal and on every receipt.</span></div>
+      <div class="pk-field"><label for="desc">What is it for?</label><input class="pk-in" type="text" id="desc" maxlength="200" placeholder="Sounds for a rainy city street scene"><span class="help">Shown to you in PayPal and on every receipt.</span></div>
       <div class="pk-field"><label id="hrs-l">Expires after</label><div class="pk-seg wide" id="hours" role="group" aria-labelledby="hrs-l"><button type="button" data-v="24">24 hours</button><button type="button" data-v="72">3 days</button><button type="button" data-v="168">7 days</button></div></div>
       <div class="pk-err" id="berr" role="alert"></div>
-      <button class="pk-pp" id="bgo" type="submit">Approve with <em>Pay<b>Pal</b></em></button>
+      <button class="btn primary pk-go" id="bgo" type="submit">Continue to PayPal</button>
     </form></div>`;
   const amount = segment($("#amts"), { value: 25 }), hours = segment($("#hours"), { value: 24 });
   $("#bform").addEventListener("submit", async (e) => {
@@ -162,7 +162,7 @@ async function pageBudget(id) {
       location.href = r.approveUrl;
     } catch (err) {
       $("#berr").innerHTML = pkNote("err", "warning", err.status === 503 ? "PayPal is not connected on this server" : "PayPal could not open the approval", err.message);
-      b.removeAttribute("aria-busy"); b.innerHTML = `Approve with <em>Pay<b>Pal</b></em>`;
+      b.removeAttribute("aria-busy"); b.innerHTML = `Continue to PayPal`;
     }
   });
 }

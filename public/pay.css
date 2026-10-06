@@ -172,3 +172,4 @@
 .creators .creator b, .creators .creator .earn { font-size: 14px; font-weight: var(--w-semibold); }
 .sale-row .sr-st.warn { grid-column: 2 / -1; justify-self: start; }
 @media (max-width: 599px) { .sale-row .sr-st.warn { grid-column: 1 / -1; justify-self: start; } }
+.pk-go { width: 100%; justify-content: center; height: 48px; } /* a plain primary: PayPal's own buttons appear only where the SDK draws them */
