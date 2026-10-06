@@ -30,8 +30,8 @@ shows every part's module URL and clean WAV. Shares go out through PayPal Payout
 
 **Agents run the same loop.** Over MCP (`search_assets`, `preview_asset` returns the WAV and a spectrogram,
 `make_kit`, `buy_assets`), an agent makes and licenses a kit inside a budget a human approved once in PayPal
-(Vault); an order over the budget is refused before PayPal is called. An unlicensed `import` gets HTTP 402 in the
-x402 v2 shape, and a browser import gets a placeholder tick of the real length.
+(Vault); an order over the budget is refused before PayPal is called. An unlicensed `import` gets HTTP 402 with headers
+shaped after x402 v2 (the payment proof is a mandate token, not a signed x402 payment), and a browser import gets a placeholder tick of the real length.
 
 ## How we built it
 
@@ -53,10 +53,13 @@ x402 v2 shape, and a browser import gets a placeholder tick of the real length.
 ## Proof
 
 - **A real sandbox order for a kit**, created by the kit page's own checkout (`POST /api/kits/:id/checkout`, then
-  `/claim`): 9SS52993P3394003X ($23.00), captured and split across three creators (foleyroom $10.80, stormfront
-  $7.20, quietmachine $2.70). The order was approved with one of PayPal's published sandbox test cards instead of a
-  person in PayPal's window; capture, the amount check and the licences are the normal code path.
-- 68/69 tests pass, including the sandbox refusing `Math.random`, imports and over-long renders; determinism; the
+  `/claim`): 97H109249N081403K ($22.00, the Hearthside Tavern kit), captured and split across three creators
+  (hollowbody $15.30, stormfront $3.60, quietmachine $0.90). Its Cellar Door Creak part runs the same program as Old
+  Door Creak and shows as covered: the program is charged once. An earlier order, 9SS52993P3394003X ($23.00), was
+  placed before that rule and charged a repeated program more than once. Both were approved with one of PayPal's
+  published sandbox test cards instead of a person in PayPal's window; capture, the amount check and the licences
+  are the normal code path.
+- 69 tests pass, including the sandbox refusing `Math.random`, imports and over-long renders; determinism; the
   watermark; the CDN gate; and a kit order through checkout, capture and claim.
 - The catalogue is growing as the factory runs; `GET /api/config` reports the live count and `/llms.txt` lists every
   sound with its kit and creator.

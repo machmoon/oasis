@@ -27,7 +27,7 @@ PayPal details: **[PAYPAL.md](PAYPAL.md)** · Write-up: **[SUBMISSION.md](SUBMIS
 |---|---|---|
 | **Approve once** | You pick an amount and expiry at `/#/budget` and approve in PayPal. You hand your agent a token. | PayPal Vault v3: setup token, approval, payment token |
 | **The agent shops** | It searches, reads knobs, previews (a WAV and a spectrogram), then buys every sound the scene needs in one `buy_assets` call, or asks `make_kit` for a whole kit. Over budget is refused before PayPal is called. | Orders v2 with `payment_source.paypal.vault_id`, `stored_credential.payment_initiator: MERCHANT`: completed in one call, no redirect |
-| **Licensed imports** | One module URL per sound. Without a licence, browsers get a placeholder tick of the real length; other clients get **HTTP 402**. | coinbase/x402 v2 HTTP transport (`PAYMENT-REQUIRED`, `PAYMENT-SIGNATURE`, `PAYMENT-RESPONSE`), scheme `exact`, network `paypal:sandbox`, asset `USD` |
+| **Licensed imports** | One module URL per sound. Without a licence, browsers get a placeholder tick of the real length; other clients get **HTTP 402**. | A 402 shaped after coinbase/x402 v2 (`PAYMENT-REQUIRED`, `PAYMENT-SIGNATURE`, `PAYMENT-RESPONSE`, scheme `exact`). Not spec-valid x402: `network: paypal:sandbox` and a creator name as `payTo` are Oasis values, and the payment proof is a mandate token, not a signed payment |
 | **Kits** | `/#/kits`: a vibe becomes 6-10 tuned programs priced as one order. Pay with PayPal in PayPal's own window, or license on a funded budget. A kit charges each program once. | Same Orders v2 checkout and capture as everything else; `POST /api/kits/{id}/license` on a mandate |
 | **Creators paid** | Each creator's share lands on the live ledger (`/#/ledger`) when PayPal completes; paid out after the 14-day refund window. | PayPal Payouts, verified webhooks, refunds revoke licences (410) |
 | **Guardrails** | The budget is server-held: cap, expiry, holds for in-flight orders, revoke = instant stop. | Shaped after AP2's open payment mandate (`payment.budget`, `payment.execution_date`) |
@@ -35,8 +35,12 @@ PayPal details: **[PAYPAL.md](PAYPAL.md)** · Write-up: **[SUBMISSION.md](SUBMIS
 ## For agents (MCP)
 
 ```bash
-claude mcp add --transport http oasis https://oasis-design.onrender.com/mcp
+npm start   # http://localhost:8787
+claude mcp add --transport http oasis http://localhost:8787/mcp
 ```
+
+The Render deploy (`oasis-design.onrender.com`) still runs the earlier build and has none of these sounds until it is
+redeployed from this branch; run it locally for now.
 
 `search_assets` · `get_asset` · `preview_asset` (the rendered WAV, a waveform+spectrogram PNG, measured numbers) ·
 `buy_assets` · `make_kit` (a vibe becomes a licensed kit) · `get_kit` · `get_budget`
