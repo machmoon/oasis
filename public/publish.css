@@ -130,7 +130,7 @@
 
 /* the creator profile: identity, one line of facts, tabs */
 .cr-head2 { display: flex; align-items: center; gap: 20px; margin: 8px 0 28px; }
-.cr-avatar { width: 96px; height: 96px; border-radius: var(--r-lg); object-fit: cover; background: #0B0C10; flex: none; }
+.cr-avatar { width: 96px; height: 96px; border-radius: var(--r-lg); object-fit: cover; background: var(--thumb-bg); flex: none; }
 .cr-facts { margin: 6px 0 0; color: var(--ink-2); }
 .cr-pay { margin: 6px 0 0; display: flex; align-items: center; gap: 6px; font-size: var(--fs-sm); color: var(--muted); }
 @media (max-width: 599px) { .cr-avatar { width: 64px; height: 64px; } .cr-head2 { gap: 14px; } }

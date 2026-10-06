@@ -118,7 +118,7 @@ export async function createApp() {
     if (a.format === "sound") {
       // a sound's sheet: its waveform over its spectrogram
       const r = await soundOf(req, a);
-      return res.set("Content-Type", "image/png").set("Cache-Control", "public, max-age=300").send(sound.cardPng(sound.analyse(r.samples, r.sr, { cols: 320 }), Math.min(1024, Number(req.query.w) || 640)));
+      return res.set("Content-Type", "image/png").set("Cache-Control", "public, max-age=300").send(sound.cardPng(sound.analyse(r.samples, r.sr, { cols: 320 }), Math.min(1024, Number(req.query.w) || 640), undefined, req.query.theme === "light" ? "light" : "dark"));
     }
     const { svg } = await catalog.renderAsync(a, parseKnobs(req), { night: req.query.night === "1" });
     res.set("Content-Type", "image/png").set("Cache-Control", "public, max-age=300").send(await catalog.toPng(svg, Math.min(1024, Number(req.query.w) || 640)));

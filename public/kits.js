@@ -2,7 +2,7 @@
 // part (watermarked until paid), shows each part's knobs, and licenses the whole kit with one PayPal order; when the
 // order lands every part turns clean and gets its import line and WAV.
 import { audio, unlock, loadWav, play } from "/audio.js";
-import { lazyWave, mountLive } from "/wave.js";
+import { lazyWave, mountLive, themed } from "/wave.js";
 import { KIND_LABEL, makeRenderer } from "/sound-page.js";
 import { mountKitPlayer } from "/keys.js";
 
@@ -59,7 +59,7 @@ export async function pageKits(app) {
     // one row grammar across the site (the sounds list): a mosaic of the kit's parts, its name and vibe, the counts,
     // the price and whether it is paid; a link to play it on pads at the end
     $("#kt-list").innerHTML = tiles.length ? `<div class="s-rows kt-rows">${tiles.map((k) => `<div class="kt-row">
-      <a class="kt-mini" href="#/kit/${esc(k.id)}" tabindex="-1" aria-hidden="true">${(k.cards || []).slice(0, 4).map((c) => `<img src="${esc(c)}" alt="" loading="lazy" width="160" height="80">`).join("")}</a>
+      <a class="kt-mini" href="#/kit/${esc(k.id)}" tabindex="-1" aria-hidden="true">${(k.cards || []).slice(0, 4).map((c) => `<img src="${esc(themed(c))}" alt="" loading="lazy" width="160" height="80">`).join("")}</a>
       <a class="s-name" href="#/kit/${esc(k.id)}"><b>${esc(k.title)}</b>${k.vibe.trim().toLowerCase() !== k.title.trim().toLowerCase() ? `<span>${esc(k.vibe)}</span>` : ""}</a>
       <span class="s-c num">${k.parts} sound${k.parts === 1 ? "" : "s"}</span><span class="s-c num">${k.creators} creator${k.creators === 1 ? "" : "s"}</span>
       <span class="s-c s-price num">${usd(k.total)}${k.licensed ? `<small>paid</small>` : ""}</span>

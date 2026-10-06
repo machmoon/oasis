@@ -44,7 +44,7 @@
 .s-card { position: relative; display: grid; padding: 6px; text-decoration: none; color: inherit; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--inset-top); transition: transform var(--t) var(--ease-out), box-shadow var(--t) var(--ease-out), border-color var(--t); }
 .s-card:hover, .s-card:focus-within { transform: translateY(-3px); border-color: var(--line-strong); box-shadow: var(--inset-top), var(--shadow); }
 /* the picture carries its own near-black light in both themes, like the spectrogram on the sound page */
-.s-sheet { position: relative; display: block; aspect-ratio: 2 / 1; border-radius: calc(var(--r-lg) - 6px); overflow: hidden; background: #0B0C10; box-shadow: 0 0 0 1px rgb(255 255 255 / .05) inset; }
+.s-sheet { position: relative; display: block; aspect-ratio: 2 / 1; border-radius: calc(var(--r-lg) - 6px); overflow: hidden; background: var(--thumb-bg); box-shadow: 0 0 0 1px rgb(255 255 255 / .05) inset; }
 .s-sheet .s-link { position: absolute; inset: 0; display: block; }
 .s-sheet img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity var(--t-slow) var(--ease-out), transform var(--t-slow) var(--ease-out); }
 .s-sheet::before { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgb(255 255 255 / .06), transparent); background-size: 200% 100%; animation: k-shimmer 1.4s linear infinite; }
@@ -231,8 +231,8 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
    tuned (the same centroid-coloured cards), so a tile shows what the kit sounds like before it is opened */
 .kt-tile { display: grid; padding: 6px; text-decoration: none; color: inherit; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--inset-top); transition: transform var(--t) var(--ease-out), border-color var(--t), box-shadow var(--t); }
 .kt-tile:hover { transform: translateY(-3px); border-color: var(--line-strong); box-shadow: var(--inset-top), var(--shadow); }
-.kt-mosaic { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; aspect-ratio: 2 / 1; border-radius: calc(var(--r-lg) - 6px); overflow: hidden; background: #0B0C10; }
-.kt-mosaic img { width: 100%; height: 100%; object-fit: cover; display: block; background: #0B0C10; transition: transform var(--t-slow) var(--ease-out); }
+.kt-mosaic { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; aspect-ratio: 2 / 1; border-radius: calc(var(--r-lg) - 6px); overflow: hidden; background: var(--thumb-bg); }
+.kt-mosaic img { width: 100%; height: 100%; object-fit: cover; display: block; background: var(--thumb-bg); transition: transform var(--t-slow) var(--ease-out); }
 .kt-mosaic[data-n="1"] { grid-template-columns: 1fr; }
 .kt-mosaic[data-n="3"] img:first-child { grid-row: span 2; }
 .kt-tile:hover .kt-mosaic img { transform: scale(1.03); }
@@ -261,7 +261,7 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
 .kv-part.on { border-color: var(--accent); box-shadow: var(--inset-top), 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
 /* while the whole kit plays, the parts waiting their turn step back so the playing one reads first */
 .kv-parts.seq .kv-part:not(.on) { opacity: .62; }
-.kv-part .pic { position: relative; height: 48px; border-radius: var(--r-sm); overflow: hidden; background: #0B0C10; }
+.kv-part .pic { position: relative; height: 48px; border-radius: var(--r-sm); overflow: hidden; background: var(--thumb-bg); }
 .kv-part .pic canvas { display: block; width: 100%; height: 100%; }
 /* the playhead (wavesurfer's part="cursor") shows only on the part that is playing */
 .kv-part .pic ::part(cursor) { opacity: 0; transition: opacity var(--t-fast); }
@@ -491,7 +491,7 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
 .kt-row { display: grid; grid-template-columns: 120px minmax(0, 1fr) 84px 92px 84px 36px; align-items: center; gap: 16px; padding: 8px 14px 8px 8px; }
 .kt-row + .kt-row { border-top: 1px solid var(--line); }
 .kt-row:hover { background: color-mix(in srgb, var(--ink) 4%, transparent); }
-.kt-mini { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; width: 120px; height: 52px; border-radius: var(--r-sm); overflow: hidden; background: #0B0C10; }
+.kt-mini { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; width: 120px; height: 52px; border-radius: var(--r-sm); overflow: hidden; background: var(--thumb-bg); }
 .kt-mini img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .kt-row .s-price { display: grid; justify-items: end; line-height: 1.15; }
 .kt-row .s-price small { font-size: 11.5px; font-weight: var(--w-medium); color: var(--muted); }

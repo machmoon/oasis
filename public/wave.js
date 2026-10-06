@@ -35,6 +35,9 @@ const tok = (n, fb) => getComputedStyle(document.documentElement).getPropertyVal
 const scheme = matchMedia("(prefers-color-scheme: dark)");
 /** Calls f now and whenever the colour scheme flips, so canvases repaint with the new tokens. */
 export function onTheme(f) { f(); const g = () => f(); scheme.addEventListener("change", g); return () => scheme.removeEventListener("change", g); }
+/** "light" or "dark": which card PNG to ask the server for (render.png?theme=light is transparent, deeper ramp). */
+export const pngTheme = () => document.documentElement.dataset.theme || (scheme.matches ? "dark" : "light");
+export const themed = (url) => pngTheme() === "light" ? `${url}${url.includes("?") ? "&" : "?"}theme=light` : url;
 /** Roseus stops (github.com/dofuuz/roseus, the table wavesurfer's fft.ts ships), bright to dark, for gradients. */
 export const ROSEUS_STOPS = ["#FEFBF9", "#F7B465", "#F05C53", "#C42A82", "#7D1F9F", "#2A2675", "#040507"];
 

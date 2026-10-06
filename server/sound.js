@@ -60,9 +60,12 @@ export function spectrogramPng(a, width = 640, height = 160) {
 // reads on the dark ground.
 const CARD_BG = [11, 12, 16, 255], CARD_ZERO = [255, 255, 255, 25];
 const CARD_RAMP = [[125, 31, 159], [196, 42, 130], [240, 92, 83], [247, 180, 101], [254, 251, 249]];
-const rampAt = (t) => {
-  const f = Math.max(0, Math.min(1, t)) * (CARD_RAMP.length - 1), i = Math.min(CARD_RAMP.length - 2, Math.floor(f)), u = f - i;
-  return [0, 1, 2].map((k) => Math.round(CARD_RAMP[i][k] + (CARD_RAMP[i + 1][k] - CARD_RAMP[i][k]) * u));
+// On a light page the ramp's pale end would vanish into the paper, so the light card drops it and starts deeper
+// (Roseus' dark half again), on a transparent ground the page's own surface shows through.
+const LIGHT_RAMP = [[62, 18, 96], [125, 31, 159], [196, 42, 130], [226, 78, 66], [214, 128, 34]];
+const rampAt = (t, ramp = CARD_RAMP) => {
+  const f = Math.max(0, Math.min(1, t)) * (ramp.length - 1), i = Math.min(ramp.length - 2, Math.floor(f)), u = f - i;
+  return [0, 1, 2].map((k) => Math.round(ramp[i][k] + (ramp[i + 1][k] - ramp[i][k]) * u));
 };
 /** Per-column brightness 0..1: the centroid of the spectrogram row under that column, over its bins. */
 function columnCentroids(a, width, loud) {
@@ -80,10 +83,12 @@ function columnCentroids(a, width, loud) {
   return out.map((v) => (v - lo) / span);
 }
 
-/** The catalogue card: a wide waveform coloured by spectral centroid on a dark ground (2:1 by default). */
-export function cardPng(a, width = 640, height = Math.round(width / 2)) {
-  const c = canvas(width, height, CARD_BG), mid = Math.floor(height / 2), amp = height / 2 - Math.round(height * 0.08);
-  c.rect(0, mid, width, 1, CARD_ZERO);
+/** The catalogue card: a wide waveform coloured by spectral centroid on a dark ground (2:1 by default), or on a
+ *  transparent one with the deeper ramp when theme is "light". */
+export function cardPng(a, width = 640, height = Math.round(width / 2), theme = "dark") {
+  const light = theme === "light", ramp = light ? LIGHT_RAMP : CARD_RAMP;
+  const c = canvas(width, height, light ? [0, 0, 0, 0] : CARD_BG), mid = Math.floor(height / 2), amp = height / 2 - Math.round(height * 0.08);
+  c.rect(0, mid, width, 1, light ? [0, 0, 0, 22] : CARD_ZERO);
   const cols = a.wave.length, col = (x) => a.wave[Math.min(cols - 1, Math.floor(x / width * cols))];
   let peak = 0; for (const [lo, hi] of a.wave) peak = Math.max(peak, -lo, hi);
   const gain = peak > 0 ? Math.min(4, 0.96 / peak) : 1; // quiet sounds still fill the card
@@ -93,7 +98,7 @@ export function cardPng(a, width = 640, height = Math.round(width / 2)) {
   for (let x = 0; x < width; x++) {
     const [lo, hi] = col(x);
     const y0 = Math.round(mid - hi * gain * amp), y1 = Math.round(mid - lo * gain * amp);
-    c.vline(x, y0, Math.max(y1, y0 + 1), loud[x] ? [...rampAt(tone[x]), 255] : [125, 31, 159, 150]);
+    c.vline(x, y0, Math.max(y1, y0 + 1), loud[x] ? [...rampAt(tone[x], ramp), 255] : [125, 31, 159, light ? 110 : 150]);
   }
   return c.png();
 }

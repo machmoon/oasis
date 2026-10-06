@@ -7,6 +7,7 @@ import { LOOKS, applyLook } from "/looks.js";
 import { pageSound, KIND_LABEL, makeRenderer } from "/sound-page.js";
 import { mountKitPlayer } from "/keys.js";
 import { unlock, loadWav, play } from "/audio.js";
+import { themed } from "/wave.js";
 
 // styles live in kit.css and sound.css; loaded once, from here, so index.html stays as it is
 for (const href of ["/kit.css", "/sound.css"]) if (!document.querySelector(`link[href="${href}"]`)) {
@@ -132,7 +133,7 @@ function liveCards(root) {
 // centroid (server/sound.js cardPng), so 265 cards cost 265 small cached PNGs, not 265 decoded WAVs. Play fetches the
 // one render.wav it needs and sweeps a playhead over the picture for the take's length. Hovering plays nothing (sound
 // needs a gesture). One toolbar filters: search, kind, kit, creator, price, sort.
-const soundThumb = (id, q = {}) => { const u = new URLSearchParams({ w: 480, ...q }); return `/api/assets/${encodeURIComponent(id)}/render.png?${u}`; };
+const soundThumb = (id, q = {}) => { const u = new URLSearchParams({ w: 480, ...q }); return themed(`/api/assets/${encodeURIComponent(id)}/render.png?${u}`); };
 export function soundCard(a) {
   return `<div class="s-card" data-id="${esc(a.id)}">
     <span class="s-sheet"><a href="#/a/${esc(a.id)}" class="s-link" tabindex="-1" aria-hidden="true"><img src="${soundThumb(a.id)}" alt="" loading="lazy" width="480" height="240"></a><i class="s-cursor" aria-hidden="true"></i><button class="s-play" data-play="${esc(a.id)}" aria-label="Play ${esc(a.title)}">${icon("play")}</button></span>

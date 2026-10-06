@@ -97,6 +97,7 @@
   /* layers */
   --z-sticky: 20; --z-overlay: 30; --z-toast: 40; --z-app: 50;
 
+  --thumb-bg: var(--sunk); /* behind waveform thumbnails; the light PNG is transparent */
   color-scheme: light;
 }
 
@@ -112,10 +113,12 @@
     --shadow: 0 1px 2px rgb(0 0 0 / .4), 0 16px 40px -24px rgb(0 0 0 / .8);
     --shadow-lg: 0 2px 4px rgb(0 0 0 / .4), 0 32px 80px -32px rgb(0 0 0 / .9);
     --inset-top: inset 0 1px 0 rgb(255 255 255 / .06);
+    --thumb-bg: #0B0C10;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
+  --thumb-bg: #0B0C10;
   --bg: #0F1115; --surface: #171A20; --sunk: #1F232B; --ink: #EDEEF2; --ink-2: #C4C9D4; --muted: #8F96A5;
   --line: #272B34; --line-strong: #3A404C;
   --accent: #F0A440; --accent-text: #F0A440; --accent-soft: #2E2210; --accent-ink: #1A1206;

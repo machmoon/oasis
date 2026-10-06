@@ -26,7 +26,14 @@ export function encodePng(rgba, width, height) {
 export function canvas(width, height, bg = [255, 255, 255, 255]) {
   const px = new Uint8Array(width * height * 4);
   for (let i = 0; i < width * height; i++) px.set(bg, i * 4);
-  const put = (x, y, c) => { if (x < 0 || y < 0 || x >= width || y >= height) return; const i = (y * width + x) * 4, a = (c[3] ?? 255) / 255; px[i] = px[i] + (c[0] - px[i]) * a; px[i + 1] = px[i + 1] + (c[1] - px[i + 1]) * a; px[i + 2] = px[i + 2] + (c[2] - px[i + 2]) * a; px[i + 3] = 255; };
+  // Porter-Duff "source over" (straight alpha), so a transparent ground stays transparent under soft strokes
+  const put = (x, y, c) => {
+    if (x < 0 || y < 0 || x >= width || y >= height) return;
+    const i = (y * width + x) * 4, sa = (c[3] ?? 255) / 255, da = px[i + 3] / 255, oa = sa + da * (1 - sa);
+    if (oa <= 0) return;
+    for (let k = 0; k < 3; k++) px[i + k] = Math.round((c[k] * sa + px[i + k] * da * (1 - sa)) / oa);
+    px[i + 3] = Math.round(oa * 255);
+  };
   return {
     width, height, px, put,
     rect(x, y, w, h, c) { for (let j = Math.max(0, y); j < Math.min(height, y + h); j++) for (let i = Math.max(0, x); i < Math.min(width, x + w); i++) put(i, j, c); },

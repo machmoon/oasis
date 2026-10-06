@@ -4,6 +4,7 @@
 import { pageStudio, leaveStudio } from "/studio.js";
 import { pageKit as page3dKit, pageAsset, pageSounds } from "/kit.js";
 import { pageKits, pageKit } from "/kits.js";
+import { themed } from "/wave.js";
 
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -30,7 +31,7 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
 };
 const icon = (name) => `<i class="ph-bold ph-${name}" aria-hidden="true"></i>`;
-const thumb = (id, w = 360) => `/api/assets/${encodeURIComponent(id)}/render.png?w=${w}`;
+const thumb = (id, w = 360) => themed(`/api/assets/${encodeURIComponent(id)}/render.png?w=${w}`);
 
 // Entrance: each block rises once when it scrolls into view (IntersectionObserver, no scroll listeners).
 const io = "IntersectionObserver" in window ? new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { threshold: 0.12 }) : null;
