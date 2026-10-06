@@ -129,7 +129,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
         <div class="a-program" id="sp-walk-code"></div>
       </div>
       <div class="sp-walk-stage" id="sp-walk">
-        <div class="sp-walk-head"><div id="sp-walk-n" class="seg"></div><span class="sp-legend"><span>up: brighter</span><span>bigger: louder</span></span><span class="sp-n" id="sp-walk-stat"></span></div>
+        <div class="sp-walk-head"><div id="sp-walk-n" class="seg"></div><span class="sp-legend"><span>higher = brighter</span><span>larger = louder</span></span><span class="sp-n" id="sp-walk-stat"></span></div>
         <svg class="sp-walk-plot" id="sp-walk-plot" role="img" aria-label="Each take as a dot: time across, brightness up, size by level"></svg>
         <div class="sp-walk-foot"><button class="s-play big" id="sp-walk-play" aria-label="Play the walk" disabled>${icon("play")}</button><div class="sp-walk-waves"><div id="sp-walk-wave"></div><div id="sp-walk-mini"></div></div></div>
         <div class="sp-note" id="sp-walk-note"><span class="skel" style="width:160px;height:12px"></span></div>
@@ -295,7 +295,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
       const cs = takes.map((t) => t[2]).filter((c) => c > 0), ps = takes.map((t) => t[1]);
       const x = scaleLinear().domain([0, dur]).range([m.l, w - m.r]);
       const y = scaleLog().domain([Math.max(20, Math.min(...cs) * 0.92), Math.max(...cs) * 1.08]).range([h - m.b, m.t]);
-      const r = scaleSqrt().domain([0, Math.max(...ps) || 1]).range([1.5, count > 100 ? 6 : 9]);
+      const r = scaleSqrt().domain([0, Math.max(...ps) || 1]).range([1.5, Math.min(count > 100 ? 6 : 9, w / (count * 2.2))]); // dots never overlap on a narrow chart
       const c = scaleLinear().domain(y.domain().map(Math.log)).range([0.08, 1]);
       const lo = y.domain()[0];
       geo = { x, y };
