@@ -187,6 +187,7 @@ export async function pageSounds(app) {
     <p class="s-count" id="k-count" aria-live="polite"></p>
     <section class="kp" id="k-play" hidden aria-label="Play the kit"></section>
     <div class="s-grid" id="k-grid">${soundSkeleton()}</div>
+    <div class="s-more" id="k-more" hidden><button class="btn" type="button" id="k-more-b"></button></div>
     <div class="k-empty" id="k-empty" hidden><h3>No sounds match.</h3><p>Clear a filter, or <a class="link" href="#/kits">describe a kit</a> and let Claude find the closest.</p><button class="btn small" type="button" id="k-clear">Clear filters</button></div>
   </div>`;
   let list;
@@ -199,16 +200,26 @@ export async function pageSounds(app) {
   $("#k-kit").innerHTML = options([["all", "All"], ...kits.map((k) => [k, k])], state.kit);
   $("#k-author").innerHTML = options([["all", "Everyone"], ...creators.map((c) => [c, c])], "all");
   const grid = $("#k-grid");
+  // a page of cards at a time: 265 cards at once is a wall nobody scrolls (the design critic measured 18,000 px)
+  const PAGE = 48; let shown = PAGE, last = [];
+  const paint = () => {
+    grid.innerHTML = last.slice(0, shown).map(soundCard).join("");
+    const left = last.length - shown;
+    $("#k-more").hidden = left <= 0;
+    if (left > 0) $("#k-more-b").textContent = `Show ${Math.min(PAGE, left)} more of ${left}`;
+    liveSoundCards(grid);
+  };
+  $("#k-more-b").addEventListener("click", () => { shown += PAGE; paint(); });
   const draw = () => {
+    shown = PAGE;
     const q = state.q.trim().toLowerCase();
     let out = list.filter((a) => (state.kind === "all" || a.kind === state.kind) && (state.price === "all" || (state.price === "free") === (a.price === 0)) && (state.author === "all" || a.author === state.author) && (state.kit === "all" || a.kit === state.kit)
       && (!q || `${a.title} ${a.kit || ""} ${a.author} ${a.description || ""}`.toLowerCase().includes(q)));
     const by = { name: (x, y) => x.title.localeCompare(y.title), kit: (x, y) => String(x.kit).localeCompare(String(y.kit)) || x.title.localeCompare(y.title), "price-asc": (x, y) => x.price - y.price || x.title.localeCompare(y.title), "price-desc": (x, y) => y.price - x.price || x.title.localeCompare(y.title), length: (x, y) => y.duration - x.duration, knobs: (x, y) => y.knobCount - x.knobCount }[state.sort];
     out = out.sort(by);
-    grid.innerHTML = out.map(soundCard).join("");
+    last = out; paint();
     $("#k-count").innerHTML = out.length === list.length ? `<b class="num">${list.length}</b> sounds from <b class="num">${creators.length}</b> creators in <b class="num">${kits.length}</b> kits` : `<b class="num">${out.length}</b> of ${list.length} sounds`;
     $("#k-empty").hidden = out.length > 0;
-    liveSoundCards(grid);
     playKit();
   };
   // a kit of voices (the Instrument kit: every sound has a note knob) gets "Play the kit" over its grid: pick a voice,
@@ -267,7 +278,18 @@ export async function pageKit(app) {
   $("#k-creators").innerHTML = `<span>By</span><div class="k-chips">${[["all", "everyone"], ...creators.map((c) => [c, c])].map(([v, l]) => `<button class="k-chip${v === "all" ? " on" : ""}" data-f="author" data-v="${esc(v)}">${v === "all" ? l : `<img src="${thumb(list.find((a) => a.author === v).id, { w: 80 })}" alt="">${esc(l)}`}</button>`).join("")}</div>`;
 
   const grid = $("#k-grid");
+  // a page of cards at a time: 265 cards at once is a wall nobody scrolls (the design critic measured 18,000 px)
+  const PAGE = 48; let shown = PAGE, last = [];
+  const paint = () => {
+    grid.innerHTML = last.slice(0, shown).map(soundCard).join("");
+    const left = last.length - shown;
+    $("#k-more").hidden = left <= 0;
+    if (left > 0) $("#k-more-b").textContent = `Show ${Math.min(PAGE, left)} more of ${left}`;
+    liveSoundCards(grid);
+  };
+  $("#k-more-b").addEventListener("click", () => { shown += PAGE; paint(); });
   const draw = () => {
+    shown = PAGE;
     let out = list.filter((a) => (state.kind === "all" || a.kind === state.kind) && (state.price === "all" || (state.price === "free") === (a.price === 0)) && (state.author === "all" || a.author === state.author));
     const by = { name: (x, y) => x.title.localeCompare(y.title), "price-asc": (x, y) => x.price - y.price || x.title.localeCompare(y.title), "price-desc": (x, y) => y.price - x.price || x.title.localeCompare(y.title), size: (x, y) => (y.footprint?.[0] || 0) * (y.footprint?.[1] || 0) - (x.footprint?.[0] || 0) * (x.footprint?.[1] || 0), knobs: (x, y) => y.knobCount - x.knobCount }[state.sort];
     out = out.sort(by);

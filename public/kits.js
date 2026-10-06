@@ -80,7 +80,7 @@ export async function pageKit(app, id) {
     app.innerHTML = `<div class="wrap a-page">
       <nav class="a-crumb" aria-label="Breadcrumb"><a href="#/kits">Kits</a><span>/</span><span>${esc(k.title)}</span></nav>
       <header class="kv-head">
-        <div><h1>${esc(k.title)}</h1><p class="kv-vibe">"<b>${esc(k.vibe)}</b>". ${k.planner === "single" ? `One sound, licensed on its own with the knobs set on its page` : `<span class="num">${k.items.length}</span> sounds from ${k.creators.length} creator${k.creators.length === 1 ? "" : "s"}, ${k.planner === "keywords" ? `matched by keyword: the Claude planner is offline, so parts are picked by the words in the vibe and their knobs are left at their defaults` : `planned by ${esc(k.planner)}`}`}.</p></div>
+        <div><h1>${esc(k.title)}</h1><p class="kv-vibe">"<b>${esc(k.vibe)}</b>". ${k.planner === "single" ? `One sound, licensed on its own with the knobs set on its page` : `<span class="num">${k.items.length}</span> sounds from ${k.creators.length} creator${k.creators.length === 1 ? "" : "s"}, ${k.planner === "keywords" ? `matched by keyword: the Claude planner is offline, so parts are picked by the words in the vibe and their knobs are left at their defaults` : `planned by Claude (${esc(k.planner)})`}`}.</p></div>
         <div class="kv-side">
           <span class="kv-state${paid ? " paid" : ""}">${paid ? `${icon("seal-check")} Licensed · PayPal order ${esc(k.licence.orderId)}` : `${icon("waveform")} Watermarked preview until paid`}</span>
           <div class="kv-share"><label class="sr-only" for="kv-url">Link to this kit</label><input id="kv-url" readonly value="${esc(kitUrl)}" spellcheck="false"><button class="btn small" id="kv-copy" type="button">${icon("link-simple")} <span>Copy link</span></button></div>
@@ -113,9 +113,9 @@ export async function pageKit(app, id) {
     return `<div class="kv-part" data-i="${i}">
       <button class="s-play" data-play="${i}" aria-label="Play ${esc(it.name)}">${icon("play")}</button>
       <div class="pic" data-wave="${i}"></div>
-      <div class="who"><b class="kv-name">${esc(it.name)}</b><span class="kv-meta">${esc(it.title)}, ${esc(KIND_LABEL[it.kind] || it.kind)} by ${esc(it.author)}${it.reason ? `. ${esc(it.reason[0].toUpperCase() + it.reason.slice(1).replace(/[.\s]+$/, ""))}.` : ""}</span>${knobs.length ? `<span class="kv-knobs">${knobs.map(([k, v]) => `<span>${esc(k)} ${esc(String(v))}</span>`).join("")}</span>` : ""}
+      <div class="who"><b class="kv-name">${esc(it.name)}</b><span class="kv-meta">${esc(it.title)}, ${esc(KIND_LABEL[it.kind] || it.kind)} by ${esc(it.author)}${it.reason ? `. ${esc(it.reason[0].toUpperCase() + it.reason.slice(1).replace(/[.\s]+$/, ""))}.` : ""}</span>${(() => { const shown = knobs.filter(([k, v]) => k !== "seed" && v !== false); return shown.length ? `<span class="kv-knobs" title="Knobs tuned for this kit">${shown.map(([k, v]) => `${esc(k)} <b>${esc(String(v))}</b>`).join(", ")}</span>` : ""; })()}
         <span class="kv-acts"><a href="#/a/${esc(it.assetId)}${it.licence ? `?lic=${esc(it.licence)}` : ""}">${icon("sliders-horizontal")} Open with knobs</a>${it.wav ? `<a href="${esc(it.wav)}">${icon("download-simple")} WAV, 44.1 kHz</a><button type="button" class="kv-code" aria-expanded="false" aria-controls="kv-code-${i}">${icon("code")} Import line</button>` : ""}</span></div>
-      <div class="amt num${paid || it.price === 0 ? " clean" : ""}">${it.covered ? "covered" : price(it.price)}<small>${it.covered ? "same program" : paid || it.price === 0 ? "clean" : "preview"}</small></div>
+      <div class="amt num${paid || it.price === 0 ? " clean" : ""}">${it.covered ? "covered" : price(it.price)}<small>${it.covered ? "same program" : paid ? "licensed" : it.price === 0 ? "free" : "preview"}</small></div>
       ${it.wav ? `<div class="links" id="kv-code-${i}" hidden><code>import { play } from "${esc(it.module)}"</code></div>` : ""}
     </div>`;
   }

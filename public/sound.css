@@ -77,6 +77,8 @@
 .s-skel .skel.t { aspect-ratio: auto; height: 14px; width: 60%; margin: 14px 8px 0; }
 .s-skel .skel.t + .skel.t { width: 36%; margin-top: 8px; margin-bottom: 8px; }
 .k-empty .btn { margin-top: 14px; }
+.s-more { display: flex; justify-content: center; margin-top: 28px; }
+.s-more[hidden] { display: none; }
 @media (max-width: 599px) {
   .s-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .s-card { padding: 4px; }
@@ -266,8 +268,9 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
 .kv-part .who { min-width: 0; }
 .kv-part .who .kv-name { display: block; font-weight: var(--w-semibold); color: var(--ink); }
 .kv-part .who span { font-size: var(--fs-sm); color: var(--muted); }
-.kv-part .kv-knobs { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
-.kv-part .kv-knobs span { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: var(--r-pill); background: var(--sunk); font: var(--fs-xs) var(--font-mono); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.kv-part .kv-knobs { display: block; margin-top: 6px; }
+.kv-part .kv-knobs { font: var(--fs-xs) / 1.5 var(--font-mono); color: var(--muted); }
+.kv-part .kv-knobs b { font-weight: var(--w-medium); color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .kv-part .amt { font: var(--w-semibold) 15px var(--font-sans); font-variant-numeric: tabular-nums; text-align: right; }
 .kv-part .amt small { display: block; font: var(--fs-xs) var(--font-sans); color: var(--muted); font-weight: var(--w-medium); }
 .kv-part .amt.clean small { color: var(--ok); }

@@ -87,7 +87,7 @@ export async function pageHome(app, ctx) {
     <h2>Agents run the same loop</h2>
     <p class="lede">Connect Claude Code over MCP. It searches, previews, makes the kit and licenses it inside a budget you approved once.</p>
     <div class="cmd"><span id="cmd-text"></span><button type="button" id="cmd-copy">Copy</button></div>
-    <div class="tools">${["search_assets", "preview_asset", "make_kit", "buy_assets", "get_budget"].map((t) => `<span class="chip">${t}</span>`).join("")}</div>
+    <div class="tools" aria-label="MCP tools">${["search_assets", "preview_asset", "make_kit", "buy_assets", "get_budget"].map((t) => `<code>${t}</code>`).join("")}</div>
   </section>
 
   <section class="wrap band">
@@ -131,7 +131,7 @@ function mountHero({ api, esc, usd, icon, reduced, onBill }) {
   io.observe(stage);
   const wait = async () => { while (alive && (offscreen || paused > performance.now())) await sleep(200); };
   const beat = (name) => lines.forEach((l) => { const i = ["vibe", "kit", "paid"].indexOf(l.dataset.beat), j = ["vibe", "kit", "paid"].indexOf(name); l.classList.toggle("on", i === j); l.classList.toggle("done", i < j); });
-  const say = (html, live = false) => { if (!readout.isConnected) { alive = false; return; } readout.innerHTML = `<i class="${live ? "live" : ""}"></i>${html}`; };
+  const say = (html, live = false) => { if (!readout.isConnected) { alive = false; return; } readout.innerHTML = `<i class="${live ? "live" : ""}"></i><span class="t">${html}</span>`; };
 
   let meta = null;
   const KNOBS = ["surface", "weight", "pace", "wetness"];
