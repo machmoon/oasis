@@ -77,22 +77,22 @@ function assignRoles(pads) {
 // ---------- grooves, in CRATE's format: [step, velocity, late (fraction of a 16th), ratchet] over `bars` bars ----------
 const hats8 = (v1, v2, late = 0, bars = 2) => Array.from({ length: bars * 8 }, (_, n) => [n * 2, n % 2 ? v2 : v1, n % 2 ? late : 0]);
 const STYLES = {
-  boombap: { label: "BOOM BAP", bpm: 93, swing: 55, bars: 2, words: ["boom bap", "boombap", "90s", "golden era", "east coast"],
+  boombap: { name: "Boom bap", label: "BOOM BAP", bpm: 93, swing: 55, bars: 2, words: ["boom bap", "boombap", "90s", "golden era", "east coast"],
     lanes: { kick: [[0, 122, 0], [3, 70, 0.04], [10, 114, 0.02], [16, 122, 0], [19, 88, 0.02], [24, 104, 0.02], [26, 110, 0]], snare: [[4, 120, 0.03], [12, 122, 0.03], [20, 120, 0.03], [28, 122, 0.03], [31, 48, 0.05]], hat: hats8(94, 58, 0.02) } },
-  dilla: { label: "DILLA", bpm: 88, swing: 57, bars: 2, words: ["dilla", "donuts", "laid back", "wonky", "drunk"],
+  dilla: { name: "Dilla", label: "DILLA", bpm: 88, swing: 57, bars: 2, words: ["dilla", "donuts", "laid back", "wonky", "drunk"],
     lanes: { kick: [[0, 118, -0.03], [6, 86, 0.14], [9, 106, 0.08], [16, 120, -0.02], [21, 90, 0.16], [25, 104, 0.06], [30, 78, 0.18]], snare: [[4, 110, 0.24], [12, 116, 0.22], [20, 112, 0.26], [28, 118, 0.22]], hat: hats8(80, 60, 0.2), rim: [[15, 46, 0.3], [31, 52, 0.28]] } },
-  jazzhop: { label: "JAZZ HOP", bpm: 89, swing: 59, bars: 2, words: ["jazz", "jazzhop", "jazz hop", "nujabes", "jazzy"],
+  jazzhop: { name: "Jazz hop", label: "JAZZ HOP", bpm: 89, swing: 59, bars: 2, words: ["jazz", "jazzhop", "jazz hop", "nujabes", "jazzy"],
     lanes: { kick: [[0, 114, 0], [10, 100, 0.05], [16, 114, 0], [18, 76, 0.05], [27, 98, 0.05]], snare: [[4, 106, 0.08], [12, 110, 0.08], [20, 106, 0.08], [28, 112, 0.08]], hat: hats8(78, 60, 0.06), rim: [[7, 42, 0.1], [23, 44, 0.1]] } },
-  lofi: { label: "LO-FI", bpm: 78, swing: 60, bars: 2, words: ["lofi", "lo-fi", "lo fi", "chill", "study", "bedroom", "cozy", "rainy"],
+  lofi: { name: "Lo-fi", label: "LO-FI", bpm: 78, swing: 60, bars: 2, words: ["lofi", "lo-fi", "lo fi", "chill", "study", "bedroom", "cozy", "rainy"],
     lanes: { kick: [[0, 110, 0], [6, 80, 0.06], [10, 98, 0.04], [16, 110, 0], [25, 96, 0.04]], snare: [[4, 98, 0.12], [12, 102, 0.12], [20, 98, 0.12], [28, 104, 0.14]], hat: hats8(62, 44, 0.08), texture: [[0, 96, 0]] } },
-  rnb: { label: "R&B", bpm: 70, swing: 60, bars: 1, words: ["r&b", "rnb", "slow jam", "soul", "smooth"],
+  rnb: { name: "R&B", label: "R&B", bpm: 70, swing: 60, bars: 1, words: ["r&b", "rnb", "slow jam", "soul", "smooth"],
     lanes: { kick: [[0, 116, 0], [7, 90, 0.05], [10, 102, 0]], snare: [[4, 104, 0.06], [12, 108, 0.06]], clap: [[4, 86, 0.08], [12, 90, 0.08]], hat: Array.from({ length: 16 }, (_, s) => [s, s % 2 ? 42 : 62, 0]) } },
-  house: { label: "HOUSE", bpm: 124, swing: 54, bars: 1, words: ["house", "four on the floor", "club", "dance", "disco"],
+  house: { name: "House", label: "HOUSE", bpm: 124, swing: 54, bars: 1, words: ["house", "four on the floor", "club", "dance", "disco"],
     lanes: { kick: [[0, 124, 0], [4, 120, 0], [8, 124, 0], [12, 120, 0]], clap: [[4, 110, 0], [12, 112, 0]], snare: [[4, 96, 0.02], [12, 98, 0.02]], openhat: [[2, 94, 0], [6, 90, 0], [10, 94, 0], [14, 90, 0]], hat: Array.from({ length: 8 }, (_, n) => [n * 2 + 1, n % 2 ? 64 : 56, 0]), perc: [[7, 68, 0], [11, 62, 0]] } },
-  trap: { label: "TRAP", bpm: 140, swing: 50, bars: 2, words: ["trap", "atl", "808", "hard"],
+  trap: { name: "Trap", label: "TRAP", bpm: 140, swing: 50, bars: 2, words: ["trap", "atl", "808", "hard"],
     lanes: { kick: [[0, 124, 0], [6, 110, 0], [11, 116, 0], [16, 124, 0], [22, 106, 0], [27, 112, 0]], clap: [[8, 118, 0], [24, 118, 0]], snare: [[8, 108, 0], [24, 108, 0], [31, 76, 0]],
       hat: [...Array.from({ length: 32 }, (_, s) => [s, s % 2 ? 64 : 90, 0]).filter(([s]) => ![7, 15, 23, 30].includes(s)), [7, 82, 0, 2], [15, 84, 0, 3], [23, 82, 0, 2], [30, 88, 0, 4]] } },
-  drill: { label: "DRILL", bpm: 142, swing: 50, bars: 2, words: ["drill", "uk drill", "slide"],
+  drill: { name: "Drill", label: "DRILL", bpm: 142, swing: 50, bars: 2, words: ["drill", "uk drill", "slide"],
     lanes: { kick: [[0, 122, 0], [10, 104, 0], [16, 120, 0], [23, 100, 0], [26, 98, 0]], snare: [[8, 118, 0], [24, 118, 0], [29, 96, 0]], hat: [[0, 90, 0], [3, 70, 0], [6, 84, 0], [9, 72, 0], [12, 86, 0], [14, 70, 0, 3], [16, 90, 0], [19, 70, 0], [22, 84, 0], [25, 72, 0], [28, 86, 0], [30, 76, 0, 3]], perc: [[5, 64, 0], [21, 66, 0]] } },
 };
 const STYLE_ORDER = ["jazzhop", "boombap", "dilla", "lofi", "rnb", "house", "trap", "drill"];
@@ -278,7 +278,7 @@ export async function pagePads(app, id) {
       <nav class="a-crumb" aria-label="Breadcrumb"><a href="#/kits">Kits</a><span>/</span><a href="#/kit/${esc(kit.id)}">${esc(kit.title)}</a><span>/</span><span>Pads</span></nav>
       <div class="cr-device" id="cr">
         <section class="cr-lid" aria-label="Display">
-          <div class="cr-title"><div><b id="cr-style">KIT</b><span>${esc(kit.title.toUpperCase())} · ${pads.length} PROGRAMS</span></div><button class="cr-loop" id="cr-loop" type="button" aria-label="Loop length"><span>LOOP · <b id="cr-bars">2</b> <em id="cr-bars-w">BARS</em></span><i id="cr-segs"></i></button></div>
+          <div class="cr-title"><div><b id="cr-style">Kit</b><span>${esc(kit.title)}, ${pads.length} programs</span></div><button class="cr-loop" id="cr-loop" type="button" aria-label="Loop length"><span>LOOP · <b id="cr-bars">2</b> <em id="cr-bars-w">BARS</em></span><i id="cr-segs"></i></button></div>
           <div class="cr-hero">
             <button class="cr-read" id="cr-bpm-b" type="button"><b class="num" id="cr-bpm">90</b><span>BPM</span></button>
             <button class="cr-read" id="cr-swing-b" type="button"><b class="num" id="cr-swing">56</b><span>SWING</span></button>
@@ -294,7 +294,7 @@ export async function pagePads(app, id) {
           <div class="cr-punch" id="cr-punch" hidden><i id="cr-cells"></i><b class="num" id="cr-punch-v"></b><span id="cr-punch-t"></span></div>
           <div class="cr-timing" id="cr-timing"></div>
           <form class="cr-prompt" id="cr-prompt" autocomplete="off"><span aria-hidden="true">›</span><input id="cr-q" placeholder="Describe a beat or a kit: rusty sci-fi dungeon, boom bap, bpm 96, looser" aria-label="Describe a beat"><button type="button" data-c="undo" title="Undo (Cmd-Z)">↶ UNDO</button><button type="button" data-c="redo" title="Redo (Shift-Cmd-Z)">↷ REDO</button></form>
-          <div class="cr-chips" id="cr-chips">${STYLE_ORDER.map((k) => `<button type="button" data-style="${k}">${STYLES[k].label}</button>`).join("")}</div>
+          <div class="cr-chips" id="cr-chips">${STYLE_ORDER.map((k) => `<button type="button" data-style="${k}">${STYLES[k].name}</button>`).join("")}</div>
         </section>
         <div class="cr-hinge" aria-hidden="true"></div>
         <section class="cr-deck" aria-label="Deck">
@@ -302,9 +302,9 @@ export async function pagePads(app, id) {
             <button class="cr-key" id="cr-fx" type="button" aria-pressed="false" title="Hold for FX pads, tap to latch">FX</button>
             <button class="cr-key" id="cr-edit" type="button" aria-pressed="false" title="The selected pad's program knobs">EDIT</button>
             <button class="cr-key" id="cr-export" type="button" title="Render the loop to a WAV">BOUNCE</button>
-            <div class="cr-mark"><b>OASIS</b><span>PADS</span><em>after CRATE CR-16</em></div>
+            <p class="cr-mark">The layout and the hinge are <a href="https://github.com/odoisveryverygood/crate-duo" target="_blank" rel="noopener">CRATE</a>'s, the iPhone Duo MPC that won Bitrig Hacks.</p>
           </div>
-          <div class="cr-pads" id="cr-pads">${DRAW_ORDER.filter((i) => pads.length > 12 || i < 12).map((i) => `<button class="cr-pad" type="button" data-i="${i}"><span class="cr-n">${i + 1}</span><span class="cr-k">${KEY_LABEL(KEYS[i])}</span><span class="cr-name"></span><span class="cr-hint"></span></button>`).join("")}</div>
+          <div class="cr-pads" id="cr-pads">${DRAW_ORDER.filter((i) => pads.length > 12 || i < 12).map((i) => `<button class="cr-pad" type="button" data-i="${i}"><span class="cr-win">${pads[i] ? `<img src="${esc(cardUrl(pads[i]))}" alt="" loading="lazy" width="480" height="240">` : ""}</span><span class="cr-n">${i + 1}</span><span class="cr-k">${KEY_LABEL(KEYS[i])}</span><span class="cr-name"></span><span class="cr-hint"></span></button>`).join("")}</div>
           <div class="cr-right">
             <div class="cr-fader-w"><span class="cr-silk">FX · HINGE</span>
               <div class="cr-fader-row"><div class="cr-fader" id="cr-fader" role="slider" tabindex="0" aria-label="Hinge: the punch amount. Pull it down fast from above 60 for the drop." aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i class="cr-cap"></i></div>
@@ -342,12 +342,12 @@ export async function pagePads(app, id) {
     $("#cr-fx").classList.toggle("on", fxMode); $("#cr-fx").setAttribute("aria-pressed", fxMode);
   }
   function paintLid() {
-    $("#cr-style").textContent = seq.style ? STYLES[seq.style].label : "KIT";
+    $("#cr-style").textContent = seq.style ? STYLES[seq.style].name : "Kit";
     $("#cr-bpm").textContent = Math.round(seq.bpm); $("#cr-swing").textContent = seq.swing; $("#cr-bars").textContent = seq.bars; $("#cr-bars-w").textContent = seq.bars === 1 ? "BAR" : "BARS";
     $("#cr-segs").innerHTML = Array.from({ length: seq.bars }, (_, b) => `<i data-b="${b}"></i>`).join("");
     $$("[data-style]", app).forEach((c) => c.classList.toggle("on", c.dataset.style === seq.style));
     const p = pads[selected];
-    $("#cr-padline").innerHTML = `<span class="cr-tag">${selected + 1}</span><img src="${esc(cardUrl(p))}" alt="" width="480" height="240"><div class="cr-pl-t"><b>${esc(p.item.name.toUpperCase())}</b><span>${esc(p.item.title)} by ${esc(p.item.author)}</span></div><span class="cr-takes" id="cr-takes">${p.takes.length ? p.takes.map((_, n) => `<canvas data-n="${n}" width="72" height="34" title="Take ${n + 1}"></canvas>`).join("") : `<em class="cr-wait">RENDERING</em>`}<em>${hasSeed(p) ? `${p.takes.length || p.rr} TAKES` : "1 TAKE"}</em></span><button type="button" class="cr-chip${lidMode === "edit" ? " on" : ""}" id="cr-edit2">EDIT</button>`;
+    $("#cr-padline").innerHTML = `<span class="cr-tag">${selected + 1}</span><img src="${esc(cardUrl(p))}" alt="" width="480" height="240"><div class="cr-pl-t"><b>${esc(p.item.name)}</b><span>${esc(p.item.title)} by ${esc(p.item.author)}</span></div><span class="cr-takes" id="cr-takes">${p.takes.length ? p.takes.map((_, n) => `<canvas data-n="${n}" width="72" height="34" title="Take ${n + 1}"></canvas>`).join("") : `<em class="cr-wait">RENDERING</em>`}<em>${hasSeed(p) ? `${p.takes.length || p.rr} TAKES` : "1 TAKE"}</em></span><button type="button" class="cr-chip${lidMode === "edit" ? " on" : ""}" id="cr-edit2">EDIT</button>`;
     $("#cr-edit2").addEventListener("click", toggleEdit);
     // the takes themselves: one small waveform per seed, so the difference between hits is visible, not just heard
     $$("#cr-takes canvas", app).forEach((c) => drawTake(c, p.takes[Number(c.dataset.n)]));
@@ -365,7 +365,7 @@ export async function pagePads(app, id) {
     const main = $("#cr-main");
     if (lidMode === "edit") return paintEdit(main);
     const lanes = pads.map((p, i) => i).filter((i) => i === selected || rows[i].some(Boolean));
-    main.innerHTML = `<div class="cr-seq"><div class="cr-ruler"><span></span>${Array.from({ length: STEPS }, (_, s) => `<i>${s % 4 === 0 ? s + 1 : ""}</i>`).join("")}</div>${lanes.map((i) => `<div class="cr-lane${i === selected ? " sel" : ""}" data-i="${i}"><button type="button" class="cr-lname" data-sel="${i}" title="Long-press to clear the lane">${esc(pads[i].item.name.toUpperCase())}</button>${Array.from({ length: STEPS }, (_, s) => `<button type="button" class="cr-dot" data-i="${i}" data-s="${s}" aria-label="${esc(pads[i].item.name)} step ${s + 1}"></button>`).join("")}</div>`).join("")}</div>`;
+    main.innerHTML = `<div class="cr-seq"><div class="cr-ruler"><span></span>${Array.from({ length: STEPS }, (_, s) => `<i>${s % 4 === 0 ? s + 1 : ""}</i>`).join("")}</div>${lanes.map((i) => `<div class="cr-lane${i === selected ? " sel" : ""}" data-i="${i}"><button type="button" class="cr-lname" data-sel="${i}" title="Long-press to clear the lane">${esc(pads[i].item.name)}</button>${Array.from({ length: STEPS }, (_, s) => `<button type="button" class="cr-dot" data-i="${i}" data-s="${s}" aria-label="${esc(pads[i].item.name)} step ${s + 1}"></button>`).join("")}</div>`).join("")}</div>`;
     paintDots();
   }
   /** The lid shows the bar under the playhead (bar 1 when stopped); a dot is the hit at that step of that bar. */
@@ -421,7 +421,7 @@ export async function pagePads(app, id) {
   }
   function paintTiming() {
     const loaded = pads.filter((p) => p.takes.length), ms = loaded.length ? Math.round(loaded.reduce((s, p) => s + p.ms, 0) / loaded.length) : 0;
-    $("#cr-timing").innerHTML = `<span>RENDER ${ms} MS / PAD · ${loaded.reduce((s, p) => s + p.takes.length, 0)} TAKES FROM ${pads.length} PROGRAMS</span><span>${fxMode ? "FX PADS" : lidMode === "edit" ? "EDIT" : "SEQ"} · ${FX.find((f) => f[0] === fxId)[1]}</span>`;
+    $("#cr-timing").innerHTML = `<span>Rendered in ${ms} ms a pad, ${loaded.reduce((s, p) => s + p.takes.length, 0)} takes from ${pads.length} programs</span><span class="cr-mode">${fxMode ? "FX pads" : lidMode === "edit" ? "Edit" : "Pattern"}, hinge on ${FX.find((f) => f[0] === fxId)[1].toLowerCase()}</span>`;
   }
   function paintAll() { paintLid(); paintTransport(); pads.forEach(paintPad); }
   const select = (i) => { if (i >= pads.length) return; const was = selected; selected = i; paintPad(pads[was]); paintPad(pads[i]); paintLid(); };
