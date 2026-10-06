@@ -216,6 +216,8 @@ export function build(p, ctx) { … return { samples }; }"></textarea>
 // counts as a line of text, then Latest sounds / Latest packs; Bandcamp and SoundCloud artist headers): identity
 // first, one line of facts, then tabs (shadcn/ui tabs.tsx) for their sounds, the orders that paid them, and forks.
 // a creator's sounds under one heading per kit (Primer ActionList.Group; Bandcamp's tracks under their release)
+// the first page of a creator's sounds ends at a kit boundary, never mid-group
+const firstGroups = (list, min = 24) => { let n = Math.min(min, list.length); while (n < list.length && (list[n].kit || "") === (list[n - 1].kit || "")) n++; return list.slice(0, n); };
 const grouped = (list, all = list) => { let last = null; return list.map((x) => { const k = x.kit || "Other sounds", head = k !== last ? `<div class="s-group"><a href="#/sounds?kit=${encodeURIComponent(x.kit || "")}">${esc(k)}</a><span>${all.filter((y) => (y.kit || "Other sounds") === k).length} sounds</span></div>` : ""; last = k; return head + soundRow(x, { maker: false, kit: false }); }).join(""); };
 export async function pageCreator(app, name) {
   app.innerHTML = `<div class="wrap pb-page cr-page" aria-busy="true"><div class="skel" style="height:72px;width:min(420px,70%);margin:24px 0"></div><div class="skel" style="height:320px;border-radius:var(--r-lg)"></div></div>`;
@@ -243,7 +245,7 @@ export async function pageCreator(app, name) {
       <p class="cr-pay">${icon("paypal-logo")} ${c.hasPayout ? `Payouts to <span class="mono">${esc(c.payoutEmail)}</span> after each order's 14-day refund window` : `No PayPal email on file, ${cents(c.earned.held)} held until there is one`}</p></div>
     </header>
     <div class="cr-tabs" role="tablist" aria-label="${esc(c.name)}">${tabs.map(([id, label, n], i) => `<button type="button" role="tab" id="crt-${id}" aria-controls="crp-${id}" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}">${label} <span class="num">${n}</span></button>`).join("")}</div>
-    <section class="cr-panel" role="tabpanel" id="crp-sounds" aria-labelledby="crt-sounds">${c.sounds.length ? `<div class="s-rows" id="cr-grid">${grouped(c.sounds.slice(0, 24), c.sounds)}</div>${c.sounds.length > 24 ? `<div class="s-more"><button class="btn" type="button" id="cr-more">Show all ${c.sounds.length}</button></div>` : ""}` : `<p class="muted">None yet.</p>`}</section>
+    <section class="cr-panel" role="tabpanel" id="crp-sounds" aria-labelledby="crt-sounds">${c.sounds.length ? `<div class="s-rows" id="cr-grid">${grouped(firstGroups(c.sounds), c.sounds)}</div>${c.sounds.length > firstGroups(c.sounds).length ? `<div class="s-more"><button class="btn" type="button" id="cr-more">Show all ${c.sounds.length}</button></div>` : ""}` : `<p class="muted">None yet.</p>`}</section>
     <section class="cr-panel" role="tabpanel" id="crp-orders" aria-labelledby="crt-orders" hidden>${c.orders.length ? `<div class="sales">${c.orders.map((o) => `<div class="sale">
         <div class="sale-top"><b class="amt num">${cents(o.cents)}</b><span class="sale-st${o.payout === "SENT" ? "" : " agent"}">${o.status === "REFUNDED" ? "Refunded" : o.payout === "SENT" ? "Paid out" : "Held"}</span><span class="sale-when">${esc(when(o.at))}</span></div>
         <div class="split">${o.items.map((i) => `${esc(i.title)} <b class="num">${cents(i.cents)}</b> ${esc(role(i.role))}`).join(", ")}</div>

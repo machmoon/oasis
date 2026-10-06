@@ -135,7 +135,7 @@ async function pageBudget(id) {
       <dl class="pk-kv">
         <dt>Charged</dt><dd>Only when the agent buys, one PayPal order per kit</dd>
         <dt>Cap</dt><dd>Enforced by Oasis before PayPal is called</dd>
-        <dt>Stop</dt><dd>Revoke the token any time; it stops working at once</dd>
+        <dt>Stop</dt><dd>Revoke it from the budget's own page (you land there after PayPal); the token stops working at once</dd>
       </dl>
       ${last ? `<p style="margin-top:28px"><a class="link" href="#/budget/${esc(last.id)}">Open your last budget</a></p>` : ""}
     </div>
@@ -220,7 +220,7 @@ async function pageLedger() {
       <div><div class="pk-col-h">Orders <span class="pk-live"><i aria-hidden="true"></i>live</span></div><div class="sales" id="sales"><div class="pk-stack" style="padding:12px 16px"><div class="pk-sk row"></div><div class="pk-sk row"></div><div class="pk-sk row"></div></div></div></div>
       <div><div class="pk-col-h" id="cr-h">Creators <span>earned so far</span></div><div class="creators" id="creators"><div class="pk-stack"><div class="pk-sk row"></div><div class="pk-sk row"></div></div></div></div>
     </div></div>`;
-  const empty = pkNote("empty", "receipt", "Nothing has been paid for yet", "Make a kit and license it, or give an agent a budget and let it buy. Every order lands here the moment PayPal completes it.", `<a class="pk-b sm" href="#/kits">${icon("sparkle")} Make a kit</a><a class="pk-b sm" href="#/budget">${icon("wallet")} Give an agent a budget</a>`);
+  const empty = pkNote("empty", "receipt", "Nothing has been paid for yet", "Make a kit and license it, or give an agent a budget and let it buy. Every order lands here the moment PayPal completes it.", `<a class="pk-b sm" href="#/kits">${icon("squares-four")} Make a kit</a><a class="pk-b sm" href="#/budget">${icon("wallet")} Give an agent a budget</a>`);
   drawSales({ limit: 40, empty, after: (sales, bump) => {
     const paid = sales.reduce((a, s) => a + s.creators.reduce((x, c) => x + c.usd, 0), 0);
     const who = new Set(sales.flatMap((s) => s.creators.map((c) => c.author)));

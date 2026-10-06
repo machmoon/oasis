@@ -93,7 +93,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
       <div class="a-buy">
         ${licence ? `<span class="kv-state paid">${icon("seal-check")} Licensed</span>` : `<span class="a-price">${price(a.price)}<small>${a.price > 0 ? "per license" : "free to use"}</small></span>`}
         ${licence ? `<a class="btn primary" href="/api/licenses/${encodeURIComponent(licence)}/render.wav" download>${icon("download-simple")} Download WAV</a><span class="note">Clean: your kit's order paid ${esc(a.author)}.</span>`
-          : a.price > 0 ? `<button class="btn primary" type="button" id="a-license">${icon("seal-check")} License it</button><a class="btn" href="#/kits?vibe=${encodeURIComponent(a.title + " and what goes with it")}">${icon("sparkle")} Put it in a kit</a>`
+          : a.price > 0 ? `<button class="btn primary" type="button" id="a-license">${icon("seal-check")} License it</button><a class="btn" href="#/kits?vibe=${encodeURIComponent(a.title + " and what goes with it")}">${icon("plus")} Put it in a kit</a>`
           : `<a class="btn primary" href="/api/assets/${esc(a.id)}/download.wav" id="a-wav">${icon("download-simple")} Download WAV</a><span class="note">44.1 kHz, rendered from the knobs you set here.</span>`}
       </div>
     </header>
@@ -151,7 +151,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
           <div class="fk-f"><label class="fk-l" for="fork-email">PayPal email <span>optional</span></label><input id="fork-email" type="email" maxlength="80" autocomplete="email"></div>
           <div class="fk-f fk-price"><label class="fk-l" for="fork-price">Price, $</label><input id="fork-price" type="number" min="0" max="50" step="0.5" value="${a.price}"></div>
         </div>
-        <div class="row"><button class="btn primary" type="submit" id="fork-go">${icon("sparkle")} Fork with Claude</button><span class="note" id="fork-note"></span></div>
+        <div class="row"><button class="btn primary" type="submit" id="fork-go">${icon("git-fork")} Fork with Claude</button><span class="note" id="fork-note"></span></div>
       </form>
     </section>
 
@@ -295,6 +295,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
       const cs = takes.map((t) => t[2]).filter((c) => c > 0), ps = takes.map((t) => t[1]);
       const x = scaleLinear().domain([0, dur]).range([m.l, w - m.r]);
       const y = scaleLog().domain([Math.max(20, Math.min(...cs) * 0.92), Math.max(...cs) * 1.08]).range([h - m.b, m.t]);
+      { const spread = (Math.max(...ps) - Math.min(...ps)) / (Math.max(...ps) || 1); const lg = document.querySelector(".sp-legend span:last-child"); if (lg) lg.hidden = spread < 0.1; }
       const r = scaleSqrt().domain([0, Math.max(...ps) || 1]).range([1.5, Math.max(2.5, Math.min(count > 100 ? 6 : 9, w / (count * 2.2)))]); // dots never overlap on a narrow chart
       const c = scaleLinear().domain(y.domain().map(Math.log)).range([0.08, 1]);
       const lo = y.domain()[0];
@@ -373,7 +374,8 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
   // a fork is written by Claude: when the server already knows the model is down, say so before anyone types
   fetch("/api/config").then((r) => r.json()).then((c) => {
     if (c.agentReady === true || !$("#fork-go")) return;
-    $("#fork-go").disabled = true; $("#fork-note").textContent = "Forking needs Claude, which is offline on this server right now.";
+    const form = $("#fork-form"); form.hidden = true;
+    form.insertAdjacentHTML("afterend", `<p class="sp-off">${icon("info")} Forking is off while Claude is offline on this server. Every other part of this page works.</p>`);
   }).catch(() => {});
   $("#fork-form").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -382,7 +384,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
     try {
       const f = await api(`/api/assets/${a.id}/fork`, { method: "POST", body: { instruction, author: $("#fork-author").value || "anonymous", payoutEmail: $("#fork-email").value || null, price: $("#fork-price").value || undefined } });
       toast(`Forked: ${f.title}`); location.hash = `#/a/${f.id}`;
-    } catch (err) { toast(err.message); b.disabled = false; b.innerHTML = `${icon("sparkle")} Fork with Claude`; $("#fork-note").textContent = err.message; }
+    } catch (err) { toast(err.message); b.disabled = false; b.innerHTML = `${icon("git-fork")} Fork with Claude`; $("#fork-note").textContent = err.message; }
   });
 
   // ----- more from the kit -----

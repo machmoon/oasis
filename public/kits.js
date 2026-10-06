@@ -54,7 +54,8 @@ export async function pageKits(app) {
     <h1>Kits</h1>
     <p class="lede">Describe a scene. Get up to ten sounds tuned to it, priced as one PayPal order.</p>
     <form class="kt-form" id="kt-form">
-      <div class="row"><input type="text" id="kt-vibe" list="kt-sugg" maxlength="300" placeholder="Describe a scene: a haunted lighthouse in a storm" value="${esc(params.get("vibe") || "")}" autocomplete="off"><button class="btn primary" type="submit" id="kt-go">${icon("sparkle")} Make a kit</button></div>
+      <label class="kt-l" for="kt-vibe">Describe a scene</label>
+      <div class="row"><input type="text" id="kt-vibe" list="kt-sugg" maxlength="300" placeholder="a haunted lighthouse in a storm" value="${esc(params.get("vibe") || "")}" autocomplete="off"><button class="btn primary" type="submit" id="kt-go">${icon("squares-four")} Make a kit</button></div>
       <datalist id="kt-sugg">${EXAMPLES.map((e) => `<option value="${esc(e)}"></option>`).join("")}</datalist>
     </form>
     <div id="kt-status" hidden></div>
@@ -67,7 +68,7 @@ export async function pageKits(app) {
     const go = $("#kt-go"); go.disabled = true; go.innerHTML = `${icon("circle-notch")} Choosing sounds…`;
     const st = $("#kt-status"); st.hidden = false; st.className = "kt-status"; st.innerHTML = `<i></i><span>Claude is reading the registry and tuning knobs for "${esc(vibe)}"</span>`;
     try { const k = await api("/api/kits", { method: "POST", body: { vibe } }); location.hash = `#/kit/${k.id}`; }
-    catch (err) { st.className = "kt-status err"; st.innerHTML = `<span>${esc(err.message)}</span>`; go.disabled = false; go.innerHTML = `${icon("sparkle")} Make a kit`; }
+    catch (err) { st.className = "kt-status err"; st.innerHTML = `<span>${esc(err.message)}</span>`; go.disabled = false; go.innerHTML = `${icon("squares-four")} Make a kit`; }
   });
   api("/api/kits").then((list) => {
     if (!$("#kt-list")) return; // the visitor has left the page
@@ -139,7 +140,7 @@ export async function pageKit(app, id) {
             ${paid ? `<dl class="r-facts"><div><dt>Captured</dt><dd>${new Date(k.licence.at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</dd></div><div><dt>PayPal order</dt><dd><code class="num">${esc(k.licence.orderId)}</code></dd></div>${k.licence.creators.map((c, i) => `<div><dt>${i ? "" : "Creators receive"}</dt><dd>${esc(c.author)} <span class="num">${usd(c.usd)}</span></dd></div>`).join("")}</dl><p class="r-note">Prices above are what the buyer paid; creators receive them less Oasis's 10% fee.</p>` : `<div class="r-paypal">${icon("paypal-logo")} Orders v2, itemised per part. Creator shares are booked from it and paid out with PayPal Payouts after 14 days.</div>`}
           </div>
           <button class="btn kv-packbtn" id="kv-pack" type="button">${icon("file-zip")} <span>Game pack: 8 WAV takes per sound${paid || k.total === 0 ? "" : " (preview)"}</span></button>
-          ${paid && !k.owner ? `<button class="btn primary" id="kv-copy-kit" type="button">${icon("copy")} License your own copy</button><p class="fine" style="margin:0;font-size:13px;color:var(--muted)">Someone else paid for this kit. Your copy has the same parts and knobs, and its own PayPal order.</p>` : paid ? `<a class="btn" href="#/kits">${icon("sparkle")} Make another kit</a>` : k.total > 0 ? `<button class="pk-pp" id="kv-pay" type="button">Pay ${usd(k.total)} with <em>Pay<b>Pal</b></em></button><p class="fine" style="margin:0;font-size:13px;color:var(--muted)">You approve in PayPal's window and come back here licensed.</p>
+          ${paid && !k.owner ? `<button class="btn primary" id="kv-copy-kit" type="button">${icon("copy")} License your own copy</button><p class="fine" style="margin:0;font-size:13px;color:var(--muted)">Someone else paid for this kit. Your copy has the same parts and knobs, and its own PayPal order.</p>` : paid ? `<a class="btn" href="#/kits">${icon("squares-four")} Make another kit</a>` : k.total > 0 ? `<button class="pk-pp" id="kv-pay" type="button">Pay ${usd(k.total)} with <em>Pay<b>Pal</b></em></button><p class="fine" style="margin:0;font-size:13px;color:var(--muted)">You approve in PayPal's window and come back here licensed.</p>
             <div class="alt"><span>Or license it on a budget your agent holds:</span><div class="row"><input id="kv-mandate" placeholder="mdt_…"><button class="btn small" id="kv-lic" type="button">License</button></div></div>` : `<button class="btn primary" id="kv-free" type="button">${icon("seal-check")} Claim the free kit</button>`}
         </aside>
       </div>
