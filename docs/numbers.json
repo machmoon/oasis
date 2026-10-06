@@ -9,18 +9,10 @@
   "kitPieces": 22,
   "factoryAuthored": 64,
   "handAuthored": 8,
-  "factoryV1": -197,
   "factoryBuilds": 483,
   "factoryPublished": 261,
   "factoryRejected": 222,
   "graderFirstPassReject": "236 of 427",
   "harnessCaughtFirstPass": "38 of 483",
-  "lessons": 115,
-  "tests": "69/69",
-  "liveAssets": "offline",
-  "paypalReady": false,
-  "agentReady": false,
-  "ordersCaptured": 0,
-  "payoutBatches": 0,
-  "refunds": 0
+  "tests": "69/69"
 }

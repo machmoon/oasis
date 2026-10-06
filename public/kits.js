@@ -52,7 +52,7 @@ export async function pageKits(app) {
   const params = new URLSearchParams(location.hash.split("?")[1] || "");
   app.innerHTML = `<div class="wrap kt-page">
     <h1>Kits</h1>
-    <p class="lede">Describe a scene. Get six to ten sounds tuned to it, priced as one PayPal order.</p>
+    <p class="lede">Describe a scene. Get up to ten sounds tuned to it, priced as one PayPal order.</p>
     <form class="kt-form" id="kt-form">
       <div class="row"><input type="text" id="kt-vibe" list="kt-sugg" maxlength="300" placeholder="Describe a scene: a haunted lighthouse in a storm" value="${esc(params.get("vibe") || "")}" autocomplete="off"><button class="btn primary" type="submit" id="kt-go">${icon("sparkle")} Make a kit</button></div>
       <datalist id="kt-sugg">${EXAMPLES.map((e) => `<option value="${esc(e)}"></option>`).join("")}</datalist>

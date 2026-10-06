@@ -174,7 +174,7 @@ export async function buyAssets({ items, mandate, agent_name }) {
   };
 }
 
-// ---------- kits: a vibe becomes 6-10 tuned sound programs, licensed in one order ----------
+// ---------- kits: a vibe becomes up to ten tuned sound programs, licensed in one order ----------
 export async function makeKit({ vibe, mandate, agent_name }) {
   const kits = await import("./kits.js");
   let k = await kits.save(await kits.planKit(String(vibe || "").slice(0, 300)));

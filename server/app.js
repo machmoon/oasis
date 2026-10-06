@@ -262,9 +262,9 @@ export async function createApp() {
   // Budgets: the human approves one PayPal Vault setup token; the agent then buys inside the budget, unattended.
   app.post("/api/budgets", mandateLimit, wrap(async (req, res) => {
     const { description, usd, hours } = req.body || {};
-    const { mandate, token } = await mandates.issue({ description: description || "3D assets for my scene", maxTotalUsd: usd, expiresInHours: hours || 24, funded: true });
+    const { mandate, token } = await mandates.issue({ description: description || "Sounds for my game", maxTotalUsd: usd, expiresInHours: hours || 24, funded: true });
     const setup = await paypal.createSetupToken({
-      description: `Oasis: up to $${Number(usd).toFixed(0)} for your agent's 3D assets`,
+      description: `Oasis: up to $${Number(usd).toFixed(0)} for your agent's sound kits`,
       returnUrl: `${config.baseUrl}/budget/return?m=${mandate.id}`, cancelUrl: `${config.baseUrl}/#/budget?cancelled=${mandate.id}`,
       requestId: `oasis-setup-${mandate.id}`,
     });
@@ -341,7 +341,7 @@ export async function createApp() {
     const seen = new Set(), key = (s) => String(s || "").trim().toLowerCase();
     // the public feed shows kits worth hearing: paid ones, or ones whose vibe matched the registry for most parts
     // (a keyword kit where nothing matched, or a vibe with markup in it, stays reachable by link but is not listed)
-    const listed = (k) => k.licence || (!/[<>]/.test(k.vibe) && (k.planner !== "keywords" || k.items.filter((l) => !/^nothing/.test(l.reason || "")).length >= Math.ceil(k.items.length * 0.75)));
+    const listed = (k) => k.licence || (!k.copiedFrom && !/[<>]/.test(k.vibe) && (k.planner !== "keywords" || k.items.filter((l) => !/^nothing/.test(l.reason || "")).length >= Math.ceil(k.items.length * 0.75)));
     const all = (await store.list("kits")).filter((k) => k.planner !== "single" && k.items.length >= 4 && listed(k)).sort((a, b) => (!!b.licence - !!a.licence) || b.updatedAt.localeCompare(a.updatedAt))
       .filter((k) => { const t = `t:${key(kits.tidyTitle(k.title))}`, v = `v:${key(k.vibe)}`; if (seen.has(t) || seen.has(v)) return false; seen.add(t); seen.add(v); return true; }).slice(0, 24);
     // the tile's picture: its first four parts as tuned in the kit (the same card render a part shows on the kit page)
@@ -355,6 +355,9 @@ export async function createApp() {
   // knobs) to pay for, the way a Gumroad product sells to many buyers.
   app.post("/api/kits/:id/copy", buyLimit, wrap(async (req, res) => {
     const k = await mustKit(req.params.id);
+    // one open (unpaid) copy per source kit, reused by everyone who asks, as /api/kits/single reuses a one-part kit
+    const open = (await store.list("kits")).find((x) => x.copiedFrom === k.id && !x.licence);
+    if (open) return res.json(kits.view(open));
     const { id, licence, refunded, createdAt, updatedAt, ...rest } = k;
     res.json(kits.view(await kits.save({ ...rest, copiedFrom: k.id, licence: null })));
   }));
@@ -661,6 +664,18 @@ export async function createApp() {
   };
   const isCreate = (req) => req.body?.method === "tools/call" && ["create_order", "buy_assets"].includes(req.body?.params?.name);
   // Public evidence page: what the deploy can do and the PayPal objects it has actually produced.
+  // The sound factory's record, counted from factory/stats.jsonl the way the demo film counts it
+  // (oasis-video/videos/oasis-sound-v4/build.mjs): API failures (out of credit, timeouts) are not grades, a grade
+  // passes at four or more scores all >= 5 averaging >= 6.5 or a "publish" verdict.
+  const factoryTally = () => {
+    try {
+      const all = fs.readFileSync("factory/stats.jsonl", "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l)).filter((r) => r.format === "sound");
+      const rows = all.filter((r) => r.verdict !== "failed"), grades = rows.flatMap((r) => r.grades || []);
+      const passes = (g) => { const v = Object.values(g.scores || {}).map(Number).filter((x) => !Number.isNaN(x)); return (v.length >= 4 && v.every((x) => x >= 5) && v.reduce((a, b) => a + b, 0) / v.length >= 6.5) || g.verdict === "publish"; };
+      return { briefs: new Set(rows.map((r) => r.slug)).size, published: rows.filter((r) => /^published/.test(r.verdict)).length, rejected: rows.filter((r) => /^rejected/.test(r.verdict)).length,
+        apiFailures: all.length - rows.length, graded: grades.length, sentBack: grades.filter((g) => !passes(g)).length };
+    } catch { return null; }
+  };
   const numbers = fs.existsSync("docs/numbers.json") ? JSON.parse(fs.readFileSync("docs/numbers.json", "utf8")) : {};
   app.get("/api/status", wrap(async (req, res) => {
     const recent = (rows, n = 12) => rows.sort((a, b) => String(b.createdAt || b.at).localeCompare(String(a.createdAt || a.at))).slice(0, n);
@@ -668,7 +683,7 @@ export async function createApp() {
     const byStatus = orders.reduce((m, o) => ((m[o.status] = (m[o.status] || 0) + 1), m), {});
     res.set("Cache-Control", "no-cache").json({
       paypalReady: paypalConfigured(), agentReady: kits.plannerReady(), planner: kits.plannerHealth, paypalEnv: "sandbox",
-      tests: numbers.tests, factory: { builds: numbers.factoryBuilds, published: numbers.factoryPublished, rejected: numbers.factoryRejected },
+      tests: numbers.tests, factory: factoryTally(),
       assets: catalog.allAssets().length,
       orders: { total: orders.length, byStatus, recent: recent(orders).map((o) => ({ id: o.id, status: o.status, total: o.total, items: o.items.length, agentName: o.agentName, cap: o.maxTotal, captureId: o.captureId || null, refundId: o.refundId || null, payoutHold: o.payoutHold?.status || null, payoutBatch: o.payoutBatch?.id || null, createdAt: o.createdAt })) },
       webhooks: recent(await store.list("webhooks"), 15),

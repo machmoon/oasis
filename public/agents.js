@@ -11,7 +11,7 @@ const TOOLS = [
   ["search_assets", "Search the registry by words, kind or kit. Every result is a program with knobs, a price and its creator."],
   ["get_asset", "One program's knobs (types, ranges, options), length, price and how to import it."],
   ["preview_asset", "Hear it with the agent's knob values before buying: a watermarked WAV and a picture of it."],
-  ["make_kit", "A vibe in, a kit out: six to ten programs tuned to the scene, with the bill."],
+  ["make_kit", "A vibe in, a kit out: up to ten programs tuned to the scene, with the bill and who planned it."],
   ["get_kit", "A kit's parts, knobs, bill, and each part's module and WAV once it is licensed."],
   ["buy_assets", "License sounds or a kit inside the budget the human approved. One PayPal order; every creator in it is paid."],
   ["get_budget", "What the human allowed: the cap, what is spent, what is left, when it expires, every order on it."],
@@ -40,7 +40,7 @@ export async function pageAgents(app) {
     <div class="ag-grid">
       <section class="ag-sec"><h2>Spending</h2><p>You approve a cap and an expiry in PayPal. Oasis holds the token and charges your saved PayPal wallet per order; an order over the cap, past the expiry or after you revoke is refused before PayPal is called. Every order lands in the <a class="link" href="#/ledger">ledger</a>.</p><p style="margin-top:14px"><a class="btn primary" href="#/budget">${icon("wallet")} Set a budget</a></p>
         <form class="ag-revoke" id="ag-revoke" autocomplete="off"><label for="ag-tok">Revoke a budget</label><div class="row"><input id="ag-tok" placeholder="mdt_…" spellcheck="false"><button class="btn small" type="submit">Revoke</button></div><p class="ag-muted" id="ag-rv-msg">The token was shown once when you approved it. Revoking stops it at once.</p></form></section>
-      <section class="ag-sec ag-402"><h2>Without a license</h2><p>An import of a paid program answers HTTP 402 with a <code>PAYMENT-REQUIRED</code> header shaped after x402. This one was fetched from this server just now:</p><pre id="ag-402">GET /cdn/footstep.mjs …</pre></section>
+      <section class="ag-sec ag-402"><h2>Without a license</h2><p>An import of a paid program answers HTTP 402 with a <code>PAYMENT-REQUIRED</code> header shaped after x402. Ask this server for one:</p><p style="margin-top:12px"><button class="btn small" id="ag-402-go" type="button">${icon("terminal-window")} GET /cdn/footstep.mjs</button></p><pre id="ag-402" hidden></pre></section>
     </div>
     <p class="ag-muted">The protocol for machines: <a class="link" href="/llms.txt">llms.txt</a>.</p>
   </div>`;
@@ -63,10 +63,11 @@ export async function pageAgents(app) {
     $("#ag-stats").innerHTML = `<b class="num">${s.requests}</b> MCP requests since ${new Date(s.since).toLocaleDateString(undefined, { month: "short", day: "numeric" })}${clients.length ? `, from ${clients.map((c) => `<code>${esc(c)}</code>`).join(" and ")}` : ""}.`;
     for (const [t, n] of Object.entries(s.tools || {})) { const el = document.querySelector(`.ag-n[data-tool="${t}"]`); if (el) el.textContent = n; }
   }).catch(() => { if ($("#ag-stats")) $("#ag-stats").textContent = "The MCP counter is not available."; });
-  fetch("/cdn/footstep.mjs", { headers: { Accept: "application/json" } }).then(async (r) => {
+  // the 402 is fetched when asked for (a 402 on page load reads as an error in every visitor's console)
+  $("#ag-402-go").addEventListener("click", () => { $("#ag-402").hidden = false; $("#ag-402").textContent = "GET /cdn/footstep.mjs …"; fetch("/cdn/footstep.mjs", { headers: { Accept: "application/json" } }).then(async (r) => {
     const h = r.headers.get("PAYMENT-REQUIRED"), body = await r.json().catch(() => null);
     if (!$("#ag-402")) return;
     let header = h; try { header = JSON.stringify(JSON.parse(atob(h)), null, 2); } catch {}
     $("#ag-402").textContent = `GET /cdn/footstep.mjs\nHTTP ${r.status} ${r.statusText || (r.status === 402 ? "Payment Required" : "")}\nPAYMENT-REQUIRED: ${h ? `${h.slice(0, 48)}…` : "(none)"}\n\n${header && header !== h ? header : JSON.stringify(body, null, 2)}`.slice(0, 1600);
-  }).catch(() => {});
+  }).catch(() => {}); });
 }

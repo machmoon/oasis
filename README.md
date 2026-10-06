@@ -13,7 +13,7 @@ play(audioContext, { surface: "gravel", weight: 0.8, seed: 42 });   // a fresh t
 const { samples, sr } = createSound({ surface: "snow", seed: 43 }, 44100);   // Float32Array for your own engine
 ```
 
-Describe a vibe ("rainy cyberpunk alley footsteps and UI clicks") and Claude picks six to ten programs from the
+Describe a vibe ("rainy cyberpunk alley footsteps and UI clicks") and Claude (or a keyword planner, when the model is offline) picks up to ten programs from the
 registry and tunes their knobs to the scene (the Crate idea: *describe the vibe you're going for and get straight to
 playing*, devpost.com/software/crate-iphone-duo-mpc). Until the kit is paid for, previews carry a soft watermark tick.
 Pay with PayPal and every part plays clean while each creator's share lands, all from one itemised Orders v2 order.
@@ -28,7 +28,7 @@ PayPal details: **[PAYPAL.md](PAYPAL.md)** · Write-up: **[SUBMISSION.md](SUBMIS
 | **Approve once** | You pick an amount and expiry at `/#/budget` and approve in PayPal. You hand your agent a token. | PayPal Vault v3: setup token, approval, payment token |
 | **The agent shops** | It searches, reads knobs, previews (a WAV and a spectrogram), then buys every sound the scene needs in one `buy_assets` call, or asks `make_kit` for a whole kit. Over budget is refused before PayPal is called. | Orders v2 with `payment_source.paypal.vault_id`, `stored_credential.payment_initiator: MERCHANT`: completed in one call, no redirect (implemented and covered by tests with a stubbed PayPal; no vaulted order has run in the sandbox yet, see PAYPAL.md "What has actually run") |
 | **Licensed imports** | One module URL per sound. Without a licence, browsers get a placeholder tick of the real length; other clients get **HTTP 402**. | A 402 shaped after coinbase/x402 v2 (`PAYMENT-REQUIRED`, `PAYMENT-SIGNATURE`, `PAYMENT-RESPONSE`, scheme `exact`). Not spec-valid x402: `network: paypal:sandbox` and a creator name as `payTo` are Oasis values, and the payment proof is a mandate token, not a signed payment |
-| **Kits** | `/#/kits`: a vibe becomes 6-10 tuned programs priced as one order. Pay with PayPal in PayPal's own window, or license on a funded budget. A kit charges each program once. | Same Orders v2 checkout and capture as everything else; `POST /api/kits/{id}/license` on a mandate |
+| **Kits** | `/#/kits`: a vibe becomes up to ten tuned programs priced as one order. Pay with PayPal in PayPal's own window, or license on a funded budget. A kit charges each program once. | Same Orders v2 checkout and capture as everything else; `POST /api/kits/{id}/license` on a mandate |
 | **Play and take it** | Every kit opens on `/#/pads/{kit}`, a 16-pad MPC after CRATE (the iPhone Duo MPC that won Bitrig Hacks): a 16-step sequencer, styles, swing, the hinge fader and its drop. The kit page's game pack zips 8 seeded WAV takes per sound with each take's peak and RMS, the import lines, and a license file. A licensed kit's clean files go to its buyer only (the claim token, or the paying mandate); anyone else can license their own copy. | The licence tokens are returned only to the order's owner (`kits.owns`) |
 | **Creators paid** | Each creator's share lands on the live ledger (`/#/ledger`) when PayPal completes; paid out after the 14-day refund window. | PayPal Payouts, verified webhooks, refunds revoke licences (410) |
 | **Guardrails** | The budget is server-held: cap, expiry, holds for in-flight orders, revoke = instant stop. | Shaped after AP2's open payment mandate (`payment.budget`, `payment.execution_date`) |
