@@ -26,6 +26,8 @@ import * as publish from "./publish.js";
 
 export async function createApp() {
   await catalog.load();
+  // real lengths for the lists, measured off the request path (skipped under node --test)
+  if (!process.env.NODE_TEST_CONTEXT) setTimeout(() => catalog.measureLengths().then((n) => console.log(`measured ${n} sound lengths`)).catch(() => {}), 2000).unref();
   // The factory publishes new sound programs while the server runs: pick them up without a restart.
   if (process.env.OASIS_RELOAD_SECONDS !== "0") setInterval(() => catalog.load().catch((e) => console.warn("catalog reload", e.message)), (Number(process.env.OASIS_RELOAD_SECONDS) || 90) * 1000).unref();
   const app = express();

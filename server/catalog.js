@@ -78,10 +78,20 @@ export const getAsset = (id) => assets.get(id) || null;
 export const allAssets = () => [...assets.values()];
 
 /** Public JSON view of an asset; never includes the program source of a paid asset. */
+// A sound's length as rendered at its default knobs (a program's meta.duration is its author's round number; the
+// page's readout shows the real one, so the lists and MCP should too). Filled in the background after load.
+const measured = new Map();
+export async function measureLengths() {
+  for (const a of allAssets().filter((x) => x.format === "sound" && !measured.has(x.id))) {
+    try { const samples = await soundInPool(a.source, resolveInput(a, {}), SOUND_SR); measured.set(a.id, +(samples.length / SOUND_SR).toFixed(2)); } catch {}
+  }
+  return measured.size;
+}
+
 export function summary(a, { withKnobs = false } = {}) {
   const s = {
     id: a.id, title: a.title, kind: a.kind, description: a.description, tags: a.tags,
-    price: a.price, author: a.author, credit: a.credit, size: a.size, format: a.format, footprint: a.footprint, duration: a.duration,
+    price: a.price, author: a.author, credit: a.credit, size: a.size, format: a.format, footprint: a.footprint, duration: measured.get(a.id) ?? a.duration,
     forkedFrom: a.forkedFrom, lineage: a.lineage, createdAt: a.createdAt,
     presets: Object.keys(a.params.presets || {}),
     knobCount: Object.keys(a.params.knobs || {}).length,
