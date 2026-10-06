@@ -267,7 +267,7 @@ export function mountWave(container, opts = {}) {
   const plugins = [];
   if (hover && !compact) plugins.push(Hover.create({ lineColor: tok("--accent", "#E08A1E"), lineWidth: 1, labelBackground: tok("--ink", "#15171C"), labelColor: tok("--bg", "#F6F7F9"), labelSize: "11px",
     formatTimeCallback: (s) => { const db = levelAt(buffer, s); return `${fmtTime(s)} · ${db === null ? "" : db === -Infinity ? "silence" : `${db.toFixed(1)} dB`}`; } }));
-  const spec = spectrogram ? followTakes(Spectrogram.create({ height: spectrogram, labels: specLabels, labelsColor: "rgb(255 255 255 / .62)", labelsHzColor: "rgb(255 255 255 / .45)", labelsBackground: "rgb(1 1 1 / .0)", colorMap: "roseus", scale: "mel", fftSamples: 512, windowFunc: "hann", gainDB: 24, rangeDB: 84 })) : null;
+  const spec = spectrogram ? followTakes(Spectrogram.create({ height: spectrogram, labels: specLabels, labelsColor: "rgb(255 255 255 / .62)", labelsHzColor: "rgb(255 255 255 / .45)", labelsBackground: "rgba(0, 0, 0, 0.55)", colorMap: "roseus", scale: "mel", fftSamples: 512, windowFunc: "hann", gainDB: 24, rangeDB: 84 })) : null;
   if (spec) plugins.push(spec);
   plugins.push(...extraPlugins);
   const ws = WaveSurfer.create({

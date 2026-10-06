@@ -278,7 +278,7 @@ export async function pagePads(app, id) {
       <nav class="a-crumb" aria-label="Breadcrumb"><a href="#/kits">Kits</a><span>/</span><a href="#/kit/${esc(kit.id)}">${esc(kit.title)}</a><span>/</span><span>Pads</span></nav>
       <div class="cr-device" id="cr">
         <section class="cr-lid" aria-label="Display">
-          <div class="cr-title"><div><b id="cr-style">KIT</b><span>${esc(kit.title.toUpperCase())} · ${pads.length} PROGRAMS</span></div><button class="cr-loop" id="cr-loop" type="button" aria-label="Loop length"><span>LOOP · <b id="cr-bars">2</b> BARS</span><i id="cr-segs"></i></button></div>
+          <div class="cr-title"><div><b id="cr-style">KIT</b><span>${esc(kit.title.toUpperCase())} · ${pads.length} PROGRAMS</span></div><button class="cr-loop" id="cr-loop" type="button" aria-label="Loop length"><span>LOOP · <b id="cr-bars">2</b> <em id="cr-bars-w">BARS</em></span><i id="cr-segs"></i></button></div>
           <div class="cr-hero">
             <button class="cr-read" id="cr-bpm-b" type="button"><b class="num" id="cr-bpm">90</b><span>BPM</span></button>
             <button class="cr-read" id="cr-swing-b" type="button"><b class="num" id="cr-swing">56</b><span>SWING</span></button>
@@ -304,7 +304,7 @@ export async function pagePads(app, id) {
             <button class="cr-key" id="cr-export" type="button" title="Render the loop to a WAV">BOUNCE</button>
             <div class="cr-mark"><b>OASIS</b><span>PADS</span><em>after CRATE CR-16</em></div>
           </div>
-          <div class="cr-pads" id="cr-pads">${DRAW_ORDER.map((i) => `<button class="cr-pad" type="button" data-i="${i}"><span class="cr-n">${i + 1}</span><span class="cr-k">${KEY_LABEL(KEYS[i])}</span><span class="cr-name"></span><span class="cr-hint"></span></button>`).join("")}</div>
+          <div class="cr-pads" id="cr-pads">${DRAW_ORDER.filter((i) => pads.length > 12 || i < 12).map((i) => `<button class="cr-pad" type="button" data-i="${i}"><span class="cr-n">${i + 1}</span><span class="cr-k">${KEY_LABEL(KEYS[i])}</span><span class="cr-name"></span><span class="cr-hint"></span></button>`).join("")}</div>
           <div class="cr-right">
             <div class="cr-fader-w"><span class="cr-silk">FX · HINGE</span>
               <div class="cr-fader-row"><div class="cr-fader" id="cr-fader" role="slider" tabindex="0" aria-label="Hinge: the punch amount. Pull it down fast from above 60 for the drop." aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i class="cr-cap"></i></div>
@@ -343,7 +343,7 @@ export async function pagePads(app, id) {
   }
   function paintLid() {
     $("#cr-style").textContent = seq.style ? STYLES[seq.style].label : "KIT";
-    $("#cr-bpm").textContent = Math.round(seq.bpm); $("#cr-swing").textContent = seq.swing; $("#cr-bars").textContent = seq.bars;
+    $("#cr-bpm").textContent = Math.round(seq.bpm); $("#cr-swing").textContent = seq.swing; $("#cr-bars").textContent = seq.bars; $("#cr-bars-w").textContent = seq.bars === 1 ? "BAR" : "BARS";
     $("#cr-segs").innerHTML = Array.from({ length: seq.bars }, (_, b) => `<i data-b="${b}"></i>`).join("");
     $$("[data-style]", app).forEach((c) => c.classList.toggle("on", c.dataset.style === seq.style));
     const p = pads[selected];
@@ -523,7 +523,12 @@ export async function pagePads(app, id) {
   };
   $("#cr-prompt").addEventListener("submit", (e) => {
     e.preventDefault();
-    const text = $("#cr-q").value.trim(), r = command(text);
+    // several commands in one line ("boom bap, bpm 96, take out the hats") run in order, a style first so the
+    // rest edit its groove
+    const text = $("#cr-q").value.trim(), bits = text.split(/\s*(?:,|;|\band then\b|\bthen\b)\s*/).filter(Boolean);
+    const rank = (b) => (STYLE_ORDER.some((k) => b.toLowerCase().includes(k) || STYLES[k].words.some((w) => b.toLowerCase().includes(w))) ? 0 : 1);
+    const results = bits.length > 1 ? [...bits].sort((a, b) => rank(a) - rank(b)).map(command) : [command(text)];
+    const r = results.every((x) => x === "?") ? "?" : results.filter((x) => x !== "?").join(" · ");
     if (r === "?" && text.split(/\s+/).length >= 2) return dig(text);
     $("#cr-q").value = "";
     $("#cr-q").placeholder = r === "?" ? "A style (boom bap, dilla, house), bpm 96, looser, 4 bars, take out the hats, or a vibe to dig" : `✓ ${r}`; $("#cr-q").blur();

@@ -214,7 +214,7 @@ async function pageLedger() {
   payCss();
   app.innerHTML = `<div class="wrap pk" style="padding-block:48px 96px">
     <div class="head"><h1>The ledger</h1><p>Every order that paid a creator, with the PayPal order behind it. Shares go out with PayPal Payouts once the 14-day refund window closes.</p></div>
-    <div class="pk-stats" id="stats"><div class="pk-stat lead"><b class="num" id="st-paid">$0.00</b><span>paid to creators</span></div><p class="pk-stat-sub">from <b class="num" id="st-orders">0</b> PayPal orders to <b class="num" id="st-creators">0</b> creators</p></div>
+    <div class="pk-stats" id="stats"><div class="pk-stat lead"><b class="num" id="st-paid">$0.00</b><span id="st-paid-w">earned by creators</span></div><p class="pk-stat-sub">from <b class="num" id="st-orders">0</b> PayPal orders to <b class="num" id="st-creators">0</b> creators</p></div>
     <div class="ledger">
       <div><div class="pk-col-h">Orders <span class="pk-live"><i aria-hidden="true"></i>live</span></div><div class="sales" id="sales"><div class="pk-stack" style="padding:12px 16px"><div class="pk-sk row"></div><div class="pk-sk row"></div><div class="pk-sk row"></div></div></div></div>
       <div><div class="pk-col-h" id="cr-h">Creators <span>earned so far</span></div><div class="creators" id="creators"><div class="pk-stack"><div class="pk-sk row"></div><div class="pk-sk row"></div></div></div></div>
@@ -226,6 +226,12 @@ async function pageLedger() {
     const set = (id, v) => { const el = $(id); if (!el) return; el.textContent = v; if (bump.length) { el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump"); } };
     set("#st-paid", usd(paid)); set("#st-orders", String(sales.length)); set("#st-creators", String(who.size));
     $("#cr-h").hidden = !who.size;
+    // what has actually left as Payouts and what is still held in the refund window, from the ledger itself
+    api("/api/ledger").then((l) => {
+      const out = l.authors.filter((a) => a.author !== "oasis").reduce((s, a) => s + a.paidOut, 0) / 100, held = l.authors.reduce((s, a) => s + a.held, 0) / 100;
+      const el = $(".pk-stat-sub"); if (!el) return;
+      el.insertAdjacentHTML("beforeend", `<span class="pk-held">${out ? `<b class="num">${usd(out)}</b> paid out with PayPal Payouts, ` : ""}<b class="num">${usd(held)}</b> held until each order's 14-day refund window closes</span>`);
+    }).catch(() => {});
   } });
 }
 
@@ -265,7 +271,7 @@ async function route() {
     else if (seg[0] === "kits") await pageKits(app);
     else if (seg[0] === "kit" && seg[1]) await pageKit(app, seg[1]);
     else if (seg[0] === "pads" && seg[1]) await (await import("/pads.js")).pagePads(app, seg[1]);
-    else if (seg[0] === "kit") await page3dKit(app);
+    else if (seg[0] === "kit") { location.replace("#/kits"); return; } // the old 3D kit is retired; kits are sound kits now
     else if (seg[0] === "a" && seg[1]) await pageAsset(app, seg[1]);
     else if (seg[0] === "publish") await (await import("/publish.js")).pagePublish(app);
     else if (seg[0] === "creator" && seg[1]) await (await import("/publish.js")).pageCreator(app, decodeURIComponent(seg[1]));

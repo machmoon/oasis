@@ -20,19 +20,34 @@ function catalogLines() {
   return sounds().map((a) => `${a.id} | ${a.title} | ${a.kind} | ${a.worldKit || "-"} | $${a.price} | ${a.author} | ${a.description} | knobs: ${Object.entries(a.params.knobs).map(([k, d]) => d.type === "choice" ? `${k}(${d.options.join("/")})` : d.type === "range" ? `${k}(${d.min}..${d.max})` : `${k}(on/off)`).join(", ")}`).join("\n");
 }
 
-/** Keyword planner: scores every sound against the vibe's words, keeps the kinds varied, 8 parts. */
+/** Keyword planner, the fallback when no model is configured: scores every sound against the vibe's words (and a few
+ * near words, so "haunted" finds the horror kit), keeps the kinds varied, 8 parts. Each part says which words it
+ * matched, and one that matched nothing says so, so a thin kit reads as thin rather than as a confident plan. */
+const STOP = new Set(["a", "an", "the", "in", "at", "of", "with", "and", "for", "on", "to", "by", "my", "some", "kit", "sounds", "sound"]);
+const NEAR = { haunted: ["horror", "ghost", "creak", "night"], spooky: ["horror", "ghost", "night"], creepy: ["horror", "creak"], scary: ["horror"], ocean: ["sea", "harbour", "wave", "gull"], sea: ["harbour", "wave"], beach: ["wave", "harbour", "gull"], city: ["street", "traffic", "rain"], urban: ["street", "traffic"], space: ["sci-fi", "console", "laser"], spaceship: ["sci-fi", "console", "servo"], robot: ["sci-fi", "servo", "console"], cyberpunk: ["neon", "rain", "sci-fi", "street"], medieval: ["market", "anvil", "tavern"], fantasy: ["tavern", "market", "magic"], cafe: ["office", "mug", "cup", "kitchen"], coffee: ["mug", "cup", "kitchen"], cooking: ["kitchen"], car: ["engine", "door", "car"], drive: ["car", "engine"], game: ["arcade", "coin", "blip"], retro: ["arcade", "chip", "pixel"], arcade: ["coin", "blip", "pixel"], drums: ["kick", "snare", "hat"], beat: ["kick", "snare", "hat"], woods: ["forest", "owl", "night"], forest: ["owl", "night", "wind"], lighthouse: ["harbour", "sea", "wind", "foghorn"], storm: ["rain", "thunder", "wind"], ui: ["click", "interface", "toggle"], menu: ["click", "interface", "ui"] };
 export function planByKeywords(vibe, { count = 8 } = {}) {
-  const terms = vibe.toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length > 2);
+  const words = vibe.toLowerCase().split(/[^a-z0-9-]+/).filter((t) => t.length > 2 && !STOP.has(t));
+  const terms = [...new Set(words.flatMap((t) => [t, ...(NEAR[t] || [])]))];
   const scored = sounds().map((a) => {
     const hay = `${a.title} ${a.tags.join(" ")} ${a.description} ${a.kind} ${a.worldKit || ""}`.toLowerCase();
-    let s = 0;
-    for (const t of terms) { if (a.title.toLowerCase().includes(t)) s += 4; if (a.tags.some((x) => x.includes(t))) s += 3; if ((a.worldKit || "").toLowerCase().includes(t)) s += 2; if (hay.includes(t)) s += 1; }
-    return [a, s + ((hash(vibe + a.id) % 100) / 1000)];
+    let s = 0; const hit = [];
+    for (const t of terms) {
+      const w = words.includes(t) ? 1 : 0.6; // a near word counts for less than the person's own word
+      let ts = 0;
+      if (a.title.toLowerCase().includes(t)) ts += 4; if (a.tags.some((x) => x.includes(t))) ts += 3; if ((a.worldKit || "").toLowerCase().includes(t)) ts += 2; if (hay.includes(t)) ts += 1;
+      if (ts) { s += ts * w; hit.push(t); }
+    }
+    return [a, s + ((hash(vibe + a.id) % 100) / 1000), hit];
   }).sort((x, y) => y[1] - x[1]);
   const picked = [], kinds = {};
-  for (const [a] of scored) { if (picked.length >= count) break; if ((kinds[a.kind] || 0) >= Math.ceil(count / 3)) continue; picked.push(a); kinds[a.kind] = (kinds[a.kind] || 0) + 1; }
-  for (const [a] of scored) { if (picked.length >= count) break; if (!picked.includes(a)) picked.push(a); }
-  return { title: vibe.split(/\s+/).slice(0, 4).map((w) => w[0].toUpperCase() + w.slice(1)).join(" "), items: picked.map((a, i) => ({ assetId: a.id, knobs: a.params.knobs.seed ? { seed: 1 + (hash(vibe + i) % 500) } : {}, name: a.title, reason: "matched the vibe's words" })) };
+  for (const e of scored) { if (picked.length >= count) break; if ((kinds[e[0].kind] || 0) >= Math.ceil(count / 3)) continue; picked.push(e); kinds[e[0].kind] = (kinds[e[0].kind] || 0) + 1; }
+  for (const e of scored) { if (picked.length >= count) break; if (!picked.includes(e)) picked.push(e); }
+  const titleWords = vibe.split(/\s+/).filter(Boolean);
+  while (titleWords.length && STOP.has(titleWords[0].toLowerCase())) titleWords.shift();
+  const t4 = titleWords.slice(0, 4); while (t4.length > 1 && STOP.has(t4[t4.length - 1].toLowerCase())) t4.pop();
+  const title = t4.map((w) => w[0].toUpperCase() + w.slice(1)).join(" ").replace(/[,:;.]+$/, "") || "Untitled Kit";
+  return { title, items: picked.map(([a, , hit], i) => ({ assetId: a.id, knobs: a.params.knobs.seed ? { seed: 1 + (hash(vibe + i) % 500) } : {}, name: a.title,
+    reason: hit.length ? `matched ${hit.slice(0, 3).map((h) => `"${h}"`).join(", ")}` : "nothing in the registry matched; picked to round out the kit" })) };
 }
 
 const SYSTEM = `You are the sound supervisor for Oasis, a registry where every sound is a program with typed knobs. A person gives you a one-line vibe; you build them a kit of 6 to 10 sounds from the catalogue, each with knobs tuned to the vibe (materials, weight, wetness, distance, brightness, pitch, a different seed per part), so the kit plays as one place. Cover what the vibe asks for first, then round it out (a bed, a few one-shots, a UI or impact if it fits). Name each part the way a sample pack would ("Alley Step L", "Neon Click"). Keep the total modest.

@@ -26,7 +26,7 @@ async function copyLink(text, btn) {
   lbl.textContent = ok ? "Copied" : "Press ⌘C"; btn.classList.toggle("done", ok);
   clearTimeout(copyLink.t); copyLink.t = setTimeout(() => { lbl.textContent = "Copy link"; btn.classList.remove("done"); }, 1800);
 }
-const EXAMPLES = ["rainy cyberpunk alley footsteps and UI clicks", "a cosy wooden tavern with a crackling fire", "sci-fi console: confirms, denies and a servo door", "lo-fi drum kit with a dusty kick", "forest at night, quiet, with an owl", "a kitchen scene: knives, a kettle and a fridge"];
+const EXAMPLES = ["rainy cyberpunk alley footsteps and UI clicks", "a cosy wooden tavern with a crackling fire", "sci-fi console: confirms, denies and a servo door", "lo-fi drum kit with a dusty kick", "forest at night, quiet, with an owl", "retro arcade: coins, blips and a power-up"];
 
 export async function pageKits(app) {
   const params = new URLSearchParams(location.hash.split("?")[1] || "");
@@ -80,7 +80,7 @@ export async function pageKit(app, id) {
     app.innerHTML = `<div class="wrap a-page">
       <nav class="a-crumb" aria-label="Breadcrumb"><a href="#/kits">Kits</a><span>/</span><span>${esc(k.title)}</span></nav>
       <header class="kv-head">
-        <div><h1>${esc(k.title)}</h1><p class="kv-vibe">"<b>${esc(k.vibe)}</b>". <span class="num">${k.items.length}</span> sounds from ${k.creators.length} creators, planned by ${esc(k.planner)}.</p></div>
+        <div><h1>${esc(k.title)}</h1><p class="kv-vibe">"<b>${esc(k.vibe)}</b>". <span class="num">${k.items.length}</span> sounds from ${k.creators.length} creators, ${k.planner === "keywords" ? `matched by keyword: the Claude planner is offline, so parts are picked by the words in the vibe and their knobs are left at their defaults` : `planned by ${esc(k.planner)}`}.</p></div>
         <div class="kv-side">
           <span class="kv-state${paid ? " paid" : ""}">${paid ? `${icon("seal-check")} Licensed · PayPal order ${esc(k.licence.orderId)}` : `${icon("waveform")} Watermarked preview until paid`}</span>
           <div class="kv-share"><label class="sr-only" for="kv-url">Link to this kit</label><input id="kv-url" readonly value="${esc(kitUrl)}" spellcheck="false"><button class="btn small" id="kv-copy" type="button">${icon("link-simple")} <span>Copy link</span></button></div>
