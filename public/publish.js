@@ -242,7 +242,7 @@ export async function pageCreator(app, name) {
     <header class="cr-head2">
       ${avatar(c.name, 56)}
       <div><h1>${esc(c.name)}</h1><p class="cr-facts">${esc(facts)}</p>
-      <p class="cr-pay">${icon("paypal-logo")} ${c.hasPayout ? `Payouts to <span class="mono">${esc(c.payoutEmail)}</span> after each order's 14-day refund window` : `No PayPal email on file, ${cents(c.earned.held)} held until there is one`}</p></div>
+      </div>
     </header>
     <div class="cr-tabs" role="tablist" aria-label="${esc(c.name)}">${tabs.map(([id, label, n], i) => `<button type="button" role="tab" id="crt-${id}" aria-controls="crp-${id}" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}">${label} <span class="num">${n}</span></button>`).join("")}</div>
     <section class="cr-panel" role="tabpanel" id="crp-sounds" aria-labelledby="crt-sounds">${c.sounds.length ? `<div class="s-rows" id="cr-grid">${grouped(firstGroups(c.sounds), c.sounds)}</div>${c.sounds.length > firstGroups(c.sounds).length ? `<div class="s-more"><button class="btn" type="button" id="cr-more">Show all ${c.sounds.length}</button></div>` : ""}` : `<p class="muted">None yet.</p>`}</section>
