@@ -198,6 +198,11 @@ export function tidyTitle(t) {
   return w.map((x, i) => (i > 0 && SMALL.has(x.toLowerCase()) ? x.toLowerCase() : x)).join(" ").replace(/[,:;.]+$/, "") || "Untitled Kit";
 }
 
+// A keyword kit names its parts by the program's title; a title that leads with another scene's word ("Tavern Door
+// Creak" in a haunted house) drops that word unless the vibe used it, so the part reads as this scene's
+const SCENE_WORDS = /^(tavern|wooden|rainy|neon|sci-fi|retro|medieval|ocean|forest|kitchen|office|car|horror|arcade|harbour|market)\s+/i;
+export function partName(name, vibe = "") { const m = String(name).match(SCENE_WORDS); return m && !new RegExp(`\\b${m[1]}\\b`, "i").test(vibe) ? String(name).slice(m[0].length) : name; }
+
 /** Whether a caller may see a licensed kit's tokens: the claim token its PayPal order handed the buyer's browser, or
  *  the mandate that paid for it. The order ID alone unlocks nothing (the same rule as commerce.publicOrder). */
 export async function owns(kit, { claim, mandate } = {}) {
@@ -217,7 +222,7 @@ export function view(kit, { owner = true } = {}) {
     items: kit.items.map((l) => {
       const q = Object.keys(l.knobs).length ? `?p=${encodeURIComponent(JSON.stringify(l.knobs))}` : "";
       const tok = (owner ? kit.licence?.tokens?.[l.assetId] : null) || (l.price === 0 && !l.covered ? "free" : null) || (l.covered && kit.items.find((x) => x.assetId === l.assetId && !x.covered)?.price === 0 ? "free" : null);
-      return { ...l, preview: `${b}/api/assets/${l.assetId}/render.wav${q}`, card: `${b}/api/assets/${l.assetId}/render.png${q}`,
+      return { ...l, name: kit.planner === "keywords" ? partName(l.name, kit.vibe) : l.name, preview: `${b}/api/assets/${l.assetId}/render.wav${q}`, card: `${b}/api/assets/${l.assetId}/render.png${q}`,
         licence: tok && tok !== "free" ? tok : null,
         wav: tok ? (tok === "free" ? `${b}/api/assets/${l.assetId}/download.wav${q}` : `${b}/api/licenses/${tok}/download.wav`) : null,
         module: tok ? `${b}/cdn/${l.assetId}.mjs${tok === "free" ? "" : `?lic=${tok}`}` : null };
