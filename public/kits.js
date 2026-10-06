@@ -74,7 +74,9 @@ export async function pageKit(app, id) {
   // a licensed kit's clean files go to its buyer only: this browser's claim token, or the budget it set up
   const mine = store.get(`oasis.kit.${id}`), budget = store.get("oasis.budget");
   const who = { ...(mine?.claimToken ? { "X-Claim-Token": mine.claimToken } : {}), ...(budget?.token ? { Authorization: `Bearer ${budget.token}` } : {}) };
+  const here = location.hash;
   try { k = await api(`/api/kits/${encodeURIComponent(id)}`, { headers: who }); } catch { app.innerHTML = `<div class="wrap split2"><div><h1>That kit doesn't exist.</h1><p class="lede">It may have been removed, or the link has a typo.</p><p style="margin-top:24px"><a class="btn primary" href="#/kits">Make a kit</a></p></div></div>`; return; }
+  if (location.hash !== here) return; // the visitor moved on while this loaded
   // back from PayPal: the browser that started the order claims the licence with its claim token
   const pending = store.get(`oasis.kit.${k.id}`);
   if (!k.licensed && pending?.orderId) {

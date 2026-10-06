@@ -85,6 +85,7 @@ async function drawSales({ limit = 6, empty = null, after = null } = {}) {
   const cat = await catalog();
   const face = (author) => cat.find((a) => a.author === author)?.id;
   const paint = (bump = []) => {
+    if (!$("#sales")) return; // the visitor has left the ledger
     $("#sales").innerHTML = sales.length ? sales.slice(0, limit).map((s, i) => saleRow(s, i === 0 && bump.length)).join("")
       : empty || `<div class="empty"><h3>No agent has bought anything yet.</h3><p>Give an agent a budget and ask it to build a scene. Its purchase shows up here the moment PayPal completes it.</p><a class="btn" href="#/budget">Give your agent a budget</a></div>`;
     const totals = creatorTotals(sales);
@@ -256,7 +257,12 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !moreMen
 moreMenu.addEventListener("click", (e) => { if (e.target.closest("a")) closeMore(); });
 
 // ---------- router ----------
+let routeSeq = 0;
+const STALE = Symbol("stale route");
 async function route() {
+  const my = ++routeSeq;
+  // a page module still loading when the visitor moves on must not paint over the newer page
+  const mod = async (path) => { const m = await import(path); if (my !== routeSeq) throw STALE; return m; };
   disposeViewers();
   leaveStudio();
   source?.close();
@@ -267,6 +273,8 @@ async function route() {
   closeMore();
   moreBtn.toggleAttribute("data-current", !!moreMenu.querySelector(`[data-nav="${navKey}"]`));
   window.scrollTo(0, 0);
+  // the old page goes at once: a module still loading must not leave the last route on screen under the new nav
+  app.innerHTML = `<div class="wrap" aria-busy="true" style="min-height:70vh"></div>`;
   // the browser tab names the page (a history of tabs that all read "Oasis" is a judge's complaint)
   const TITLES = { sounds: "Sounds", kits: "Kits", kit: "Kit", pads: "Pads", a: "Sound", ledger: "Ledger", publish: "Publish", creator: "Creator", agents: "For agents", budget: "Budget", studio: "Studio" };
   document.title = seg.length ? `${TITLES[seg[0]] || "Oasis"} · Oasis` : "Oasis: sound effects you tune, licensed per kit";
@@ -277,16 +285,17 @@ async function route() {
     else if (seg[0] === "sounds") await pageSounds(app);
     else if (seg[0] === "kits") await pageKits(app);
     else if (seg[0] === "kit" && seg[1]) await pageKit(app, seg[1]);
-    else if (seg[0] === "agents") await (await import("/agents.js")).pageAgents(app);
-    else if (seg[0] === "pads" && seg[1]) await (await import("/pads.js")).pagePads(app, seg[1]);
+    else if (seg[0] === "agents") await (await mod("/agents.js")).pageAgents(app);
+    else if (seg[0] === "pads" && seg[1]) await (await mod("/pads.js")).pagePads(app, seg[1]);
     else if (seg[0] === "kit") { location.replace("#/kits"); return; } // the old 3D kit is retired; kits are sound kits now
     else if (seg[0] === "a" && seg[1]) await pageAsset(app, seg[1]);
-    else if (seg[0] === "publish") await (await import("/publish.js")).pagePublish(app);
-    else if (seg[0] === "creator" && seg[1]) await (await import("/publish.js")).pageCreator(app, decodeURIComponent(seg[1]));
+    else if (seg[0] === "publish") await (await mod("/publish.js")).pagePublish(app);
+    else if (seg[0] === "creator" && seg[1]) await (await mod("/publish.js")).pageCreator(app, decodeURIComponent(seg[1]));
     else if (seg[0] === "studio") await pageStudio(app, null);
     else if (seg[0] === "film" && seg[1]) await pageStudio(app, seg[1]);
     else notFound("That page doesn't exist.");
   } catch (e) {
+    if (e === STALE || my !== routeSeq) return; // the visitor has moved on; the newer route owns the page
     console.error(e);
     app.innerHTML = `<div class="wrap split2"><div><h1>Something went wrong.</h1><p class="lede">${esc(e.message)}</p><a class="btn" href="#/">Home</a></div></div>`;
   }

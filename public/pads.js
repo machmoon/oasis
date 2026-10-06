@@ -40,7 +40,7 @@ for (const href of ["/sound.css", "/kit.css", "/pads.css"]) if (!document.queryS
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-async function api(path) { const r = await fetch(path); if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `${r.status}`); return r.json(); }
+async function api(path, headers = {}) { const r = await fetch(path, { headers }); if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `${r.status}`); return r.json(); }
 
 // pad n (0-based) -> key; the grid is drawn top row first: pads 13-16, 9-12, 5-8, 1-4
 const KEYS = ["KeyZ", "KeyX", "KeyC", "KeyV", "KeyA", "KeyS", "KeyD", "KeyF", "KeyQ", "KeyW", "KeyE", "KeyR", "Digit1", "Digit2", "Digit3", "Digit4"];
@@ -117,9 +117,13 @@ const fmtHz = (f) => (f >= 1000 ? `${(f / 1000).toFixed(f >= 10000 ? 0 : 1)}k` :
 
 export async function pagePads(app, id) {
   app.innerHTML = `<div class="cr-page"><div class="wrap"><div class="skel" style="height:640px;border-radius:14px"></div></div></div>`;
-  let kit;
-  try { kit = await api(`/api/kits/${encodeURIComponent(id)}`); } catch { app.innerHTML = `<div class="wrap split2"><div><h1>That kit doesn't exist.</h1><p class="lede">Make one from a vibe, then play it here.</p><p style="margin-top:24px"><a class="btn primary" href="#/kits">Make a kit</a></p></div></div>`; return; }
+  let kit; const here = location.hash, gone = () => location.hash !== here; // the visitor may leave while this loads
+  // the kit's clean takes are its buyer's: this browser's claim token or budget, as on the kit page
+  const ls = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } }, mine = ls(`oasis.kit.${id}`), budget = ls("oasis.budget");
+  const who = { ...(mine?.claimToken ? { "X-Claim-Token": mine.claimToken } : {}), ...(budget?.token ? { Authorization: `Bearer ${budget.token}` } : {}) };
+  try { kit = await api(`/api/kits/${encodeURIComponent(id)}`, who); if (gone()) return; } catch { app.innerHTML = `<div class="wrap split2"><div><h1>That kit doesn't exist.</h1><p class="lede">Make one from a vibe, then play it here.</p><p style="margin-top:24px"><a class="btn primary" href="#/kits">Make a kit</a></p></div></div>`; return; }
   const details = await Promise.all(kit.items.map((it) => api(`/api/assets/${encodeURIComponent(it.assetId)}`).catch(() => null)));
+  if (gone()) return;
   const pads = kit.items.slice(0, 16).map((item, i) => ({ i, item, detail: details[i], key: KEYS[i], knobs: { ...(item.knobs || {}) }, rr: 4, takes: [], next: 0, loading: null, lit: 0, ms: 0 }));
   const roles = assignRoles(pads);
   pads.forEach((p, i) => { p.role = roles[i]; p.guess = roles.guessed.has(i); });

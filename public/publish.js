@@ -218,14 +218,17 @@ export function build(p, ctx) { … return { samples }; }"></textarea>
 export async function pageCreator(app, name) {
   app.innerHTML = `<div class="wrap pb-page cr-page" aria-busy="true"><div class="skel" style="height:72px;width:min(420px,70%);margin:24px 0"></div><div class="skel" style="height:320px;border-radius:var(--r-lg)"></div></div>`;
   let c;
+  const here = location.hash;
   try { c = await api(`/api/creators/${encodeURIComponent(name)}`); }
   catch (e) {
+    if (location.hash !== here) return;
     // only a real 404 says the name is free; anything else is a load failure with a retry (Primer Blankslate)
     app.innerHTML = e.status === 404
       ? `<div class="wrap split2"><div><h1>No creator called ${esc(name)}</h1><p class="lede">Nobody has published under that name yet. Names are taken by publishing.</p><div style="margin-top:24px;display:flex;gap:12px"><a class="btn primary" href="#/publish">Publish a sound</a><a class="link" href="#/sounds">Browse sounds</a></div></div></div>`
       : `<div class="wrap split2"><div><h1>Couldn't load ${esc(name)}</h1><p class="lede">${esc(e.message || "The registry did not answer.")}</p><p style="margin-top:20px"><button class="btn" type="button" onclick="location.reload()">${icon("arrow-clockwise")} Try again</button></p></div></div>`;
     return;
   }
+  if (location.hash !== here) return; // the visitor moved on while this loaded
   const when = (iso) => (iso ? new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "");
   const role = (r) => (r === "creator" ? "share" : r === "parent" ? "royalty from a fork" : "royalty from a fork's fork");
   const face = c.sounds.slice().sort((x, y) => (y.price || 0) - (x.price || 0))[0];
