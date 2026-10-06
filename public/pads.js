@@ -462,7 +462,7 @@ export async function pagePads(app, id) {
   }
   function paintTiming() { if (!document.getElementById("cr")) return; // the visitor has left the page
     const loaded = pads.filter((p) => p.takes.length), ms = loaded.length ? Math.round(loaded.reduce((s, p) => s + p.ms, 0) / loaded.length) : 0;
-    $("#cr-timing").innerHTML = `<span>Rendered in ${ms} ms a pad, ${loaded.reduce((s, p) => s + p.takes.length, 0)} takes from ${pads.length} programs</span>${perf.on ? `<span class="cr-perf">Perform on</span>` : ""}<span class="cr-mode">${fxMode ? "FX pads" : lidMode === "edit" ? "Edit" : "Pattern"}, hinge on ${FX.find((f) => f[0] === fxId)[1].toLowerCase()}</span>`;
+    $("#cr-timing").innerHTML = `<span>Rendered in ${ms} ms a pad, ${loaded.reduce((s, p) => s + p.takes.length, 0)} takes from ${pads.length} programs</span>${perf.on ? `<span class="cr-perf">Perform on</span>` : ""}<span class="cr-mode">Pads: ${fxMode ? "FX" : lidMode === "edit" ? "edit" : "pattern"} · Hinge fader: ${FX.find((f) => f[0] === fxId)[1].toLowerCase()}</span>`;
   }
   function paintAll() { paintLid(); paintTransport(); pads.forEach(paintPad); paintStage(); }
   const select = (i) => { if (i >= pads.length) return; const was = selected; selected = i; paintPad(pads[was]); paintPad(pads[i]); paintLid(); };
