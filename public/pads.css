@@ -48,8 +48,10 @@ a.cr-chip { display: inline-flex; align-items: center; text-decoration: none; }
 .cr-pl-t b { display: block; font: var(--w-semibold) 13px var(--font-sans); letter-spacing: .06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cr-pl-t span { display: block; font-size: 12px; color: var(--cr-g1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cr-takes { display: flex; align-items: center; gap: 4px; }
-.cr-takes i { width: 6px; height: 6px; border-radius: 50%; background: var(--cr-g3); }
-.cr-takes i.on { background: var(--cr-orange); }
+/* each take a small waveform; the one that just sounded goes orange (CRATE's live colour) */
+.cr-takes canvas { width: 54px; height: 26px; border-radius: 3px; background: #0E0E0E; border: 1px solid var(--cr-g3); opacity: .55; transition: opacity 80ms linear, border-color 80ms linear; }
+.cr-takes canvas.on { opacity: 1; border-color: var(--cr-orange); box-shadow: inset 0 -2px 0 var(--cr-orange); }
+.cr-wait { font: 10.5px var(--font-mono); font-style: normal; color: var(--cr-g2); }
 .cr-takes em { margin-left: 6px; font: 11px var(--font-mono); font-style: normal; color: var(--cr-g1); }
 
 /* the SEQ panel: LidPanels.swift:58-273, a label column, 16 dots, a gap every beat, a playhead per lane */

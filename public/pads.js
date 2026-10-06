@@ -347,9 +347,19 @@ export async function pagePads(app, id) {
     $("#cr-segs").innerHTML = Array.from({ length: seq.bars }, (_, b) => `<i data-b="${b}"></i>`).join("");
     $$("[data-style]", app).forEach((c) => c.classList.toggle("on", c.dataset.style === seq.style));
     const p = pads[selected];
-    $("#cr-padline").innerHTML = `<span class="cr-tag">${selected + 1}</span><img src="${esc(cardUrl(p))}" alt="" width="480" height="240"><div class="cr-pl-t"><b>${esc(p.item.name.toUpperCase())}</b><span>${esc(p.item.title)} by ${esc(p.item.author)}</span></div><span class="cr-takes" id="cr-takes">${hasSeed(p) ? Array.from({ length: p.takes.length || p.rr }, (_, n) => `<i data-n="${n}"></i>`).join("") : ""}<em>${hasSeed(p) ? `${p.takes.length || p.rr} TAKES` : "1 TAKE"}</em></span><button type="button" class="cr-chip${lidMode === "edit" ? " on" : ""}" id="cr-edit2">EDIT</button>`;
+    $("#cr-padline").innerHTML = `<span class="cr-tag">${selected + 1}</span><img src="${esc(cardUrl(p))}" alt="" width="480" height="240"><div class="cr-pl-t"><b>${esc(p.item.name.toUpperCase())}</b><span>${esc(p.item.title)} by ${esc(p.item.author)}</span></div><span class="cr-takes" id="cr-takes">${p.takes.length ? p.takes.map((_, n) => `<canvas data-n="${n}" width="72" height="34" title="Take ${n + 1}"></canvas>`).join("") : `<em class="cr-wait">RENDERING</em>`}<em>${hasSeed(p) ? `${p.takes.length || p.rr} TAKES` : "1 TAKE"}</em></span><button type="button" class="cr-chip${lidMode === "edit" ? " on" : ""}" id="cr-edit2">EDIT</button>`;
     $("#cr-edit2").addEventListener("click", toggleEdit);
+    // the takes themselves: one small waveform per seed, so the difference between hits is visible, not just heard
+    $$("#cr-takes canvas", app).forEach((c) => drawTake(c, p.takes[Number(c.dataset.n)]));
     paintMain(); paintTiming();
+  }
+  function drawTake(c, buf) {
+    if (!buf) return;
+    const g = c.getContext("2d"), W = c.width, H = c.height, d = buf.getChannelData(0), per = Math.max(1, Math.floor(d.length / W));
+    let peak = 0; for (let i = 0; i < d.length; i += 8) peak = Math.max(peak, Math.abs(d[i]));
+    const k = peak > 0 ? (H / 2 - 2) / peak : 1;
+    g.clearRect(0, 0, W, H); g.fillStyle = "#F5F5F3";
+    for (let x = 0; x < W; x++) { let lo = 0, hi = 0; for (let i = x * per; i < (x + 1) * per && i < d.length; i++) { if (d[i] < lo) lo = d[i]; if (d[i] > hi) hi = d[i]; } g.fillRect(x, H / 2 - hi * k, 1, Math.max(1, (hi - lo) * k)); }
   }
   function paintMain() {
     const main = $("#cr-main");
@@ -566,7 +576,7 @@ export async function pagePads(app, id) {
       } else {
         const p = pads[q.i]; p.lit = now + 0.1; // lit for 100 ms after a hit (Theme.swift:104)
         $(`.cr-pad[data-i="${q.i}"]`, app)?.classList.add("lit");
-        if (q.i === selected) $$("#cr-takes i", app).forEach((d) => d.classList.toggle("on", Number(d.dataset.n) === q.take));
+        if (q.i === selected) $$("#cr-takes canvas", app).forEach((d) => d.classList.toggle("on", Number(d.dataset.n) === q.take));
       }
     }
     for (const p of pads) if (p.lit && now > p.lit) { p.lit = 0; $(`.cr-pad[data-i="${p.i}"]`, app)?.classList.remove("lit"); }
