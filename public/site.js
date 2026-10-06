@@ -69,10 +69,10 @@ function saleRow(s, fresh = false) {
   const held = s.payoutAfter && new Date(s.payoutAfter) > new Date();
   const when = s.at ? new Date(s.at).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "";
   return `<div class="sale${fresh ? " new" : ""}">
-    <div class="sale-top"><b class="amt num">${usd(s.total)}</b><span class="sale-st">Captured</span>${s.funded ? `<span class="sale-st agent">Agent, on a budget</span>` : ""}<span class="sale-when">${esc(when)}</span></div>
+    <div class="sale-top"><b class="amt num">${usd(s.total)}</b><span class="sale-st">${s.payout === "SENT" ? "Paid out" : "Captured"}</span>${s.funded ? `<span class="sale-st agent">Agent, on a budget</span>` : ""}<span class="sale-when">${esc(when)}</span></div>
     <div class="what">${esc(list)}</div>
     <div class="split">${s.creators.map((c) => `${esc(c.author)} <b class="num">${usd(c.usd)}</b>`).join(", ")}${held ? `<span class="sale-held">, held until ${new Date(s.payoutAfter).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>` : ""}</div>
-    <div class="ids">PayPal order ${esc(s.orderId)}</div></div>`;
+    <div class="ids">PayPal order ${esc(s.orderId)}${s.captureId ? `, capture ${esc(s.captureId)}` : ""}${s.payout === "SENT" ? ", Payouts batch sent" : ""}</div></div>`;
 }
 function creatorTotals(sales) {
   const t = {};

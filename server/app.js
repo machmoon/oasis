@@ -309,7 +309,8 @@ export async function createApp() {
   // Every captured order with royalties: kit checkouts, agent orders on a budget, single-asset licences.
   app.get("/api/sales", wrap(async (req, res) => {
     const orders = (await store.list("orders")).filter((o) => o.status === "COMPLETED" && o.royalties?.length).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
-    res.json(orders.slice(0, 40).map(commerce.saleEvent).map((e, i) => ({ ...e, at: orders[i].createdAt })));
+    // the capture and the payout batch's state ride along, so the ledger shows the money moving, not only the order
+    res.json(orders.slice(0, 40).map(commerce.saleEvent).map((e, i) => ({ ...e, at: orders[i].createdAt, captureId: orders[i].captureId || null, payout: orders[i].payoutHold?.status || null })));
   }));
 
   // Kits: a vibe becomes 6-10 tuned sound programs (server/kits.js), licensed in one PayPal order.
