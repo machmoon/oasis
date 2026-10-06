@@ -301,6 +301,24 @@ export async function pageKit(app, id) {
         location.href = o.approve_url;
       } catch (e) { toast(e.message); b.removeAttribute("aria-busy"); b.innerHTML = `Pay ${usd(k.total)} with <em>Pay<b>Pal</b></em>`; }
     });
+    // PayPal's own Smart Buttons when the JS SDK loads (the standard integration: createOrder returns the server's
+    // Orders v2 id, onApprove claims, which captures; PayPal's docs-examples standard-integration/client/app.js), so
+    // the payer sees PayPal's button, not ours; the redirect button stays as the fallback if the SDK doesn't load
+    if ($("#kv-pay")) smartButtons().catch(() => {});
+    async function smartButtons() {
+      const cfg = await api("/api/config"); if (!cfg.paypalClientId) return;
+      if (!window.paypal) await new Promise((ok, fail) => { const sc = document.createElement("script"); sc.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(cfg.paypalClientId)}&currency=USD&intent=capture&components=buttons&disable-funding=paylater`; sc.onload = ok; sc.onerror = fail; document.head.appendChild(sc); setTimeout(fail, 8000); });
+      const host = $("#kv-pay"); if (!host || !window.paypal?.Buttons) return;
+      const box = document.createElement("div"); box.id = "kv-ppbtn"; host.before(box);
+      const buttons = window.paypal.Buttons({
+        style: { layout: "vertical", color: "gold", shape: "rect", label: "pay", height: 45 },
+        createOrder: async () => { const o = await api(`/api/kits/${k.id}/checkout`, { method: "POST", body: {} }); store.set(`oasis.kit.${k.id}`, { orderId: o.order_id, claimToken: o.claim_token, approveUrl: o.approve_url, at: Date.now() }); return o.order_id; },
+        onApprove: async (data) => { const pend = store.get(`oasis.kit.${k.id}`); k = await api(`/api/kits/${k.id}/claim`, { method: "POST", body: { order_id: data.orderID, claim_token: pend?.claimToken } }); toast("Paid. Every part is licensed and plays clean."); draw(); },
+        onError: (err) => toast(String(err?.message || err || "PayPal could not finish the payment")),
+      });
+      if (!buttons.isEligible()) { box.remove(); return; }
+      await buttons.render(box); host.hidden = true;
+    }
     $("#kv-lic")?.addEventListener("click", async () => {
       const m = $("#kv-mandate").value.trim(); if (!m) { toast("Paste the budget token"); return; }
       try { k = await api(`/api/kits/${k.id}/license`, { method: "POST", body: { mandate: m, agent_name: "the kit page" } }); toast("Licensed on the budget."); draw(); } catch (e) { toast(e.message); }
