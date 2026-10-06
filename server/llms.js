@@ -34,7 +34,7 @@ search_assets {query, kind?, max_price?}    sounds with price, creator, kit, len
 get_asset {asset_id}                        knob schema, how to import
 preview_asset {asset_id, knobs}             the rendered WAV, a waveform+spectrogram PNG, measured numbers
 buy_assets {items:[{asset_id,knobs}], mandate, agent_name}   one PayPal order, module URLs back
-make_kit {vibe, mandate?, agent_name?}      6-10 sounds chosen and knob-tuned to a vibe, priced as one order; licensed at once with a mandate
+make_kit {vibe, mandate?, agent_name?, dry_run?}  up to ten sounds chosen for a vibe (by Claude, or a keyword planner when the model is offline; planned_by says which), priced as one order; licensed at once with a mandate; dry_run plans and prices without saving
 get_kit {kit_id}                            parts, bill, licence, module and WAV URLs
 get_budget {mandate}                        spent, left, expiry, every order
 
@@ -51,7 +51,7 @@ GET  ${b}/cdn/{id}.mjs   no licence: HTTP 402, x402 v2 shape. PAYMENT-REQUIRED h
      Retry with PAYMENT-SIGNATURE: base64 {x402Version:2, accepted:<that requirement>, payload:{mandate:"mdt_..."}}
      -> 200 module + PAYMENT-RESPONSE {success, transaction:<PayPal order id>, network, payer}
 GET  ${b}/cdn/{id}.mjs?lic={licence}   the licensed module
-GET  ${b}/api/sales      recent agent purchases and what each creator earned
+GET  ${b}/api/sales      every captured order and each creator's booked share
 
 ## The sound contract (factory/CONTRACT-SOUND.md)
 

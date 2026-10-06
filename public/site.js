@@ -218,7 +218,7 @@ async function pageBudgetView(id) {
 async function pageLedger() {
   payCss();
   app.innerHTML = `<div class="wrap pk" style="padding-block:48px 96px">
-    <div class="head"><h1>Ledger</h1><p>Every captured PayPal order, and each creator's share of it: held for the 14-day refund window, then paid out.</p></div>
+    <div class="head"><h1>Ledger</h1><p>Every captured PayPal order and each creator's share of it, held for the 14-day refund window, then paid out to the creator's PayPal email once one is set.</p></div>
     <dl class="pk-bal two" id="stats"><div><dt>Held for creators</dt><dd class="num" id="st-held">–</dd><dd class="pk-stat-sub">earned <b class="num" id="st-paid">–</b> from <b class="num" id="st-orders">–</b> PayPal orders by <b class="num" id="st-creators">–</b> creators; each share is released when its order's 14-day refund window closes</dd></div><div><dt>Paid out</dt><dd class="num" id="st-out">–</dd><dd class="pk-stat-sub">with PayPal Payouts</dd></div></dl>
     <div class="ledger">
       <div><div class="pk-col-h">Orders <span class="pk-live"><i aria-hidden="true"></i>live</span></div><div class="sales" id="sales"><div class="pk-stack" style="padding:12px 16px"><div class="pk-sk row"></div><div class="pk-sk row"></div><div class="pk-sk row"></div></div></div></div>

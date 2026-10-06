@@ -351,15 +351,18 @@ export async function createApp() {
   app.get("/api/kits", wrap(async (req, res) => {
     // one row per kit name and per vibe: the list is licensed first, then newest, so a repeat take is dropped
     const seen = new Set(), key = (s) => String(s || "").trim().toLowerCase();
+    const paidTitles = new Set((await store.list("kits")).filter((k) => k.licence).map((k) => `t:${key(kits.tidyTitle(k.title))}`));
     // the public feed shows kits worth hearing: paid ones, or ones whose vibe matched the registry for most parts
     // (a keyword kit where nothing matched, or a vibe with markup in it, stays reachable by link but is not listed)
     // keyword kits planned before whole-word matching (2558069) picked "platform" sounds for a subway; unlisted
     const KEYWORDS_FIXED = "2026-10-06T08:48:00Z";
     const chargedTwice = (k) => { const seen = new Set(); return k.items.some((l) => l.price > 0 && (seen.has(l.assetId) || !seen.add(l.assetId))); };
+    // a kit most of whose parts are stand-ins (the planner says "no kettle exists, so…") is not a kit of the scene
+    const standIns = (k) => k.items.filter((l) => /stand[s-]? ?in|stand-in|no .{1,30} (exists|in the catalogue)|closest/i.test(l.reason || "")).length >= k.items.length / 2;
     const honestKeywords = (k) => k.planner !== "keywords" || (Array.isArray(k.unmatched) && !k.unmatched.length);
-    const listed = (k) => (k.licence && !chargedTwice(k)) || (!k.licence && honestKeywords(k) && !k.copiedFrom && !(k.planner === "keywords" && String(k.createdAt) < KEYWORDS_FIXED) && !/[<>]/.test(k.vibe) && (k.planner !== "keywords" || k.items.filter((l) => !/^nothing/.test(l.reason || "")).length >= Math.ceil(k.items.length * 0.75)));
+    const listed = (k) => (k.licence && !chargedTwice(k)) || (!k.licence && honestKeywords(k) && !standIns(k) && !k.copiedFrom && !(k.planner === "keywords" && String(k.createdAt) < KEYWORDS_FIXED) && !/[<>]/.test(k.vibe) && (k.planner !== "keywords" || k.items.filter((l) => !/^nothing/.test(l.reason || "")).length >= Math.ceil(k.items.length * 0.75)));
     const all = (await store.list("kits")).filter((k) => k.planner !== "single" && k.items.length >= 4 && listed(k)).sort((a, b) => (!!b.licence - !!a.licence) || b.updatedAt.localeCompare(a.updatedAt))
-      .filter((k) => { const t = `t:${key(kits.tidyTitle(k.title))}`, v = `v:${key(k.vibe)}`; if (seen.has(t) || seen.has(v)) return false; seen.add(t); seen.add(v); return true; }).slice(0, 24);
+      .filter((k) => { const t = `t:${key(kits.tidyTitle(k.title))}`, v = `v:${key(k.vibe)}`; if (seen.has(t) || seen.has(v) || (!k.licence && paidTitles.has(t))) return false; seen.add(t); seen.add(v); return true; }).slice(0, 24);
     // the tile's picture: its first four parts as tuned in the kit (the same card render a part shows on the kit page)
     const card = (l) => `/api/assets/${encodeURIComponent(l.assetId)}/render.png?w=320${Object.keys(l.knobs || {}).length ? `&p=${encodeURIComponent(JSON.stringify(l.knobs))}` : ""}`;
     res.json(all.map((k) => ({ id: k.id, title: kits.tidyTitle(k.title), vibe: k.vibe, parts: k.items.length, total: k.total, creators: k.creators.length, licensed: !!k.licence, createdAt: k.createdAt, cards: k.items.filter((l) => !l.covered).slice(0, 4).map(card) })));

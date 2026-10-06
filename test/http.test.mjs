@@ -100,3 +100,14 @@ test("a licensed kit's tokens and clean files reach its buyer only, not anyone w
   assert.equal(mine.owner, true);
   assert.equal(mine.items[0].licence, "tok-secret");
 });
+
+test("MCP make_kit with dry_run plans a kit without saving it or linking to it", async () => {
+  const before = (await (await fetch(`${base}/api/kits`)).json()).length;
+  const tools = await import("../server/tools.js");
+  const r = await tools.makeKit({ vibe: "retro arcade coins and blips", dry_run: true });
+  assert.equal(r.kit_id, null); assert.equal(r.link, null); assert.equal(r.dry_run, true);
+  assert.ok(r.parts.length > 0);
+  const store = await import("../server/store.js");
+  assert.ok(!(await store.list("kits")).some((k) => k.vibe === "retro arcade coins and blips"), "nothing saved");
+  assert.equal((await (await fetch(`${base}/api/kits`)).json()).length, before);
+});

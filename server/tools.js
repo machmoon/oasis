@@ -178,7 +178,7 @@ export async function buyAssets({ items, mandate, agent_name }) {
 export async function makeKit({ vibe, mandate, agent_name, dry_run }) {
   const kits = await import("./kits.js");
   // dry_run plans and prices the kit without saving it (nothing lands in the public list, nothing is bought)
-  if (dry_run) return kitStatus({ id: null, ...(await kits.planKit(String(vibe || "").slice(0, 300))), licence: null });
+  if (dry_run) { const plan = await kitStatus({ id: null, ...(await kits.planKit(String(vibe || "").slice(0, 300))), licence: null }); return { ...plan, kit_id: null, link: null, dry_run: true, next: "Dry run: nothing was saved or bought. Call make_kit again without dry_run to save the kit (and with mandate to license it)." }; }
   let k = await kits.save(await kits.planKit(String(vibe || "").slice(0, 300)));
   if (mandate) {
     const items = kits.billItems(k);
