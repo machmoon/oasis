@@ -221,7 +221,7 @@ export async function pageSounds(app) {
     grid.innerHTML = last.slice(0, shown).map(view === "list" ? soundRow : soundCard).join("");
     const left = last.length - shown;
     $("#k-more").hidden = left <= 0;
-    if (left > 0) $("#k-more-b").textContent = `Show ${Math.min(PAGE, left)} more of ${left}`;
+    if (left > 0) $("#k-more-b").textContent = `Show ${Math.min(PAGE, left)} more (${left} left)`;
     liveSoundCards(grid);
   };
   $("#k-more-b").addEventListener("click", () => { shown += PAGE; paint(); });
@@ -303,7 +303,7 @@ export async function pageKit(app) {
     grid.innerHTML = last.slice(0, shown).map(view === "list" ? soundRow : soundCard).join("");
     const left = last.length - shown;
     $("#k-more").hidden = left <= 0;
-    if (left > 0) $("#k-more-b").textContent = `Show ${Math.min(PAGE, left)} more of ${left}`;
+    if (left > 0) $("#k-more-b").textContent = `Show ${Math.min(PAGE, left)} more (${left} left)`;
     liveSoundCards(grid);
   };
   $("#k-more-b").addEventListener("click", () => { shown += PAGE; paint(); });

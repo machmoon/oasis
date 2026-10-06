@@ -202,7 +202,7 @@ export async function createApp() {
 
   app.get("/api/assets/:id/download.:fmt", wrap(async (req, res) => {
     const a = mustAsset(req.params.id);
-    if (a.price > 0) throw Object.assign(new Error("This asset needs a licence: check out with PayPal first."), { status: 402 });
+    if (a.price > 0) throw Object.assign(new Error("This asset needs a license: check out with PayPal first."), { status: 402 });
     await sendFormat(res, a, parseKnobs(req), req.params.fmt);
   }));
 
@@ -509,7 +509,7 @@ export async function createApp() {
     const js = (body) => res.set({ "Content-Type": "text/javascript; charset=utf-8", "Cache-Control": "private, no-store" }).send(body);
     if (req.query.lic) {
       const lic = await commerce.license(String(req.query.lic)).catch((e) => { throw Object.assign(new Error(e.message), { status: e.status === 410 ? 410 : 403 }); });
-      if (lic.assetId !== a.id) throw Object.assign(new Error("That licence is for a different asset"), { status: 403 });
+      if (lic.assetId !== a.id) throw Object.assign(new Error("That license is for a different asset"), { status: 403 });
       return js(licensed(lic));
     }
     if (a.price <= 0) return js(licensed({ token: "free", orderId: "free" }));

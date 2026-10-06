@@ -268,7 +268,7 @@ async function route() {
   source?.close();
   const [path] = location.hash.slice(1).split("?");
   const seg = (path || "/").split("/").filter(Boolean);
-  const navKey = (seg[0] === "kit" && seg[1]) || seg[0] === "pads" ? "kits" : seg[0] === "a" ? "sounds" : seg[0] || "home";
+  const navKey = (seg[0] === "kit" && seg[1]) || seg[0] === "pads" ? "kits" : seg[0] === "a" || seg[0] === "creator" ? "sounds" : seg[0] || "home";
   document.querySelectorAll("[data-nav]").forEach((a) => a.classList.toggle("on", a.dataset.nav === navKey));
   closeMore();
   moreBtn.toggleAttribute("data-current", !!moreMenu.querySelector(`[data-nav="${navKey}"]`));

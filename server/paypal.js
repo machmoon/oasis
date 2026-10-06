@@ -36,7 +36,7 @@ export async function createOrder(lines, { returnUrl, cancelUrl, customId, descr
       {
         referenceId: "oasis",
         customId,
-        description: (description || `Oasis licences (${lines.length})`).slice(0, 127),
+        description: (description || `Oasis licenses (${lines.length})`).slice(0, 127),
         softDescriptor: "OASIS",
         amount: { ...money(total), breakdown: { itemTotal: money(total) } },
         items: lines.map((l) => ({
@@ -222,7 +222,7 @@ export async function createVaultedOrder(lines, { vaultId, customId, description
     purchase_units: [{
       reference_id: "oasis",
       custom_id: customId,
-      description: String(description || `Oasis licences (${lines.length})`).slice(0, 127),
+      description: String(description || `Oasis licenses (${lines.length})`).slice(0, 127),
       soft_descriptor: "OASIS",
       amount: { ...m(total), breakdown: { item_total: m(total) } },
       items: lines.map((l) => ({ name: l.name.slice(0, 127), unit_amount: m(l.price), quantity: "1", sku: l.sku.slice(0, 127), description: (l.description || "").slice(0, 127), category: "DIGITAL_GOODS", url: l.url })),

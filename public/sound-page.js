@@ -87,7 +87,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
     <header class="a-head">
       <div>
         <h1>${esc(a.title)}</h1>
-        <p class="a-sub">by <a class="a-by" href="#/creator/${encodeURIComponent(a.author)}">${esc(a.author)}</a>${kitName ? ` for the ${esc(kitName)} kit` : ""}. ${esc(KIND_LABEL[a.kind] || a.kind)}, ${Object.keys(knobs).length} knobs, <span class="num">${a.duration}</span> s.</p>
+        <p class="a-sub">by <a class="a-by" href="#/creator/${encodeURIComponent(a.author)}">${esc(a.author)}</a>${kitName ? ` for the ${esc(kitName)} kit` : ""}. ${esc(KIND_LABEL[a.kind] || a.kind)}, ${Object.keys(knobs).length} knobs, <span class="num" id="a-dur">${a.duration}</span> s.</p>
         <p class="a-desc">${esc(a.description)}</p>
       </div>
       <div class="a-buy">
@@ -222,6 +222,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
     stage.classList.remove("busy");
     await wave.show(res.buffer, { dim: res.watermarked });
     const an = res.analysis;
+    if ($("#a-dur")) $("#a-dur").textContent = +an.seconds.toFixed(2); // the header length follows the knobs, as the readout does
     $("#sp-readout").innerHTML = `<span><b>${an.seconds.toFixed(2)}</b> s</span><span>peak <b>${an.peak}</b></span><span>rms <b>${an.rms}</b></span><span>centroid <b>${an.centroid}</b> Hz</span><span>rendered in <b>${res.ms}</b> ms${res.where === "worker" ? " in your browser" : ""}</span>`;
     const wm = $("#sp-wm"); wm.hidden = false;
     wm.className = `sp-wm${res.watermarked ? "" : " clean"}`; wm.innerHTML = res.watermarked ? `${icon("waveform")} preview: a soft tick until licensed` : `${icon("seal-check")} ${a.price > 0 ? "licensed, clean" : "free, clean"}`;

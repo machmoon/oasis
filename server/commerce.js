@@ -291,8 +291,8 @@ export function saleEvent(o) {
 
 export async function license(token) {
   const lic = await store.get("licenses", token);
-  if (!lic) throw Object.assign(new Error("Unknown licence"), { status: 404 });
-  if (lic.revoked) throw Object.assign(new Error("This licence was refunded and is no longer valid"), { status: 410 });
+  if (!lic) throw Object.assign(new Error("Unknown license"), { status: 404 });
+  if (lic.revoked) throw Object.assign(new Error("This license was refunded and is no longer valid"), { status: 410 });
   return lic;
 }
 

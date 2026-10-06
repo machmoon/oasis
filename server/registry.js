@@ -28,8 +28,8 @@ export const moduleUrl = (id, lic) => `${config.baseUrl}/cdn/${id}.mjs${lic ? `?
 export function paymentRequired(a) {
   return {
     x402Version: X402_VERSION,
-    error: "A licence is required to import this asset.",
-    resource: { url: moduleUrl(a.id), description: `${a.title} by ${a.author}: licence to import and ship`, mimeType: "text/javascript" },
+    error: "A license is required to import this asset.",
+    resource: { url: moduleUrl(a.id), description: `${a.title} by ${a.author}: license to import and ship`, mimeType: "text/javascript" },
     accepts: [{
       scheme: "exact",
       network: NETWORK,
