@@ -193,6 +193,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
   const addLog = (entry) => { if (!$("#a-log")) return; $("#a-log-g").hidden = false; log.unshift(entry); log.length = Math.min(log.length, 6); $("#a-log").innerHTML = log.map((l) => `<li><b>${esc(l.what)}</b><span>${l.ms} ms · ${l.where}</span></li>`).join(""); };
   let hot = null;
   const program = () => {
+    if (!$("#a-program")) return; // a delayed repaint (the Copy button's 2 s reset) after the visitor left the page
     const d = diff();
     const body = Object.entries(d).map(([k, val]) => `\n  <span class="kn${k === hot ? " hot" : ""}" data-k="${k}">${k}: <span class="s">${esc(JSON.stringify(val))}</span></span>,`).join("");
     const url = `${origin}/cdn/${a.id}.mjs${a.price > 0 ? (licence ? `?lic=${licence.slice(0, 6)}…` : "?lic=…") : ""}`;
@@ -262,9 +263,9 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
   $("#sp-ab").addEventListener("click", async () => {
     if (!base || !current || base === current) { toast("Change a knob first, then A/B against the defaults"); return; }
     await unlock(); wave.stop();
-    const b = $("#sp-ab"); b.classList.add("on");
+    const b = $("#sp-ab"); b.classList.add("on"); b.setAttribute("aria-pressed", "true");
     const pa = play(base.buffer); await pa.done; await new Promise((r) => setTimeout(r, 120));
-    await wave.play(); await new Promise((r) => wave.ws.once("finish", r)); b.classList.remove("on");
+    await wave.play(); await new Promise((r) => wave.ws.once("finish", r)); b.classList.remove("on"); b.setAttribute("aria-pressed", "false");
   });
 
   // ----- the walk -----

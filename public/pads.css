@@ -269,7 +269,7 @@ a.cr-chip { display: inline-flex; align-items: center; text-decoration: none; }
 }
 .cr-prompt button[hidden] { display: none; }
 .cr-pad.empty .cr-k { visibility: hidden; } /* an empty pad has no key to press */
-.cr-timing:empty { display: none; } /* nothing to say: no band */
+.cr-timing { min-height: 18px; } /* fixed height: when FX fills it, nothing below may move under the pointer (a hidden-when-empty line shifted the FX key between press and release) */
 .cr-pad .cr-hint { display: none; } /* a role on some pads and not others read as random; pads are named, not tagged */
 .cr-pad.empty { border-style: solid; background: rgb(0 0 0 / .03); opacity: .55; } /* an unassigned pad is an unlit pad (MPC), not a dashed placeholder */
 .cr-pad .cr-n { display: none; } /* the key cap is the pad's label; a pad number beside it doubled it */
