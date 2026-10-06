@@ -55,7 +55,7 @@ export async function pagePublish(app) {
   const who = store.get("oasis.creator") || {};
   app.innerHTML = `<div class="wrap pb-page">
     <header class="pb-head">
-      <h1>Publish a sound.</h1>
+      <h1>Publish a sound</h1>
       <p class="lede">Paste a program written to <a class="link" href="/contract.txt" target="_blank" rel="noopener">the contract</a>. The server renders it in a sandbox and runs the factory's harness on every knob; if it passes, it is listed under your name.</p>
     </header>
     <div class="pb-grid">
@@ -79,7 +79,7 @@ export function build(p, ctx) { … return { samples }; }"></textarea>
       </aside>
     </div>
     <form class="pb-form" id="pb-form" novalidate hidden>
-      <h2>The listing.</h2>
+      <h2>The listing</h2>
       <div class="pb-fields">
         <div class="pk-field"><label for="pb-title">Title</label><input class="pk-in" id="pb-title" maxlength="60" placeholder="Gravel Step"></div>
         <div class="pk-field"><label id="pb-kind-l">Kind</label><div id="pb-kind" aria-labelledby="pb-kind-l"></div></div>
@@ -225,7 +225,7 @@ export async function pageCreator(app, name) {
         <div class="cr-stat"><b class="num">${c.forks.length}</b><span>fork${c.forks.length === 1 ? "" : "s"} of their programs</span></div>
       </div>
     </header>
-    <section class="cr-sec"><h2>Sounds.</h2>${c.sounds.length ? `<div class="s-grid" id="cr-grid">${c.sounds.map(soundCard).join("")}</div>` : `<p class="muted">None yet.</p>`}</section>
+    <section class="cr-sec"><h2>Sounds</h2>${c.sounds.length ? `<div class="s-grid" id="cr-grid">${c.sounds.map(soundCard).join("")}</div>` : `<p class="muted">None yet.</p>`}</section>
     <div class="cr-cols">
       <section class="cr-sec"><div class="pk-col-h">Orders that paid ${esc(c.name)} <span>${c.orders.length ? `${c.orders.length} on the ledger` : ""}</span></div>
         ${c.orders.length ? `<div class="sales">${c.orders.map((o) => `<div class="sale"><div class="who" aria-hidden="true">${esc((o.agent || "B")[0].toUpperCase())}</div><div class="what"><b>${esc(o.agent || "A buyer")}</b> licensed ${esc(o.items.map((i) => i.title).join(", "))}${o.total !== undefined ? ` in a ${usd(o.total)} order` : ""}.<div class="split">${o.items.map((i) => `<span class="chip">${esc(role(i.role))} <b>${cents(i.cents)}</b></span>`).join("")}</div><div class="ids">PayPal order ${esc(o.orderId)} · ${when(o.at)}${o.status === "REFUNDED" ? " · refunded" : o.payout === "SENT" ? " · paid out" : o.payoutAfter ? ` · paid out after ${when(o.payoutAfter)}` : o.items.some((i) => i.held) ? " · held, no PayPal email" : ""}</div></div><div class="amt">${cents(o.cents)}</div></div>`).join("")}</div>`

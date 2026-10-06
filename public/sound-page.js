@@ -124,7 +124,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
 
     ${knobs.seed ? `<section class="sp-walk" id="sp-walk-sec">
       <div>
-        <h2>300 takes, no two alike.</h2>
+        <h2>300 takes, no two alike</h2>
         <p class="lede">The same program with your knobs, rendered once per seed and laid along a timeline. Each dot is one take: left to right is time, up is brighter, bigger is louder. Press play and each take lights up as it sounds; click a dot to hear it. A file played 300 times would be one dot.</p>
         <div class="a-program" id="sp-walk-code"></div>
       </div>
@@ -138,7 +138,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
 
     <section class="sp-fork" id="sp-fork">
       <div>
-        <h2>Fork it with AI.</h2>
+        <h2>Fork it with AI</h2>
         <p class="lede">Describe a new direction and Claude rewrites this program into a new sound that keeps what makes it good. The fork is yours to sell; ${esc(a.author)} keeps a share of every sale, down the lineage.</p>
         ${a.parent ? `<div class="lineage"><span class="chip">forked from <a href="#/a/${esc(a.parent.id)}">${esc(a.parent.title)}</a></span></div>` : ""}
         ${a.children?.length ? `<div class="lineage">${a.children.map((c) => `<a class="chip" href="#/a/${esc(c.id)}">${esc(c.title)} <b>${price(c.price)}</b></a>`).join("")}</div>` : ""}
@@ -150,7 +150,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
       </form>
     </section>
 
-    <section class="a-more" id="a-more" hidden><h2>More from ${esc(kitName || "the registry")}.</h2><div class="s-grid" id="a-more-grid"></div></section>
+    <section class="a-more" id="a-more" hidden><h2>More from ${esc(kitName || "the registry")}</h2><div class="s-grid" id="a-more-grid"></div></section>
   </div>`;
 
   // ----- rendering -----

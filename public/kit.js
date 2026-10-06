@@ -173,7 +173,7 @@ const options = (pairs, on) => pairs.map(([v, l]) => `<option value="${esc(v)}"$
 export async function pageSounds(app) {
   const params = new URLSearchParams(location.hash.split("?")[1] || "");
   app.innerHTML = `<div class="wrap kit-page s-page">
-    <header class="s-intro"><h1>The sounds.</h1><p class="lede">Every sound is a program with knobs. Press play for the default take; open one to turn its knobs, hear 300 takes, or fork it.</p></header>
+    <header class="s-intro"><h1>The sounds</h1><p class="lede">Every sound is a program with knobs. Press play for the default take; open one to turn its knobs, hear 300 takes, or fork it.</p></header>
     <div class="s-tools" role="search">
       <label class="s-search">${icon("magnifying-glass")}<input type="search" id="k-q" placeholder="Search sounds" aria-label="Search sounds" autocomplete="off"></label>
       <div class="s-kinds" id="k-kinds" aria-label="Kind"></div>
@@ -243,7 +243,7 @@ export async function pageSounds(app) {
 export async function pageKit(app) {
   app.innerHTML = `<div class="wrap kit-page">
     <header class="k-head">
-      <div><h1>The kit.</h1><p class="lede">Every piece is a program on one 6 m grid. Hover one and it rebuilds; open one and turn its knobs.</p></div>
+      <div><h1>The kit</h1><p class="lede">Every piece is a program on one 6 m grid. Hover one and it rebuilds; open one and turn its knobs.</p></div>
       <dl class="k-facts" id="k-facts"></dl>
     </header>
     <div class="k-bar">
@@ -379,14 +379,14 @@ export async function pageAsset(app, id) {
 
     <section class="a-place" id="a-place-sec">
       <div>
-        <h2>In the street.</h2>
+        <h2>In the street</h2>
         <p class="lede">A kit is a place. One plan call lays out the ${esc(kitName || "kit")}'s street; your remix of ${esc(a.title)} takes its spot and the rest is built around it.</p>
         <div class="a-program" id="a-place-code"></div>
       </div>
       <div class="a-place-stage" id="a-place"><div class="skel"></div></div>
     </section>
 
-    <section class="a-more" id="a-more" hidden><h2>More from the kit.</h2><div class="k-grid" id="a-more-grid"></div></section>
+    <section class="a-more" id="a-more" hidden><h2>More from the kit</h2><div class="k-grid" id="a-more-grid"></div></section>
   </div>`;
 
   // ----- the viewer -----

@@ -128,7 +128,7 @@ async function pageBudget(id) {
   const last = store.get("oasis.budget");
   app.innerHTML = `<div class="wrap split2 pk">
     <div>
-      <h1>Give your agent a budget.</h1>
+      <h1>Give your agent a budget</h1>
       <p class="lede">You approve once in PayPal. Your agent can then license sounds and kits up to this amount, and nothing more.</p>
       <dl class="pk-kv">
         <dt>Charged</dt><dd>Only when the agent buys, one PayPal order per scene</dd>
@@ -213,8 +213,8 @@ async function pageBudgetView(id) {
 async function pageLedger() {
   payCss();
   app.innerHTML = `<div class="wrap pk" style="padding-block:48px 96px">
-    <div class="head"><h1>The ledger.</h1><p>Every order that paid a creator: kits licensed at checkout, agent purchases on a budget, single sounds. The PayPal order behind each, and what every creator earned. Creator shares are paid out with PayPal Payouts once the 14-day refund window closes.</p></div>
-    <div class="pk-stats" id="stats"><div class="pk-stat"><b class="num" id="st-paid">$0.00</b><span>paid to creators</span></div><div class="pk-stat"><b class="num" id="st-orders">0</b><span>PayPal orders</span></div><div class="pk-stat"><b class="num" id="st-creators">0</b><span>creators paid</span></div></div>
+    <div class="head"><h1>The ledger</h1><p>Every order that paid a creator, with the PayPal order behind it. Shares go out with PayPal Payouts once the 14-day refund window closes.</p></div>
+    <div class="pk-stats" id="stats"><div class="pk-stat lead"><b class="num" id="st-paid">$0.00</b><span>paid to creators</span></div><p class="pk-stat-sub">from <b class="num" id="st-orders">0</b> PayPal orders to <b class="num" id="st-creators">0</b> creators</p></div>
     <div class="ledger">
       <div><div class="pk-col-h">Orders <span class="pk-live"><i aria-hidden="true"></i>live</span></div><div class="sales" id="sales"><div class="pk-stack" style="padding:12px 16px"><div class="pk-sk row"></div><div class="pk-sk row"></div><div class="pk-sk row"></div></div></div></div>
       <div><div class="pk-col-h" id="cr-h">Creators <span>earned so far</span></div><div class="creators" id="creators"><div class="pk-stack"><div class="pk-sk row"></div><div class="pk-sk row"></div></div></div></div>

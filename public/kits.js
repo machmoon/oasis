@@ -31,14 +31,14 @@ const EXAMPLES = ["rainy cyberpunk alley footsteps and UI clicks", "a cosy woode
 export async function pageKits(app) {
   const params = new URLSearchParams(location.hash.split("?")[1] || "");
   app.innerHTML = `<div class="wrap kt-page">
-    <h1>Describe the vibe.</h1>
+    <h1>Describe the vibe</h1>
     <p class="lede">One line in, a kit out. Claude picks six to ten sound programs, tunes their knobs to your scene, and one PayPal order pays every creator.</p>
     <form class="kt-form" id="kt-form">
       <div class="row"><input type="text" id="kt-vibe" maxlength="300" placeholder="rainy cyberpunk alley footsteps and UI clicks" value="${esc(params.get("vibe") || "")}" autocomplete="off"><button class="btn primary" type="submit" id="kt-go">${icon("sparkle")} Make a kit</button></div>
       <div class="kt-examples">${EXAMPLES.map((e) => `<button type="button" data-v="${esc(e)}">${esc(e)}</button>`).join("")}</div>
     </form>
     <div id="kt-status" hidden></div>
-    <section class="kt-recent"><h2>Recent kits.</h2><div class="kt-list" id="kt-list"><div class="skel" style="height:72px"></div></div></section>
+    <section class="kt-recent"><h2>Recent kits</h2><div class="kt-list" id="kt-list"><div class="skel" style="height:72px"></div></div></section>
   </div>`;
   $(".kt-examples").addEventListener("click", (e) => { const b = e.target.closest("button[data-v]"); if (!b) return; $("#kt-vibe").value = b.dataset.v; $("#kt-form").requestSubmit(); });
   $("#kt-form").addEventListener("submit", async (e) => {

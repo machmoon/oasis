@@ -103,7 +103,13 @@
 .pk-order .ids { font: 12px var(--pk-mono); color: var(--muted); overflow-wrap: anywhere; }
 .pk-order .amt { grid-row: 1 / span 2; font-size: 18px; font-weight: 600; color: var(--ink); }
 .pk-order.held .amt { color: var(--muted); }
-.pk-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0 0 24px; }
+.pk-stats { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; margin: 0 0 28px; }
+/* one figure leads (what creators were paid); the counts read as its sentence, not as two more equal cards */
+.pk-stat.lead { padding: 0; border: 0; background: none; box-shadow: none; display: flex; align-items: baseline; gap: 12px; }
+.pk-stat.lead b { font-size: clamp(40px, 5vw, 60px); letter-spacing: -.035em; }
+.pk-stat.lead span { font-size: var(--fs-md, 18px); color: var(--ink-2); }
+.pk-stat-sub { margin: 0; font-size: var(--fs-md, 18px); color: var(--muted); }
+.pk-stat-sub b { color: var(--ink); font-weight: 600; }
 .pk-stat { padding: 18px 20px; border-radius: var(--pk-r); background: var(--surface); border: 1px solid var(--line); box-shadow: var(--pk-sh-sm); }
 .pk-stat b { display: block; font-size: 28px; line-height: 1.1; letter-spacing: -.02em; font-weight: 700; color: var(--navy, var(--ink)); }
 .pk-stat span { font-size: 13px; color: var(--muted); }
@@ -116,7 +122,7 @@
 .pk-live i { width: 8px; height: 8px; border-radius: 50%; background: var(--pk-ok); box-shadow: 0 0 0 3px var(--pk-ok-soft); }
 
 @media (max-width: 899px) {
-  .pk-stats { grid-template-columns: 1fr; }
+  .pk-stats { gap: 2px 14px; }
   .pk-panel { padding: 20px; }
 }
 @media (prefers-reduced-motion: reduce) { .pk *, .pk-note, .pk-sk { animation: none !important; transition: none !important; } }
