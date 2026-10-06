@@ -1,3 +1,11 @@
+> **Note (2026-10-06):** this records a run of the earlier build, before Oasis sold sound programs. It used the
+> MCP tools `create_order` and `get_order`, SVG design assets (a pricing card, a fork-of-a-fork lantern) and an SVG
+> download, none of which the current MCP server or kits use, and `npm run sandbox-demo` no longer works against the
+> current build. The PayPal objects below are real; the refund and Payouts code they exercised
+> (`server/commerce.js` `refund()`, `releaseDuePayouts()`) is unchanged. The fork-of-a-fork 60/30/10 split still
+> exists in code but does not apply to current sounds, which have no lineage. See [PAYPAL.md](../PAYPAL.md) for
+> what the current build does and what has run.
+
 # Oasis against the PayPal sandbox
 
 Run 2026-10-02T17:31:56.446Z by `npm run sandbox-demo`. Every ID below is a real PayPal sandbox object.
