@@ -87,7 +87,7 @@ async function drawSales({ limit = 6, empty = null, after = null } = {}) {
     $("#sales").innerHTML = sales.length ? sales.slice(0, limit).map((s, i) => saleRow(s, i === 0 && bump.length)).join("")
       : empty || `<div class="empty"><h3>No agent has bought anything yet.</h3><p>Give an agent a budget and ask it to build a scene. Its purchase shows up here the moment PayPal completes it.</p><a class="btn" href="#/budget">Give your agent a budget</a></div>`;
     const totals = creatorTotals(sales);
-    $("#creators").innerHTML = totals.length ? totals.map(([a, v]) => `<div class="creator">${avatar(a)}<div><b><a href="#/creator/${encodeURIComponent(a)}">${esc(a)}</a></b></div><div class="earn${bump.includes(a) ? " bump" : ""}">${usd(v)}</div></div>`).join("")
+    $("#creators").innerHTML = totals.length ? totals.map(([a, v]) => `<div class="creator"><div><b><a href="#/creator/${encodeURIComponent(a)}">${esc(a)}</a></b></div><div class="earn${bump.includes(a) ? " bump" : ""}">${usd(v)}</div></div>`).join("")
       : "";
     $("#creators").hidden = !totals.length;
     $("#sales").closest(".ledger")?.classList.toggle("solo", !totals.length);
@@ -216,7 +216,7 @@ async function pageLedger() {
   payCss();
   app.innerHTML = `<div class="wrap pk" style="padding-block:48px 96px">
     <div class="head"><h1>Ledger</h1><p>Every captured PayPal order, and each creator's share of it: held for the 14-day refund window, then paid out.</p></div>
-    <dl class="pk-bal" id="stats"><div><dt>Earned by creators</dt><dd class="num" id="st-paid">–</dd><dd class="pk-stat-sub"><b class="num" id="st-orders">–</b> PayPal orders, <b class="num" id="st-creators">–</b> creators</dd></div><div><dt>Paid out</dt><dd class="num" id="st-out">–</dd><dd class="pk-stat-sub">with PayPal Payouts</dd></div><div><dt>Held</dt><dd class="num" id="st-held">–</dd><dd class="pk-stat-sub">until each order's 14-day refund window closes</dd></div></dl>
+    <dl class="pk-bal two" id="stats"><div><dt>Held for creators</dt><dd class="num" id="st-held">–</dd><dd class="pk-stat-sub">earned <b class="num" id="st-paid">–</b> from <b class="num" id="st-orders">–</b> PayPal orders by <b class="num" id="st-creators">–</b> creators; each share is released when its order's 14-day refund window closes</dd></div><div><dt>Paid out</dt><dd class="num" id="st-out">–</dd><dd class="pk-stat-sub">with PayPal Payouts</dd></div></dl>
     <div class="ledger">
       <div><div class="pk-col-h">Orders <span class="pk-live"><i aria-hidden="true"></i>live</span></div><div class="sales" id="sales"><div class="pk-stack" style="padding:12px 16px"><div class="pk-sk row"></div><div class="pk-sk row"></div><div class="pk-sk row"></div></div></div></div>
       <div><div class="pk-col-h" id="cr-h">Creators <span>earned so far</span></div><div class="creators" id="creators"><div class="pk-stack"><div class="pk-sk row"></div><div class="pk-sk row"></div></div></div></div>

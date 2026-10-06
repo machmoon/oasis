@@ -401,10 +401,9 @@ body > main { flex: 1 0 auto; }
 .receipt .r-note { margin: 10px 0 0; font-size: 12.5px; color: var(--muted); }
 
 /* initials avatar (see wave.js avatar()): a soft tint of the name's hue, readable in both themes */
-.av { display: inline-grid; place-items: center; flex: none; text-decoration: none; border-radius: 50%; font-weight: var(--w-semibold); letter-spacing: .02em;
-  background: hsl(var(--av-h) 55% 90%); color: hsl(var(--av-h) 45% 28%); }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .av { background: hsl(var(--av-h) 35% 22%); color: hsl(var(--av-h) 60% 82%); } }
-:root[data-theme="dark"] .av { background: hsl(var(--av-h) 35% 22%); color: hsl(var(--av-h) 60% 82%); }
+.av { display: inline-grid; place-items: center; flex: none; text-decoration: none; border-radius: var(--r); font-weight: var(--w-semibold); letter-spacing: .02em;
+  background: var(--sunk); color: var(--ink-2); border: 1px solid var(--line); }
+
 
 /* kit receipt: one line per creator, the parts behind a disclosure (a Stripe invoice's line-item summary) */
 .receipt details.r-who > summary { list-style: none; cursor: pointer; }
@@ -412,3 +411,4 @@ body > main { flex: 1 0 auto; }
 .receipt details.r-who > summary small { color: var(--muted); font-weight: 400; font-size: var(--fs-xs); margin-left: 6px; }
 .receipt details.r-who > summary span::after { content: "›"; display: inline-block; margin-left: 6px; color: var(--muted); transition: transform var(--t); }
 .receipt details.r-who[open] > summary span::after { transform: rotate(90deg); }
+.creators .creator { grid-template-columns: 1fr auto; padding-left: 18px; } /* no avatar on the ledger: names are the links */

@@ -146,3 +146,5 @@
 .sale .what a { color: var(--ink); text-decoration: none; font-weight: var(--w-semibold); }
 .sale .what a:hover { text-decoration: underline; text-underline-offset: 3px; }
 .sale .what .sale-n { color: var(--muted); font-weight: 400; }
+.pk-bal.two { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+@media (max-width: 599px) { .pk-bal.two { grid-template-columns: 1fr; } }

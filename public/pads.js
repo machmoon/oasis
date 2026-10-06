@@ -333,7 +333,7 @@ export async function pagePads(app, id) {
           <div class="cr-main" id="cr-main"></div>
           <div class="cr-punch" id="cr-punch" hidden><i id="cr-cells"></i><b class="num" id="cr-punch-v"></b><span id="cr-punch-t"></span></div>
           <div class="cr-timing" id="cr-timing"></div>
-          <form class="cr-prompt" id="cr-prompt" autocomplete="off"><span aria-hidden="true">›</span><input id="cr-q" placeholder="Describe a beat or a kit: rusty sci-fi dungeon, boom bap, bpm 96, looser" aria-label="Describe a beat"><button type="button" data-c="undo" title="Undo (Cmd-Z)">UNDO</button><button type="button" data-c="redo" title="Redo (Shift-Cmd-Z)">REDO</button><button type="button" data-c="keep" id="cr-keep" disabled title="Play pads over the loop with REC off, then keep what you played">KEEP JAM</button><button type="button" data-c="perform" id="cr-perform" aria-pressed="false" title="Fills at the end of every phrase">PERFORM</button></form>
+          <form class="cr-prompt" id="cr-prompt" autocomplete="off"><span aria-hidden="true">›</span><input id="cr-q" placeholder="Describe a beat or a kit: rusty sci-fi dungeon, boom bap, bpm 96, looser" aria-label="Describe a beat"><button type="button" data-c="undo" title="Undo (Cmd-Z)">UNDO</button><button type="button" data-c="redo" title="Redo (Shift-Cmd-Z)">REDO</button><button type="button" data-c="keep" id="cr-keep" disabled hidden title="Play pads over the loop with REC off, then keep what you played">KEEP JAM</button><button type="button" data-c="perform" id="cr-perform" aria-pressed="false" title="Fills at the end of every phrase">PERFORM</button></form>
           <div class="cr-chips" id="cr-chips">${STYLE_ORDER.map((k) => `<button type="button" data-style="${k}">${STYLES[k].name}</button>`).join("")}</div>
         </section>
         <div class="cr-hinge" aria-hidden="true"></div>
@@ -462,7 +462,9 @@ export async function pagePads(app, id) {
   }
   function paintTiming() { if (!document.getElementById("cr")) return; // the visitor has left the page
     const loaded = pads.filter((p) => p.takes.length), ms = loaded.length ? Math.round(loaded.reduce((s, p) => s + p.ms, 0) / loaded.length) : 0;
-    $("#cr-timing").innerHTML = `<span>Rendered in ${ms} ms a pad, ${loaded.reduce((s, p) => s + p.takes.length, 0)} takes from ${pads.length} programs</span>${perf.on ? `<span class="cr-perf">Perform on</span>` : ""}<span class="cr-mode">Pads: ${fxMode ? "FX" : lidMode === "edit" ? "edit" : "pattern"} · Hinge fader: ${FX.find((f) => f[0] === fxId)[1].toLowerCase()}</span>`;
+    // render stats are for the curious (a tooltip), not the lid; the lid only says what changes how it plays
+    $("#cr-timing").title = `Rendered in ${ms} ms a pad, ${loaded.reduce((s, p) => s + p.takes.length, 0)} takes from ${pads.length} programs`;
+    $("#cr-timing").innerHTML = `${perf.on ? `<span class="cr-perf">Perform on</span>` : ""}${fxMode ? `<span class="cr-mode">FX pads</span>` : ""}${fxId !== "punch" ? `<span class="cr-mode">Hinge: ${FX.find((f) => f[0] === fxId)[1].toLowerCase()}</span>` : ""}`;
   }
   function paintAll() { paintLid(); paintTransport(); pads.forEach(paintPad); paintStage(); }
   const select = (i) => { if (i >= pads.length) return; const was = selected; selected = i; paintPad(pads[was]); paintPad(pads[i]); paintLid(); };
@@ -473,7 +475,7 @@ export async function pagePads(app, id) {
   // KEEP JAM: pads played over the loop with REC off are remembered, quantised as a recorded hit would be, newest
   // loop only; KEEP writes them in (AudioSequencer.swift:602-641 noteJam / captureJam)
   let jam = [];
-  const paintJam = () => { const b = $("#cr-keep"); if (!b) return; b.disabled = !jam.length; b.textContent = jam.length ? `KEEP JAM · ${jam.length}` : "KEEP JAM"; };
+  const paintJam = () => { const b = $("#cr-keep"); if (!b) return; b.disabled = !jam.length; b.hidden = !jam.length; b.textContent = jam.length ? `KEEP JAM · ${jam.length}` : "KEEP JAM"; };
   const hit = async (i, vel) => {
     const p = pads[i]; if (!p) return;
     await unlock();

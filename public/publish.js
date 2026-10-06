@@ -215,6 +215,8 @@ export function build(p, ctx) { … return { samples }; }"></textarea>
 // A creator's page reads like a profile on a sound library (MTG/freesound templates/accounts/account.html: name, the
 // counts as a line of text, then Latest sounds / Latest packs; Bandcamp and SoundCloud artist headers): identity
 // first, one line of facts, then tabs (shadcn/ui tabs.tsx) for their sounds, the orders that paid them, and forks.
+// a creator's sounds under one heading per kit (Primer ActionList.Group; Bandcamp's tracks under their release)
+const grouped = (list, all = list) => { let last = null; return list.map((x) => { const k = x.kit || "Other sounds", head = k !== last ? `<div class="s-group"><a href="#/sounds?kit=${encodeURIComponent(x.kit || "")}">${esc(k)}</a><span>${all.filter((y) => (y.kit || "Other sounds") === k).length} sounds</span></div>` : ""; last = k; return head + soundRow(x, { maker: false, kit: false }); }).join(""); };
 export async function pageCreator(app, name) {
   app.innerHTML = `<div class="wrap pb-page cr-page" aria-busy="true"><div class="skel" style="height:72px;width:min(420px,70%);margin:24px 0"></div><div class="skel" style="height:320px;border-radius:var(--r-lg)"></div></div>`;
   let c;
@@ -236,12 +238,12 @@ export async function pageCreator(app, name) {
   app.innerHTML = `<div class="wrap pb-page cr-page">
     <nav class="a-crumb" aria-label="Breadcrumb"><a href="#/sounds">Sounds</a><span>/</span><span>${esc(c.name)}</span></nav>
     <header class="cr-head2">
-      ${avatar(c.name, 96)}
+      ${avatar(c.name, 56)}
       <div><h1>${esc(c.name)}</h1><p class="cr-facts">${esc(facts)}</p>
       <p class="cr-pay">${icon("paypal-logo")} ${c.hasPayout ? `Payouts to <span class="mono">${esc(c.payoutEmail)}</span> after each order's 14-day refund window` : `No PayPal email on file, ${cents(c.earned.held)} held until there is one`}</p></div>
     </header>
     <div class="cr-tabs" role="tablist" aria-label="${esc(c.name)}">${tabs.map(([id, label, n], i) => `<button type="button" role="tab" id="crt-${id}" aria-controls="crp-${id}" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}">${label} <span class="num">${n}</span></button>`).join("")}</div>
-    <section class="cr-panel" role="tabpanel" id="crp-sounds" aria-labelledby="crt-sounds">${c.sounds.length ? `<div class="s-rows" id="cr-grid">${c.sounds.slice(0, 24).map((x) => soundRow(x, { maker: false })).join("")}</div>${c.sounds.length > 24 ? `<div class="s-more"><button class="btn" type="button" id="cr-more">Show all ${c.sounds.length}</button></div>` : ""}` : `<p class="muted">None yet.</p>`}</section>
+    <section class="cr-panel" role="tabpanel" id="crp-sounds" aria-labelledby="crt-sounds">${c.sounds.length ? `<div class="s-rows" id="cr-grid">${grouped(c.sounds.slice(0, 24), c.sounds)}</div>${c.sounds.length > 24 ? `<div class="s-more"><button class="btn" type="button" id="cr-more">Show all ${c.sounds.length}</button></div>` : ""}` : `<p class="muted">None yet.</p>`}</section>
     <section class="cr-panel" role="tabpanel" id="crp-orders" aria-labelledby="crt-orders" hidden>${c.orders.length ? `<div class="sales">${c.orders.map((o) => `<div class="sale">
         <div class="sale-top"><b class="amt num">${cents(o.cents)}</b><span class="sale-st${o.payout === "SENT" ? "" : " agent"}">${o.status === "REFUNDED" ? "Refunded" : o.payout === "SENT" ? "Paid out" : "Held"}</span><span class="sale-when">${esc(when(o.at))}</span></div>
         <div class="split">${o.items.map((i) => `${esc(i.title)} <b class="num">${cents(i.cents)}</b> ${esc(role(i.role))}`).join(", ")}</div>
@@ -254,6 +256,6 @@ export async function pageCreator(app, name) {
   const tabEls = $$('[role="tab"]', app);
   const pick = (t) => { tabEls.forEach((x) => { const on = x === t; x.setAttribute("aria-selected", on); x.tabIndex = on ? 0 : -1; $(`#${x.getAttribute("aria-controls")}`).hidden = !on; }); t.focus(); };
   tabEls.forEach((t, i) => { t.addEventListener("click", () => pick(t)); t.addEventListener("keydown", (e) => { const d = { ArrowRight: 1, ArrowLeft: -1 }[e.key]; if (d) { e.preventDefault(); pick(tabEls[(i + d + tabEls.length) % tabEls.length]); } }); });
-  $("#cr-more")?.addEventListener("click", (e) => { $("#cr-grid").innerHTML = c.sounds.map((x) => soundRow(x, { maker: false })).join(""); liveSoundCards($("#cr-grid")); e.currentTarget.parentElement.remove(); });
+  $("#cr-more")?.addEventListener("click", (e) => { $("#cr-grid").innerHTML = grouped(c.sounds); liveSoundCards($("#cr-grid")); e.currentTarget.parentElement.remove(); });
   if ($("#cr-grid")) liveSoundCards($("#cr-grid"));
 }

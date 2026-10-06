@@ -142,11 +142,11 @@ export function soundCard(a) {
 /** A sound as a row, the way a sound library lists results (MTG/freesound templates/search/search.html renders search
  * results as a vertical list; Splice's sample browser is rows of play, waveform, name, key/BPM, actions). The row reuses
  * the card's classes, so play, the sweep and the picture's fade-in work unchanged. */
-export function soundRow(a, { maker = true } = {}) {
+export function soundRow(a, { maker = true, kit = true } = {}) {
   return `<div class="s-card s-row" data-id="${esc(a.id)}">
     <button class="s-play" data-play="${esc(a.id)}" aria-label="Play ${esc(a.title)}">${icon("play")}</button>
     <span class="s-sheet"><a href="#/a/${esc(a.id)}" class="s-link" tabindex="-1" aria-hidden="true"><img src="${soundThumb(a.id, { w: 320 })}" alt="" loading="lazy" width="320" height="160"></a><i class="s-cursor" aria-hidden="true"></i></span>
-    <a class="s-name" href="#/a/${esc(a.id)}"><b>${esc(a.title)}</b><span>${maker ? `${esc(a.author)}${a.kit ? ` <i>in</i> ` : ""}` : ""}${a.kit ? esc(a.kit) : ""}</span></a>
+    <a class="s-name" href="#/a/${esc(a.id)}"><b>${esc(a.title)}</b><span>${maker ? `${esc(a.author)}${a.kit && kit ? ` <i>in</i> ` : ""}` : ""}${a.kit && kit ? esc(a.kit) : ""}</span></a>
     <span class="s-c s-kind">${esc(KIND_LABEL[a.kind] || a.kind)}</span><span class="s-c num">${a.duration} s</span><span class="s-c num">${a.knobCount} knobs</span>
     <span class="s-c s-price num">${price(a.price)}</span></div>`;
 }
@@ -221,7 +221,7 @@ export async function pageSounds(app) {
     grid.innerHTML = last.slice(0, shown).map(view === "list" ? soundRow : soundCard).join("");
     const left = last.length - shown;
     $("#k-more").hidden = left <= 0;
-    if (left > 0) $("#k-more-b").textContent = `Show ${Math.min(PAGE, left)} more (${left} left)`;
+    if (left > 0) $("#k-more-b").textContent = `Load more (${left} left)`;
     liveSoundCards(grid);
   };
   $("#k-more-b").addEventListener("click", () => { shown += PAGE; paint(); });
@@ -303,7 +303,7 @@ export async function pageKit(app) {
     grid.innerHTML = last.slice(0, shown).map(view === "list" ? soundRow : soundCard).join("");
     const left = last.length - shown;
     $("#k-more").hidden = left <= 0;
-    if (left > 0) $("#k-more-b").textContent = `Show ${Math.min(PAGE, left)} more (${left} left)`;
+    if (left > 0) $("#k-more-b").textContent = `Load more (${left} left)`;
     liveSoundCards(grid);
   };
   $("#k-more-b").addEventListener("click", () => { shown += PAGE; paint(); });

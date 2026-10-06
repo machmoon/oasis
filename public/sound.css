@@ -509,3 +509,10 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
 .sp-walk > div:first-child h2, .sp-fork > div:first-child h2 { margin: 0; }
 .sp-walk > div:first-child .lede, .sp-fork > div:first-child .lede { margin: 0; font-size: var(--fs-sm); max-width: none; }
 #sp-walk-code { display: none; }
+
+/* group heading inside a sounds list (the creator page, by kit) */
+.s-rows .s-group { display: flex; align-items: baseline; gap: 10px; padding: 18px 16px 8px; font-size: var(--fs-sm); border-top: 1px solid var(--line); }
+.s-rows .s-group:first-child { border-top: 0; padding-top: 12px; }
+.s-rows .s-group a { color: var(--ink); font-weight: var(--w-semibold); text-decoration: none; }
+.s-rows .s-group a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.s-rows .s-group span { color: var(--muted); }
