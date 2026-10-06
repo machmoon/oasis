@@ -6,7 +6,7 @@
 import { audio, unlock, toBuffer, renderInWorker } from "/audio.js";
 import { mountWave } from "/wave.js";
 import { segment, KIND_LABEL } from "/sound-page.js";
-import { soundCard, liveSoundCards } from "/kit.js";
+import { soundCard, soundRow, liveSoundCards } from "/kit.js";
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -208,39 +208,46 @@ export function build(p, ctx) { … return { samples }; }"></textarea>
   });
 }
 
+// A creator's page reads like a profile on a sound library (MTG/freesound templates/accounts/account.html: name, the
+// counts as a line of text, then Latest sounds / Latest packs; Bandcamp and SoundCloud artist headers): identity
+// first, one line of facts, then tabs (shadcn/ui tabs.tsx) for their sounds, the orders that paid them, and forks.
 export async function pageCreator(app, name) {
-  app.innerHTML = `<div class="wrap pb-page cr-page" aria-busy="true"><div class="skel" style="height:14px;width:160px;margin-bottom:18px"></div><div class="skel" style="height:52px;width:min(320px,50%)"></div><div class="skel" style="height:14px;width:min(520px,80%);margin:14px 0 32px"></div><div class="s-grid">${Array.from({ length: 4 }, () => `<div class="s-skel"><div class="skel"></div><div class="skel t"></div><div class="skel t"></div></div>`).join("")}</div></div>`;
+  app.innerHTML = `<div class="wrap pb-page cr-page" aria-busy="true"><div class="skel" style="height:72px;width:min(420px,70%);margin:24px 0"></div><div class="skel" style="height:320px;border-radius:var(--r-lg)"></div></div>`;
   let c;
-  try { c = await api(`/api/creators/${encodeURIComponent(name)}`); } catch { app.innerHTML = `<div class="wrap split2"><div><h1>No creator called ${esc(name)}.</h1><p class="lede">Nobody has published under that name yet. Names are taken by publishing.</p><div style="margin-top:24px;display:flex;gap:12px"><a class="btn primary" href="#/publish">Publish a sound</a><a class="link" href="#/sounds">Browse sounds</a></div></div></div>`; return; }
+  try { c = await api(`/api/creators/${encodeURIComponent(name)}`); }
+  catch (e) {
+    // only a real 404 says the name is free; anything else is a load failure with a retry (Primer Blankslate)
+    app.innerHTML = e.status === 404
+      ? `<div class="wrap split2"><div><h1>No creator called ${esc(name)}</h1><p class="lede">Nobody has published under that name yet. Names are taken by publishing.</p><div style="margin-top:24px;display:flex;gap:12px"><a class="btn primary" href="#/publish">Publish a sound</a><a class="link" href="#/sounds">Browse sounds</a></div></div></div>`
+      : `<div class="wrap split2"><div><h1>Couldn't load ${esc(name)}</h1><p class="lede">${esc(e.message || "The registry did not answer.")}</p><p style="margin-top:20px"><button class="btn" type="button" onclick="location.reload()">${icon("arrow-clockwise")} Try again</button></p></div></div>`;
+    return;
+  }
   const when = (iso) => (iso ? new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "");
-  const priced = c.sounds.filter((s) => s.price > 0).length;
-  const role = (r) => (r === "creator" ? "creator share" : r === "parent" ? "royalty, parent of a fork" : "royalty, ancestor of a fork");
+  const role = (r) => (r === "creator" ? "share" : r === "parent" ? "royalty from a fork" : "royalty from a fork's fork");
+  const face = c.sounds.slice().sort((x, y) => (y.price || 0) - (x.price || 0))[0];
+  const facts = [`${c.sounds.length} sound${c.sounds.length === 1 ? "" : "s"}`, c.earned.cents ? `${cents(c.earned.cents)} earned from ${c.earned.orders} order${c.earned.orders === 1 ? "" : "s"}` : null, c.forks.length ? `${c.forks.length} fork${c.forks.length === 1 ? "" : "s"}` : null, c.since ? `since ${when(c.since)}` : null].filter(Boolean).join(", ");
+  const tabs = [["sounds", "Sounds", c.sounds.length], ["orders", "Orders", c.orders.length], ["forks", "Forks", c.forks.length]];
   app.innerHTML = `<div class="wrap pb-page cr-page">
-    <nav class="a-crumb" aria-label="Breadcrumb"><a href="#/sounds">Sounds</a><span>/</span><span>Creators</span><span>/</span><span>${esc(c.name)}</span></nav>
-    <header class="cr-head">
-      <div class="cr-id"><span class="cr-face" aria-hidden="true">${esc(c.name[0].toUpperCase())}</span><div><h1>${esc(c.name)}</h1><p class="lede">${c.sounds.length ? `<span class="num">${c.sounds.length}</span> sound program${c.sounds.length === 1 ? "" : "s"} in the registry${priced ? `, ${priced} priced` : ""}${c.since ? `, since ${when(c.since)}` : ""}.` : "No programs listed yet."} ${c.hasPayout ? `Shares go out with PayPal Payouts to <span class="mono">${esc(c.payoutEmail)}</span> once an order's 14-day refund window closes.` : "No PayPal email on file: shares are held until there is one."}</p></div></div>
-      <div class="cr-stats">
-        <div class="cr-stat"><b class="num">${cents(c.earned.cents)}</b><span>earned, ${c.earned.orders} order${c.earned.orders === 1 ? "" : "s"}</span></div>
-        <div class="cr-stat"><b class="num">${cents(c.earned.royalties)}</b><span>royalties from forks</span></div>
-        <div class="cr-stat"><b class="num">${c.forks.length}</b><span>fork${c.forks.length === 1 ? "" : "s"} of their programs</span></div>
-      </div>
+    <nav class="a-crumb" aria-label="Breadcrumb"><a href="#/sounds">Sounds</a><span>/</span><span>${esc(c.name)}</span></nav>
+    <header class="cr-head2">
+      ${face ? `<img class="cr-avatar" src="/api/assets/${encodeURIComponent(face.id)}/render.png?w=240" alt="" width="240" height="120">` : ""}
+      <div><h1>${esc(c.name)}</h1><p class="cr-facts">${esc(facts)}</p>
+      <p class="cr-pay">${icon("paypal-logo")} ${c.hasPayout ? `Payouts to <span class="mono">${esc(c.payoutEmail)}</span> after each order's 14-day refund window` : `No PayPal email on file, ${cents(c.earned.held)} held until there is one`}</p></div>
     </header>
-    <section class="cr-sec"><h2>Sounds</h2>${c.sounds.length ? `<div class="s-grid" id="cr-grid">${c.sounds.map(soundCard).join("")}</div>` : `<p class="muted">None yet.</p>`}</section>
-    <div class="cr-cols">
-      <section class="cr-sec"><div class="pk-col-h">Orders that paid ${esc(c.name)} <span>${c.orders.length ? `${c.orders.length} on the ledger` : ""}</span></div>
-        ${c.orders.length ? `<div class="sales">${c.orders.map((o) => `<div class="sale"><div class="who" aria-hidden="true">${esc((o.agent || "B")[0].toUpperCase())}</div><div class="what"><b>${esc(o.agent || "A buyer")}</b> licensed ${esc(o.items.map((i) => i.title).join(", "))}${o.total !== undefined ? ` in a ${usd(o.total)} order` : ""}.<div class="split">${o.items.map((i) => `<span class="chip">${esc(role(i.role))} <b>${cents(i.cents)}</b></span>`).join("")}</div><div class="ids">PayPal order ${esc(o.orderId)} · ${when(o.at)}${o.status === "REFUNDED" ? " · refunded" : o.payout === "SENT" ? " · paid out" : o.payoutAfter ? ` · paid out after ${when(o.payoutAfter)}` : o.items.some((i) => i.held) ? " · held, no PayPal email" : ""}</div></div><div class="amt">${cents(o.cents)}</div></div>`).join("")}</div>`
-        : `<div class="pk-note empty">${icon("receipt")}<b>Nothing paid yet</b><p>When a kit or an agent licenses one of these sounds, the PayPal order and ${esc(c.name)}'s share land here.</p></div>`}
-      </section>
-      <aside class="cr-side">
-        <section class="cr-sec"><div class="pk-col-h">Forks of their programs <span>${c.forks.length ? "30 % of each fork's sale comes back" : ""}</span></div>
-          ${c.forks.length ? `<div class="cr-forks">${c.forks.map((f) => `<a class="cr-fork" href="#/a/${esc(f.id)}"><img src="/api/assets/${encodeURIComponent(f.id)}/render.png?w=120" alt=""><span><b>${esc(f.title)}</b><span>by <em>${esc(f.author)}</em>, ${price(f.price)}, from ${esc(c.sounds.find((s) => f.lineage?.includes(s.id))?.title || "their program")}</span></span><span class="amt num">${cents(f.royaltyCents)}</span></a>`).join("")}</div>`
-          : `<p class="muted">No forks yet. Anyone can fork a program with AI from its page; ${esc(c.name)} keeps a share of every sale down the lineage.</p>`}
-        </section>
-        <section class="cr-sec cr-payout"><div class="pk-col-h">Payout</div>
-          <div class="cr-payout-card">${icon("paypal-logo")}<div><b>${c.hasPayout ? esc(c.payoutEmail) : "No PayPal email on file"}</b><span>${c.hasPayout ? "Shares are held for the 14-day refund window, then sent with PayPal Payouts, one batch per order." : `${cents(c.earned.held)} held. Publish with a PayPal email to be paid.`}</span></div></div>
-        </section>
-      </aside>
-    </div>
+    <div class="cr-tabs" role="tablist" aria-label="${esc(c.name)}">${tabs.map(([id, label, n], i) => `<button type="button" role="tab" id="crt-${id}" aria-controls="crp-${id}" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}">${label} <span class="num">${n}</span></button>`).join("")}</div>
+    <section class="cr-panel" role="tabpanel" id="crp-sounds" aria-labelledby="crt-sounds">${c.sounds.length ? `<div class="s-rows" id="cr-grid">${c.sounds.slice(0, 24).map((x) => soundRow(x, { maker: false })).join("")}</div>${c.sounds.length > 24 ? `<div class="s-more"><button class="btn" type="button" id="cr-more">Show all ${c.sounds.length}</button></div>` : ""}` : `<p class="muted">None yet.</p>`}</section>
+    <section class="cr-panel" role="tabpanel" id="crp-orders" aria-labelledby="crt-orders" hidden>${c.orders.length ? `<div class="sales">${c.orders.map((o) => `<div class="sale">
+        <div class="sale-top"><b class="amt num">${cents(o.cents)}</b><span class="sale-st${o.payout === "SENT" ? "" : " agent"}">${o.status === "REFUNDED" ? "Refunded" : o.payout === "SENT" ? "Paid out" : "Held"}</span><span class="sale-when">${esc(when(o.at))}</span></div>
+        <div class="split">${o.items.map((i) => `${esc(i.title)} <b class="num">${cents(i.cents)}</b> ${esc(role(i.role))}`).join(", ")}</div>
+        <div class="ids">PayPal order ${esc(o.orderId)}${o.payoutAfter && o.payout !== "SENT" ? `, pays out after ${esc(when(o.payoutAfter))}` : ""}</div></div>`).join("")}</div>`
+      : `<p class="muted">Nothing paid yet. When a kit or an agent licenses one of these sounds, the order lands here.</p>`}</section>
+    <section class="cr-panel" role="tabpanel" id="crp-forks" aria-labelledby="crt-forks" hidden>${c.forks.length ? `<div class="cr-forks">${c.forks.map((f) => `<a class="cr-fork" href="#/a/${esc(f.id)}"><img src="/api/assets/${encodeURIComponent(f.id)}/render.png?w=120" alt=""><span><b>${esc(f.title)}</b><span>by <em>${esc(f.author)}</em>, ${price(f.price)}, from ${esc(c.sounds.find((s) => f.lineage?.includes(s.id))?.title || "their program")}</span></span><span class="amt num">${cents(f.royaltyCents)}</span></a>`).join("")}</div>`
+      : `<p class="muted">No forks yet. Anyone can fork a program from its page; ${esc(c.name)} keeps a share of every sale down the lineage.</p>`}</section>
   </div>`;
+  // tabs: click or arrow keys move the selection; one panel shows (WAI-ARIA tabs, as shadcn/ui tabs.tsx renders Radix Tabs)
+  const tabEls = $$('[role="tab"]', app);
+  const pick = (t) => { tabEls.forEach((x) => { const on = x === t; x.setAttribute("aria-selected", on); x.tabIndex = on ? 0 : -1; $(`#${x.getAttribute("aria-controls")}`).hidden = !on; }); t.focus(); };
+  tabEls.forEach((t, i) => { t.addEventListener("click", () => pick(t)); t.addEventListener("keydown", (e) => { const d = { ArrowRight: 1, ArrowLeft: -1 }[e.key]; if (d) { e.preventDefault(); pick(tabEls[(i + d + tabEls.length) % tabEls.length]); } }); });
+  $("#cr-more")?.addEventListener("click", (e) => { $("#cr-grid").innerHTML = c.sounds.map((x) => soundRow(x, { maker: false })).join(""); liveSoundCards($("#cr-grid")); e.currentTarget.parentElement.remove(); });
   if ($("#cr-grid")) liveSoundCards($("#cr-grid"));
 }
