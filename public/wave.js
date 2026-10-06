@@ -260,13 +260,14 @@ function niceStep(dur, target) {
 /** A take without its trailing digital silence (below -60 dBFS), keeping 80 ms of tail, so the waveform and the
  * spectrogram fill their frame instead of running a flat line to the edge. Nothing audible is cut. */
 function trimTail(buf) {
-  if (!buf || buf.numberOfChannels !== 1) return buf;
-  const d = buf.getChannelData(0); let last = d.length - 1;
-  while (last > 0 && Math.abs(d[last]) < 0.001) last--;
-  const keep = Math.min(d.length, last + Math.round(0.08 * buf.sampleRate));
-  if (keep >= d.length * 0.95) return buf;
-  const out = new AudioBuffer({ length: keep, sampleRate: buf.sampleRate, numberOfChannels: 1 });
-  out.copyToChannel(d.subarray(0, keep), 0);
+  if (!buf) return buf;
+  // the last sample above -60 dBFS on any channel (stereo renders with a room tail used to keep their silence)
+  const chans = Array.from({ length: buf.numberOfChannels }, (_, c) => buf.getChannelData(c)), n = buf.length; let last = n - 1;
+  while (last > 0 && chans.every((d) => Math.abs(d[last]) < 0.001)) last--;
+  const keep = Math.min(n, last + Math.round(Math.min(0.08 * buf.sampleRate, 0.03 * n))); // a breath after the last sound, never a fifth of a short one
+  if (keep >= n * 0.95) return buf;
+  const out = new AudioBuffer({ length: keep, sampleRate: buf.sampleRate, numberOfChannels: buf.numberOfChannels });
+  chans.forEach((d, c) => out.copyToChannel(d.subarray(0, keep), c));
   for (const k of ["oasisWatermarked", "oasisTakes"]) if (buf[k] !== undefined) out[k] = buf[k];
   return out;
 }

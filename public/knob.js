@@ -26,6 +26,7 @@ svg { display: block; width: 100%; height: 100%; overflow: visible; }
 .tick { stroke: var(--line-strong); stroke-width: 1.4; stroke-linecap: round; }
 .tick.on { stroke: var(--accent); }
 .v { font: 600 12.5px var(--font-mono); font-variant-numeric: tabular-nums; color: var(--ink); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v.words { white-space: normal; text-overflow: clip; text-align: center; line-height: 1.15; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-size: 11.5px; }
 .l { font-size: 12px; color: var(--muted); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 :host(.hot) .v, :host(.hot) .l { color: var(--accent-text); }
 .tip { position: absolute; left: 50%; bottom: calc(100% + 6px); transform: translateX(-50%); padding: 3px 7px; border-radius: 6px; background: var(--ink); color: var(--bg); font: 600 11.5px var(--font-mono); white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity var(--t-fast, 120ms); }
@@ -82,7 +83,9 @@ class OasisKnob extends HTMLElement {
     this.$(".ptr").setAttribute("transform", `rotate(${(a * 180) / Math.PI})`);
     this.shadowRoot.querySelectorAll(".tick").forEach((t) => t.classList.toggle("on", Number(t.dataset.i) === Math.round(v)));
     const txt = this._fmt(this._v);
-    this.$(".v").textContent = txt; this.$(".tip").textContent = txt;
+    // a choice reads as words ("wet concrete"), allowed two lines, instead of a truncated slug ("wet-concre…")
+    const words = this.options ? String(txt).replace(/[-_]/g, " ") : txt;
+    this.$(".v").textContent = words; this.$(".v").classList.toggle("words", !!this.options); this.$(".tip").textContent = words;
     const dial = this.$(".dial");
     dial.setAttribute("aria-valuemin", this.min); dial.setAttribute("aria-valuemax", this.max);
     dial.setAttribute("aria-valuenow", this._v); dial.setAttribute("aria-valuetext", txt);
