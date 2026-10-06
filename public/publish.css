@@ -139,3 +139,4 @@
 
 /* publish: before any check has run the list has no status gutter at all */
 .pb-gates:not(:has(.pb-gate.ok, .pb-gate.warn, .pb-gate.fail)) .pb-gate { grid-template-columns: 0 minmax(0, 1fr); column-gap: 0; }
+.pb-src textarea { white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 2; border-radius: var(--r-lg); } /* long lines wrap instead of clipping mid-token */

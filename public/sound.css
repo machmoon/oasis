@@ -472,7 +472,7 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
 @media (max-width: 599px) {
   .kv-n { display: none; }
   .kv-body { grid-template-columns: minmax(0, 1fr); }
-  .kv-bill { order: -1; position: static; min-width: 0; }
+  .kv-bill { position: static; min-width: 0; } /* phones: the tracks first, the receipt after them (Bandcamp's mobile album page) */
 }
 .kv-packbtn { white-space: normal; height: auto; min-height: 46px; padding-block: 10px; line-height: 1.25; text-align: left; justify-content: flex-start; }
 .kv-bill > * { min-width: 0; }
