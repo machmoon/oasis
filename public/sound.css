@@ -453,3 +453,24 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
 .s-rows .s-skel { display: none; }
 @media (max-width: 899px) { .s-row { grid-template-columns: 34px 120px minmax(0, 1fr) 56px; } .s-row .s-c:not(.s-price) { display: none; } }
 @media (max-width: 599px) { .s-row { grid-template-columns: 34px 84px minmax(0, 1fr) auto; gap: 10px; padding: 8px 12px 8px 8px; } .s-row .s-sheet { height: 38px; } }
+
+/* ---------- the kit's parts as one numbered list (Bandcamp's tracklist, Gumroad's bundle rows: one bordered article,
+   rows split by hairlines, actions as quiet icons at the end) ---------- */
+.kv-parts { gap: 0; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); overflow: hidden; }
+.kv-part { border: 0; border-radius: 0; box-shadow: none; background: none; }
+@media (min-width: 600px) { .kv-part { grid-template-columns: 20px 36px 132px minmax(0, 1fr) auto auto; padding: 10px 16px 10px 12px; } .kv-part .links { grid-column: 3 / -1; } }
+.kv-part + .kv-part { border-top: 1px solid var(--line); }
+.kv-part.on { box-shadow: inset 3px 0 0 var(--accent); border-color: var(--line); background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.kv-n { font: var(--fs-sm) var(--font-mono); color: var(--muted); text-align: right; }
+.kv-part .kv-acts { display: flex; gap: 2px; margin: 0; }
+.kv-part .kv-acts a, .kv-part .kv-acts .kv-code { display: grid; place-items: center; width: 32px; height: 32px; border-radius: var(--r-pill); color: var(--muted); text-decoration: none; font-size: 16px; }
+.kv-part .kv-acts a:hover, .kv-part .kv-acts .kv-code:hover, .kv-part .kv-acts .kv-code[aria-expanded="true"] { background: var(--sunk); color: var(--ink); }
+.kv-why { font-style: normal; color: var(--muted); }
+.kv-share { display: flex; justify-content: flex-end; }
+@media (max-width: 599px) {
+  .kv-n { display: none; }
+  .kv-body { grid-template-columns: minmax(0, 1fr); }
+  .kv-bill { order: -1; position: static; min-width: 0; }
+}
+.kv-packbtn { white-space: normal; height: auto; min-height: 46px; padding-block: 10px; line-height: 1.25; text-align: left; justify-content: flex-start; }
+.kv-bill > * { min-width: 0; }
