@@ -1,4 +1,4 @@
-# Oasis: sounds as programs, kits from a vibe, every creator paid
+# Oasis: sounds as programs, kits from a vibe, every creator's share booked
 
 **Oasis is a registry of sounds written as code. Every sound is a small program with typed knobs, so one footstep
 program is three hundred footsteps that never repeat. Describe a vibe, get a kit of sounds tuned to it, and one
