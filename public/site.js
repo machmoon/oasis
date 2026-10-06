@@ -227,6 +227,7 @@ async function pageLedger() {
     const who = new Set(sales.flatMap((s) => s.creators.map((c) => c.author)));
     const set = (id, v) => { const el = $(id); if (!el) return; el.textContent = v; if (bump.length) { el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump"); } };
     set("#st-paid", usd(paid)); set("#st-orders", String(sales.length)); set("#st-creators", String(who.size));
+    if (!$("#cr-h")) return; // the visitor has left the ledger
     $("#cr-h").hidden = !who.size;
     // what has actually left as Payouts and what is still held in the refund window, from the ledger itself
     api("/api/ledger").then((l) => {

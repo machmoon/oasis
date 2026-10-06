@@ -50,6 +50,7 @@ export async function pageKits(app) {
     catch (err) { st.className = "kt-status err"; st.innerHTML = `<span>${esc(err.message)}</span>`; go.disabled = false; go.innerHTML = `${icon("sparkle")} Make a kit`; }
   });
   api("/api/kits").then((list) => {
+    if (!$("#kt-list")) return; // the visitor has left the page
     // one tile per vibe: the list arrives licensed first, then newest, so the first kit seen for a vibe is the one to show;
     // the others are earlier takes on the same line and are counted on it
     const byVibe = new Map();
@@ -59,7 +60,7 @@ export async function pageKits(app) {
       <span class="kt-mosaic" data-n="${(k.cards || []).length}">${(k.cards || []).map((c) => `<img src="${esc(c)}" alt="" loading="lazy" width="320" height="160">`).join("")}</span>
       <span class="kt-body"><b>${esc(k.title)}</b>${k.licensed ? `<em class="kt-paid">${icon("seal-check")} Paid</em>` : ""}<q>${esc(k.vibe)}</q>
       <span class="kt-facts">${[[k.parts, "sounds"], [k.creators, "creators"], [usd(k.total), ""], ...(k.takes > 1 ? [[k.takes, "takes"]] : [])].map(([v, l]) => `<span><b class="num">${v}</b>${l ? ` ${l}` : ""}</span>`).join("")}</span></span></a>`).join("") : `<p class="muted">No kits yet. Yours will be the first.</p>`;
-  }).catch((e) => { $("#kt-list").innerHTML = `<p class="muted">Recent kits could not be loaded: ${esc(e.message)}</p>`; });
+  }).catch((e) => { if (!$("#kt-list")) return; $("#kt-list").innerHTML = `<p class="muted">Recent kits could not be loaded: ${esc(e.message)}</p>`; });
 }
 
 export async function pageKit(app, id) {
