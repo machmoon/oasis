@@ -118,7 +118,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
         <div class="a-group"><span>The sound</span>${controls(others)}</div>
         ${knobs.seed ? `<div class="a-group"><span>Take</span>${control("seed", knobs.seed)}</div>` : ""}
         <div class="a-group"><span>The program</span><div class="a-program" id="a-program"></div></div>
-        <div class="a-group"><span>Renders</span><ol class="a-log" id="a-log"><li class="empty">No renders yet</li></ol></div>
+        <div class="a-group" id="a-log-g" hidden><span>Renders</span><ol class="a-log" id="a-log"></ol></div>
       </aside>
     </section>
 
@@ -190,7 +190,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
   const offRoute = () => { if (!stage.isConnected) { wave.destroy(); live.destroy(); setBusLook("dry"); removeEventListener("hashchange", offRoute); } };
   addEventListener("hashchange", () => setTimeout(offRoute, 0));
   const log = [];
-  const addLog = (entry) => { log.unshift(entry); log.length = Math.min(log.length, 6); $("#a-log").innerHTML = log.map((l) => `<li><b>${esc(l.what)}</b><span>${l.ms} ms · ${l.where}</span></li>`).join(""); };
+  const addLog = (entry) => { if (!$("#a-log")) return; $("#a-log-g").hidden = false; log.unshift(entry); log.length = Math.min(log.length, 6); $("#a-log").innerHTML = log.map((l) => `<li><b>${esc(l.what)}</b><span>${l.ms} ms · ${l.where}</span></li>`).join(""); };
   let hot = null;
   const program = () => {
     const d = diff();

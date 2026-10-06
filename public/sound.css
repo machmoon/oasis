@@ -500,3 +500,4 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
 .kt-pads:hover { background: var(--sunk); color: var(--ink); }
 @media (max-width: 899px) { .kt-row { grid-template-columns: 96px minmax(0, 1fr) 70px 34px; } .kt-row .s-c:not(.s-price) { display: none; } .kt-mini { width: 96px; height: 44px; } }
 @media (max-width: 899px) { .kt-pads span { display: none; } .kt-pads { padding: 0; width: 34px; } }
+.a-group[hidden] { display: none; }
