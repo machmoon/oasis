@@ -44,9 +44,11 @@ free items is refused.
 
 ## 3. A human approves
 
-- **In the store and the agent chat:** PayPal JS SDK Smart Buttons (`public/app.js` → `mountPayPal`),
-  `createOrder` → `onApprove` → server capture, including the `INSTRUMENT_DECLINED` → `actions.restart()` path
-  from PayPal's reference client.
+- **On a kit or a sound's page:** the Pay button (`public/kits.js`, and "License it" in `public/sound-page.js`)
+  calls `POST /api/kits/:id/checkout`, which creates the itemised order with `return_url`
+  `/checkout/return?kit=<id>`, and sends the buyer to the order's PayPal approval link. PayPal returns them to
+  `/checkout/return`, which captures server-side; the kit page then claims the licences with the claim token it
+  saved before leaving. (A redirect, not the JS SDK's Smart Buttons: one flow for people and for agents' humans.)
 - **From an outside agent over MCP:** `create_order` returns the order's `payer-action` link. The agent hands it
   to the human; PayPal redirects back to `/checkout/return`, which captures.
 
