@@ -519,3 +519,5 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
 .a-knobs .a-dials[style*="--n"] { grid-template-columns: repeat(var(--n), minmax(0, 1fr)); } /* columns fit the knob count: no knob alone on a row */
 .kt-row { min-height: 68px; } /* one row height whether or not a vibe line shows */
 .kv-miss { margin: 8px 0 0; display: flex; gap: 6px; align-items: baseline; font-size: var(--fs-sm); color: var(--muted); }
+/* the hero's player ends where the page's content ends (it ran ~100 px past it at 1440) */
+@media (min-width: 900px) { .hero-sound { right: max(var(--gutter), calc((100% - var(--measure)) / 2 + var(--gutter))); } }
