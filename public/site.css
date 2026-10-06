@@ -80,7 +80,7 @@ p { text-wrap: pretty; }
 .hero-copy { position: relative; z-index: 2; max-width: 620px; padding: clamp(40px, 7vh, 88px) 0 var(--s-9); pointer-events: none; }
 .hero-copy a, .hero-copy button { pointer-events: auto; }
 .hero h1 { font: var(--w-black) var(--fs-display) / var(--lh-display) var(--font-sans); letter-spacing: var(--ls-display); color: var(--hero-ink); display: grid; }
-.hero h1 .line { display: block; color: color-mix(in srgb, var(--hero-ink) 32%, transparent); transition: color .6s var(--ease-out), transform .6s var(--ease-out); }
+.hero h1 .line { display: block; color: color-mix(in srgb, var(--hero-ink) 44%, transparent); transition: color .6s var(--ease-out), transform .6s var(--ease-out); }
 .hero h1 .line.on { color: var(--hero-ink); }
 .hero h1 .line.done { color: color-mix(in srgb, var(--hero-ink) 72%, transparent); }
 .hero .lede { color: var(--hero-ink-2); margin-top: var(--s-5); max-width: 36ch; }
@@ -89,7 +89,7 @@ p { text-wrap: pretty; }
 .hero.night .btn.primary { background: #F2F4F8; color: #15171C; border-color: #F2F4F8; }
 .hero.night .btn.primary:hover { background: #fff; }
 /* the readout: what the stage is doing right now, in the product's own words. A mono line on a frosted pill. */
-.hero-readout { position: absolute; left: var(--gutter); bottom: var(--s-5); z-index: 2; display: inline-flex; align-items: center; gap: 10px; max-width: calc(100% - 2 * var(--gutter)); height: 36px; padding: 0 14px 0 12px; border-radius: var(--r-pill); background: color-mix(in srgb, var(--surface) 72%, transparent); color: var(--ink); border: 1px solid color-mix(in srgb, var(--line) 60%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); font: var(--w-medium) var(--fs-sm) / 1 var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: var(--shadow-sm); }
+.hero-readout { position: absolute; left: max(var(--gutter), calc((100% - var(--measure)) / 2 + var(--gutter))); bottom: var(--s-5); z-index: 2; display: inline-flex; align-items: center; gap: 10px; max-width: calc(100% - 2 * var(--gutter)); height: 36px; padding: 0 14px 0 12px; border-radius: var(--r-pill); background: color-mix(in srgb, var(--surface) 72%, transparent); color: var(--ink); border: 1px solid color-mix(in srgb, var(--line) 60%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); font: var(--w-medium) var(--fs-sm) / 1 var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: var(--shadow-sm); }
 .hero-readout i { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; }
 .hero-readout i.live { animation: blink 1s ease-in-out infinite; }
 .hero-readout b { font-weight: var(--w-semibold); }

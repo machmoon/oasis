@@ -48,7 +48,7 @@ export async function pageHome(app, ctx) {
     </div>
     <div class="wrap"><div class="hero-copy">
       <h1><span class="line on" data-beat="vibe">Vibe in.</span><span class="line" data-beat="kit">Kit out.</span><span class="line" data-beat="paid">Creators paid.</span></h1>
-      <p class="lede">Every sound is a program with knobs, so one footstep is three hundred footsteps. Describe a vibe, get a tuned kit, and one PayPal order pays every creator in it.</p>
+      <p class="lede">Every sound is a program with knobs. Describe a vibe, get a tuned kit, and one PayPal order pays every creator.</p>
       <div class="cta"><a class="btn primary" href="#/kits">Make a kit</a><a class="btn" href="#/sounds">Browse sounds</a></div>
     </div></div>
     <div class="hero-readout" id="readout" aria-live="polite"><i class="live"></i><span>rendering a footstep</span></div>
@@ -92,17 +92,21 @@ export async function pageHome(app, ctx) {
 
   <section class="wrap band">
     <div class="kit-head"><h2>From creators' programs.</h2><a class="link" href="#/sounds">All sounds</a></div>
-    <div class="kit-row" id="kit"></div>
+    <div class="s-grid" id="kit"></div>
   </section>`;
 
   const cmd = `claude mcp add --transport http oasis ${location.origin}/mcp`;
   $("#cmd-text").textContent = cmd;
   $("#cmd-copy").addEventListener("click", async () => { try { await navigator.clipboard.writeText(cmd); ctx.toast("Copied"); } catch { ctx.toast("Select the command and copy it"); } });
 
-  drawKitRow($("#kit"), { catalog, esc, price });
+  drawKitRow($("#kit"), { catalog });
   drawSales().then((n) => { if (n) $("#sales-sec").hidden = false; });
   mountRebuild({ api, esc, icon, reduced });
-  const hero = mountHero({ api, esc, usd, icon, reduced, onBill: (kit) => drawReceipt($("#receipt"), kit, { esc, usd, icon }) });
+  // the bill shows a real paid kit at once (the latest licensed one, with its PayPal order), so the band is never an
+  // empty frame waiting on the hero; a bill the hero builds later replaces it
+  let heroBilled = false;
+  api("/api/kits").then((ks) => ks.find((k) => k.licensed)).then((k) => k && api(`/api/kits/${encodeURIComponent(k.id)}`)).then((kit) => { if (kit && !heroBilled) drawReceipt($("#receipt"), kit, { esc, usd, icon }); }).catch(() => {});
+  const hero = mountHero({ api, esc, usd, icon, reduced, onBill: (kit) => { heroBilled = true; drawReceipt($("#receipt"), kit, { esc, usd, icon }); } });
   viewers.push({ dispose: hero.stop });
   rise(app);
 }
@@ -266,14 +270,18 @@ function drawReceipt(el, kit, { esc, usd, icon }) {
   const creators = Object.entries(by).sort((a, b) => b[1].usd - a[1].usd);
   el.innerHTML = `<div class="r-head"><b>${esc(kit.title)}</b><span>${kit.items.length} sounds, ${creators.length} creators</span></div>
     ${creators.map(([who, c]) => `<div class="r-who"><div class="r-name">${esc(who)}<em class="num">${usd(c.usd)}</em></div>${c.lines.map((l) => `<div class="r-line"><span>${esc(l.name)}</span><span class="num">${usd(l.price)}</span></div>`).join("")}</div>`).join("")}
-    <div class="r-total"><span>One PayPal order</span><b class="num">${usd(kit.total)}</b></div>
-    <div class="r-paypal">${icon("paypal-logo")} Orders v2, itemised per part. Shares paid out with PayPal Payouts.</div>`;
+    <div class="r-total"><span>${kit.licence ? "Paid in one PayPal order" : "One PayPal order"}</span><b class="num">${usd(kit.total)}</b></div>
+    <div class="r-paypal">${icon("paypal-logo")} ${kit.licence ? `Order ${esc(kit.licence.orderId)}, itemised per part. Shares paid out with PayPal Payouts.` : "Orders v2, itemised per part. Shares paid out with PayPal Payouts."}</div>`;
 }
 
 // ---------- the sounds row ----------
-async function drawKitRow(el, { catalog, esc, price }) {
-  const list = (await catalog()).slice(0, 18);
+// the same card the sounds browser shows (public/kit.js soundCard: the centroid-coloured waveform, play in the corner),
+// eight of them from different kits so the row shows the registry's range rather than one kit's
+async function drawKitRow(el, { catalog }) {
+  const [all, { soundCard, liveSoundCards }] = await Promise.all([catalog(), import("/kit.js")]);
   if (!el.isConnected) return;
-  el.innerHTML = list.map((a) => `<a class="piece" href="#/a/${esc(a.id)}"><span class="sheet"><img src="/api/assets/${encodeURIComponent(a.id)}/render.png?w=360" alt="${esc(a.title)}" loading="lazy" width="360" height="360"></span><div><b>${esc(a.title)}</b><em class="num">${price(a.price)}</em><span>${esc(a.author)}${a.kit ? ` · ${esc(a.kit)}` : ""}</span></div></a>`).join("");
-  el.querySelectorAll(".sheet img").forEach((img) => { const on = () => img.parentElement.classList.add("in"); img.complete && img.naturalWidth ? on() : img.addEventListener("load", on, { once: true }); img.addEventListener("error", on, { once: true }); });
+  const seen = new Set(), list = [];
+  for (const a of all) { if (list.length >= 8) break; if (seen.has(a.kit)) continue; seen.add(a.kit); list.push(a); }
+  el.innerHTML = list.map(soundCard).join("");
+  liveSoundCards(el);
 }

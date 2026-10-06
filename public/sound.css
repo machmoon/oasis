@@ -105,10 +105,13 @@
 .sp-stage-wrap { display: grid; gap: 10px; }
 .sp-stage { position: relative; border-radius: var(--r-lg); overflow: hidden; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--inset-top), var(--shadow); display: grid; min-height: 400px; isolation: isolate; }
 /* the wavesurfer mount: waveform on the surface, the spectrogram plugin's canvases on their own near-black below it */
-.sp-ws { position: relative; padding-top: 30px; background: linear-gradient(var(--surface) 0 calc(30px + 184px), #010101 0); }
+/* the waveform shares the spectrogram's near-black in both themes: one instrument panel, whose centroid-toned bars
+   (public/wave.js tonesOf) read the same as the cards' */
+.sp-ws { position: relative; padding-top: 30px; background: linear-gradient(#0B0C10 0 calc(30px + 184px), #010101 0); }
+.sp-ws .sp-axis, .hero-sound .sp-axis, .hs-stage2 .sp-axis { color: rgb(255 255 255 / .55); }
 .sp-ws .sp-axis { z-index: 3; }
 .sp-ws .sp-axis.spec { top: calc(30px + 184px + 8px); left: auto; right: 10px; color: rgb(255 255 255 / .62); }
-@media (max-width: 599px) { .sp-ws { background: linear-gradient(var(--surface) 0 calc(30px + 128px), #010101 0); } .sp-ws .sp-axis.spec { top: calc(30px + 128px + 8px); } }
+@media (max-width: 599px) { .sp-ws { background: linear-gradient(#0B0C10 0 calc(30px + 128px), #010101 0); } .sp-ws .sp-axis.spec { top: calc(30px + 128px + 8px); } }
 /* wavesurfer's shadow parts: the playback cursor, the hover line and its time + level label */
 .sp-ws ::part(cursor) { box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 70%, transparent); }
 .sp-ws ::part(hover-label), .rebuild-stage ::part(hover-label) { font-family: var(--font-mono); border-radius: 6px; font-variant-numeric: tabular-nums; }
@@ -320,7 +323,7 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
    its own black, and a knob strip under them. Below the stage: the readout on the left, the bill on the right. */
 .hero-sound { display: grid; grid-template-rows: minmax(0, 1fr) auto; grid-template-columns: minmax(0, 1fr); left: 47%; right: var(--gutter); top: clamp(40px, 7vh, 88px); bottom: 100px; inset-inline-start: 47%; border-radius: var(--r-lg); overflow: hidden; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--inset-top), var(--shadow-lg); }
 /* one wavesurfer mount: the waveform on the surface (30px of headroom for the label), the spectrogram on black */
-.hero-sound .hs-pic { position: relative; min-height: 0; padding-top: 30px; background: linear-gradient(var(--surface) 0 var(--wave-h, 45%), #010101 0); }
+.hero-sound .hs-pic { position: relative; min-height: 0; padding-top: 30px; background: linear-gradient(#0B0C10 0 var(--wave-h, 45%), #010101 0); }
 .hero-sound .sp-axis { top: 8px; z-index: 3; }
 .hero-sound .sp-axis.spec { color: rgb(255 255 255 / .62); }
 /* the film's knobs: read-only dials that turn (knob.js), the one that just moved in the accent */
@@ -351,7 +354,7 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
 }
 /* rendered, not resampled: one wavesurfer (waveform over spectrogram) and a play control in the band's stage */
 .hs-stage2 { background: #010101; }
-.hs-stage2 #rb-ws { background: var(--surface); }
+.hs-stage2 #rb-ws { background: #0B0C10; }
 .hs-stage2 .s-play { position: absolute; left: var(--s-4); bottom: var(--s-4); z-index: 4; }
 .hs-stage2 .readout { z-index: 4; }
 .rebuild-knobs .a-dials { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); }

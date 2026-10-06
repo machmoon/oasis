@@ -126,27 +126,79 @@ const resample = (bars, n) => {
   for (let i = 0; i < n; i++) { const j = Math.min(bars.n - 1, Math.floor((i * bars.n) / n)); top[i] = bars.top[j]; bot[i] = bars.bot[j]; }
   return { top, bot, n };
 };
+// ---------- bars coloured by spectral centroid ----------
+// Each bar takes its colour from the spectral centroid under it, the way Freesound draws its waveforms (MTG/freesound
+// utils/audioprocessing/processing.py WaveformImage.draw_peaks: a colour lookup indexed by the normalised centroid) and
+// the way the server draws every card (server/sound.js cardPng): the same Roseus ramp, the same "a bar under 4% of full
+// scale is drawn dim and left out of the range" rule, so a sound's card and its page agree.
+const TONE_RAMP = [[125, 31, 159], [196, 42, 130], [240, 92, 83], [247, 180, 101], [254, 251, 249]];
+const TONE_DIM = "rgb(125 31 159 / .59)", TONE_STEPS = 32;
+const TONE_FILLS = Array.from({ length: TONE_STEPS }, (_, q) => {
+  const f = (q / (TONE_STEPS - 1)) * (TONE_RAMP.length - 1), i = Math.min(TONE_RAMP.length - 2, Math.floor(f)), u = f - i;
+  return `rgb(${[0, 1, 2].map((c) => Math.round(TONE_RAMP[i][c] + (TONE_RAMP[i + 1][c] - TONE_RAMP[i][c]) * u)).join(" ")})`;
+});
+/** Per bar 0..1, or -1 for a quiet bar: the centroid of a 512-sample Hann window at the bar's centre over 32 bins. */
+function tonesOf(ch, bars) {
+  const n = bars.n, win = 512, bins = 32, out = new Float32Array(n), hann = new Float32Array(win), len = ch.length;
+  for (let i = 0; i < win; i++) hann[i] = 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / win);
+  const ks = Array.from({ length: bins }, (_, b) => Math.min(win / 2 - 1, Math.round(Math.pow((b + 0.5) / bins, 1.8) * (win / 2 - 2)) + 1));
+  let peak = 0; for (let i = 0; i < n; i++) peak = Math.max(peak, bars.top[i], bars.bot[i]);
+  const gain = peak > 0 ? Math.min(4, 0.96 / peak) : 1;
+  let lo = 1, hi = 0;
+  for (let i = 0; i < n; i++) {
+    if ((bars.top[i] + bars.bot[i]) * gain <= 0.08) { out[i] = -1; continue; }
+    const o = Math.max(0, Math.min(len - win, Math.floor(((i + 0.5) * len) / n) - win / 2));
+    let s = 0, w = 0;
+    for (let b = 0; b < bins; b++) {
+      let re = 0, im = 0; const k = ks[b];
+      for (let j = 0; j < win; j++) { const v = (ch[o + j] || 0) * hann[j], a = (2 * Math.PI * k * j) / win; re += v * Math.cos(a); im -= v * Math.sin(a); }
+      const m = Math.sqrt(re * re + im * im); s += m * b; w += m;
+    }
+    out[i] = w > 0 ? s / w / (bins - 1) : 0;
+    if (out[i] < lo) lo = out[i]; if (out[i] > hi) hi = out[i];
+  }
+  if (lo > hi) { lo = 0; hi = 1; }
+  const span = Math.max(0.08, hi - lo);
+  for (let i = 0; i < n; i++) if (out[i] >= 0) out[i] = (out[i] - lo) / span;
+  return out;
+}
+
 function morphRenderer(state, { barWidth, barGap, barRadius, scale = 0.94, floor = 1 }) {
   return (channels, ctx) => {
     const { width: W, height: H } = ctx.canvas, pr = Math.max(1, devicePixelRatio || 1);
     const bw = barWidth * pr, sp = bw + barGap * pr, n = Math.max(1, Math.floor(W / sp)), mid = H / 2;
     const ch = channels[0];
-    if (state.cacheCh !== ch || state.cache?.n !== n) { state.cacheCh = ch; state.cache = barsOf(ch, n); }
+    if (state.cacheCh !== ch || state.cache?.n !== n) { state.cacheCh = ch; state.cache = barsOf(ch, n); state.tones = null; }
     const to = state.cache, from = state.k < 1 ? resample(state.from, n) : null, k = state.k;
+    // wavesurfer calls this once and makes the progress layer from a copy recoloured "source-in" with progressColor
+    // (src/renderer.ts renderSingleCanvas), so the played part still reads as one accent. A watermarked preview keeps
+    // its colours at reduced strength: the same sound as its card, visibly not yet licensed.
+    const toned = state.tone;
+    if (toned) ctx.globalAlpha = state.dim ? 0.62 : 1;
+    if (toned && !state.tones) state.tones = tonesOf(ch, to);
     const shown = { top: new Float32Array(n), bot: new Float32Array(n), n };
-    ctx.beginPath();
+    const paths = toned ? new Map() : null;
+    if (!toned) ctx.beginPath();
     for (let i = 0; i < n; i++) {
       const t = from ? from.top[i] + (to.top[i] - from.top[i]) * k : to.top[i];
       const b = from ? from.bot[i] + (to.bot[i] - from.bot[i]) * k : to.bot[i];
       shown.top[i] = t; shown.bot[i] = b;
       const th = Math.max(0, t * mid * scale), bh = Math.max(0, b * mid * scale), h = Math.max(floor * pr, th + bh);
       const y = th + bh < floor * pr ? mid - h / 2 : mid - th;
-      if (barRadius && ctx.roundRect) ctx.roundRect(i * sp, y, bw, h, barRadius * pr); else ctx.rect(i * sp, y, bw, h);
+      let path = ctx;
+      if (paths) {
+        const tone = state.tones[Math.min(state.tones.length - 1, i)], key = tone < 0 ? TONE_DIM : TONE_FILLS[Math.round(tone * (TONE_STEPS - 1))];
+        if (!paths.has(key)) paths.set(key, new Path2D());
+        path = paths.get(key);
+      }
+      if (barRadius && path.roundRect) path.roundRect(i * sp, y, bw, h, barRadius * pr); else path.rect(i * sp, y, bw, h);
     }
-    ctx.fill();
+    if (paths) for (const [fill, path] of paths) { ctx.fillStyle = fill; ctx.fill(path); }
+    else ctx.fill();
     state.shown = shown;
   };
 }
+
 
 // ---------- the spectrogram follows every take ----------
 // The vendored 7.12.12 plugin keeps cachedFrequencies keyed by cachedBuffer, but its throttledRender takes the
@@ -203,9 +255,9 @@ function niceStep(dur, target) {
  * Returns { ws, media, show(buffer, { dim }), play(), stop(), toggle(), playing, buffer, destroy() }.
  */
 export function mountWave(container, opts = {}) {
-  const { height = 160, spectrogram = 0, timeline = null, hover = true, barWidth = 2, barGap = 1, barRadius = 2, compact = false, onState = () => {}, specLabels = true, wsOptions = {}, extraPlugins = [] } = opts;
+  const { height = 160, spectrogram = 0, timeline = null, hover = true, barWidth = 2, barGap = 1, barRadius = 2, compact = false, onState = () => {}, specLabels = true, wsOptions = {}, extraPlugins = [], tone = true } = opts;
   const media = new BufferMedia();
-  const state = { k: 1, from: null, shown: null };
+  const state = { k: 1, from: null, shown: null, tone, dim: false };
   let dim = false, buffer = null, anim = null, tl = null, tlDur = 0, ghost = null, ghostAnim = null, offGhost = null;
   const dropGhost = () => { ghostAnim?.stop(); offGhost?.(); offGhost = null; ghost?.remove(); ghost = null; };
   const colors = () => {
@@ -242,7 +294,7 @@ export function mountWave(container, opts = {}) {
     async show(buf, { dim: d = false, morph = true } = {}) {
       const was = !media.paused;
       if (was) ws.pause();
-      dim = d; buffer = buf;
+      dim = d; state.dim = d; buffer = buf;
       anim?.stop();
       const glide = morph && !reduced && !!state.shown;
       state.from = glide ? state.shown : null; state.k = glide ? 0 : 1;
