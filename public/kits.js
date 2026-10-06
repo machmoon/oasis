@@ -170,7 +170,7 @@ export async function pageKit(app, id) {
       "Each import is its own binding (play1, play2, ...); call one with an AudioContext to hear a fresh take.", "",
       marked ? "These are previews: paid parts carry a soft tick every 0.6 s until the kit is licensed on its page." : "These are clean renders.", "",
       `Kit page: ${location.origin}/#/kit/${k.id}`, ""].join("\n") });
-    files.push({ name: `${kitSlug}/LICENCE.txt`, data: [own ? `Licensed with PayPal order ${k.licence.orderId} on ${new Date(k.licence.at).toUTCString()}.` : "Not licensed yet. These files are previews.", "",
+    files.push({ name: `${kitSlug}/LICENSE.txt`, data: [own ? `Licensed with PayPal order ${k.licence.orderId} on ${new Date(k.licence.at).toUTCString()}.` : "Not licensed yet. These files are previews.", "",
       "Parts, their programs and who made them:", ...manifest.parts.map((p) => `  ${p.name}: ${p.title} (${p.program}) by ${p.author}`), "",
       own ? "What the order bought: a license to import and ship each program, at any knobs and any seed, in what you make (the terms the registry states on every program's 402 and in /llms.txt)." : "",
       `Credit line: Sounds from Oasis by ${[...new Set(manifest.parts.map((p) => p.author))].join(", ")}.`, ""].join("\n") });
