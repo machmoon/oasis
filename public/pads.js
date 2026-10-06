@@ -1,312 +1,593 @@
-// Pads: a kit played as an MPC. The idea is Crate, the iPhone Duo MPC that won Bitrig Hacks (Devpost
-// "crate-iphone-duo-mpc": describe a vibe, get a playable kit from your samples, jam on the pads, fold the phone to
-// shape the sound and snap it open for the drop). Its source is not public (github.com/Shuhan-Zhang/crate-duo is gone),
-// so this follows the write-up, not its code. What Oasis adds is what a sampler cannot do: a pad is a program, not a
-// file. Every hit is a new take of the program (samplers call this round robin and fake it with a handful of
-// recordings; here the takes are rendered from seeds), and a pad's knobs re-render its sound instead of filtering it.
-//
-// Timing is Chris Wilson's lookahead scheduler (github.com/cwilso/metronome js/metronome.js and metronomeworker.js,
-// "A Tale of Two Clocks"): a Worker ticks every 25 ms, every tick schedules on the AudioContext clock whatever falls in
-// the next 100 ms, and what is drawn is read back from a queue of { step, time } against currentTime in rAF.
-// The keyboard is the 4x4 grid an MPC and Ableton's Drum Rack put on a computer keyboard: 1234 / QWER / ASDF / ZXCV.
+// Pads: a kit played on CRATE's instrument. CRATE is the iPhone Duo MPC that won Bitrig Hacks (Aradhya Mishra, Mahin
+// Bharathwaj, Shuhan Zhang); its source is public at github.com/odoisveryverygood/crate-duo, and this page follows
+// that source, file by file:
+//   - the device: a black lid display over an aluminium deck, white keys, orange only for what is live, flat (no
+//     shadows), motion 100 ms or less (Sources/UI/Theme.swift, Sources/App/RootView.swift)
+//   - pads: 4x4 in MPC order, pad 1 bottom left (Sources/UI/PadGridView.swift:33-39); velocity from where the finger
+//     lands, 127 at the top edge to 70 at the bottom (:157), gain (v/127)^1.6 (Sources/Audio/AudioSequencer.swift:461);
+//     a hit is a 100 ms fill change and a 3 px orange bar along the top (PadGridView.swift:266, Theme.swift:104)
+//   - keys: Z X C V pads 1-4, A S D F 5-8, Q W E R 9-12, 1 2 3 4 13-16; Space play, Return rec, / prompt, Cmd-Z undo
+//     (Sources/App/KeyboardControl.swift:5,50-68)
+//   - the lid: title row with LOOP segments, hero readouts BPM / SWING / BAR.beat, the pad line, the SEQ dot grid with
+//     a gap each beat, hits as white dots, ghosts as rings, rests as specks, a playhead per lane, the punch strip, a
+//     timing strip, the prompt row and style chips (Sources/UI/LidDisplayView.swift:17-49, LidPanels.swift:58-273,
+//     518-625)
+//   - the hinge, here a fader: one punch amount p drives lowpass 20000*(180/20000)^(p^0.85), crush 30*p^2 %, a 3/16
+//     delay 22*p % and a hall 38*p %; past 0.92 the drums break down; pulling it from above 0.6 to under 0.1 inside
+//     0.45 s is the DROP: punch resets, the crash and the kick fire (Sources/App/HingeFX.swift:7-56,
+//     Sources/Audio/AudioEngine.swift:490-552)
+//   - FX pads: hold FX (or tap to latch) and the pads become 16 effects; the finger's height is the amount, lifting
+//     puts the previous effect back (Sources/Core/FXType.swift:32-59, Sources/Audio/AudioPadFX.swift:111-157,
+//     PadGridView.swift:207-209, Sources/UI/UISupport.swift:151-183)
+//   - sequencer: 16ths, swing as MPC percent (odd steps late by 2*swing/100-1 steps, 50-75, default 56), hits with a
+//     late offset and ratchets decaying x0.85, a one-bar count-in before REC, quantise to the nearest 16th less 25 ms,
+//     overdub, a 30-deep undo (AudioSequencer.swift:133,358-369,570-588; UISupport.swift:105-130;
+//     Sources/AI/Orchestrator+Edit.swift:34,329-378)
+//   - grooves use CRATE's format (library/grooves.json: [step, velocity, late, ratchet] per lane, lanes are pad roles);
+//     the repository carries no licence, so the patterns below are written for Oasis, not copied
+// Timing is a lookahead scheduler (CRATE ticks 5 ms with 100 ms lookahead; here a Worker ticks 25 ms as in
+// github.com/cwilso/metronome, scheduling 100 ms ahead on the AudioContext clock).
+// What CRATE cannot do, because its pads are samples: every Oasis pad is a program. Each hit plays the next of a pool
+// of takes rendered from seeds (round robin from the program), and EDIT on the lid shows the program's knobs, which
+// re-render the pad instead of trimming a file.
 import { audio, unlock, loadWav, output } from "/audio.js";
 import { wav } from "/sound-dsp.js";
-import { control, segment } from "/sound-page.js";
-import { LOOKS, buildLook } from "/fx.js";
+import { control } from "/sound-page.js";
 import "/knob.js";
 
-// styles: sound.css (crumbs, dials) and kit.css (a-dials), then pads.css; loaded once from here, as the other pages do
 for (const href of ["/sound.css", "/kit.css", "/pads.css"]) if (!document.querySelector(`link[href="${href}"]`)) { const l = document.createElement("link"); l.rel = "stylesheet"; l.href = href; document.head.appendChild(l); }
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const icon = (name) => `<i class="ph-bold ph-${name}" aria-hidden="true"></i>`;
 async function api(path) { const r = await fetch(path); if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `${r.status}`); return r.json(); }
 
-const KEYS = ["Digit1", "Digit2", "Digit3", "Digit4", "KeyQ", "KeyW", "KeyE", "KeyR", "KeyA", "KeyS", "KeyD", "KeyF", "KeyZ", "KeyX", "KeyC", "KeyV"];
+// pad n (0-based) -> key; the grid is drawn top row first: pads 13-16, 9-12, 5-8, 1-4
+const KEYS = ["KeyZ", "KeyX", "KeyC", "KeyV", "KeyA", "KeyS", "KeyD", "KeyF", "KeyQ", "KeyW", "KeyE", "KeyR", "Digit1", "Digit2", "Digit3", "Digit4"];
 const KEY_LABEL = (code) => code.replace(/^(Digit|Key)/, "");
+const DRAW_ORDER = [12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3];
 const STEPS = 16;
+const VEL = { X: 118, x: 92, g: 44 }; // CRATE's pattern letters (Sources/AI/OpenAIClient.swift:124-127)
 
-/** A first pattern from what the parts are: kicks on the one and the and-of-three, snares and claps on two and four,
- * ticks and taps on the off-beats, a long bed once a bar. A starting point to play over, not a composition. */
-function starter(pads) {
-  const rx = (p, re) => re.test(`${p.item.name} ${p.item.title}`.toLowerCase());
-  const used = new Set();
-  const rows = pads.map(() => new Array(STEPS).fill(0));
-  const take = (test) => { const i = pads.findIndex((p, j) => !used.has(j) && test(p)); if (i >= 0) used.add(i); return i; };
-  const bed = take((p) => p.item.kind === "ambience" || p.item.duration >= 2.4);
-  if (bed >= 0) rows[bed][0] = 2;
-  const kick = take((p) => rx(p, /kick|boom|thump|stomp|drop|slam|thud|barrel|knock/));
-  if (kick >= 0) [0, 6, 8, 11].forEach((s, n) => (rows[kick][s] = n === 0 ? 2 : 1));
-  const snare = take((p) => rx(p, /snare|clap|crack|snap|slap|hit|strike|shut/));
-  if (snare >= 0) [4, 12].forEach((s) => (rows[snare][s] = 2));
-  const hat = take((p) => rx(p, /hat|tick|tap|click|clink|blip|ping|drip|step/) || p.item.kind === "ui");
-  if (hat >= 0) for (let s = 2; s < STEPS; s += 4) rows[hat][s] = 1;
-  const ghost = take((p) => p.item.duration < 1.2);
-  if (ghost >= 0) [7, 15].forEach((s) => (rows[ghost][s] = 1));
-  return rows;
+// ---------- roles: which pad plays which lane of a groove ----------
+const ROLE_RX = [
+  ["kick", /kick|boom|thump|stomp|thud|slam|barrel|log drop|knock(?!le)|808|bass drum/],
+  ["snare", /snare|snap|crack|slap|strike|shut|whip/],
+  ["clap", /clap/],
+  ["hat", /hat|tick|tap|click|clink|drip|coin|ping|blip|step|tock/],
+  ["openhat", /open|sizzle|shaker|hiss|spray/],
+  ["rim", /rim|knuckle|wood|block|stick/],
+  ["perc", /perc|tom|bell|clank|anvil|pot|cup|mug|toast|glass|pan/],
+  ["cymbal", /cymbal|crash|ride|gong|chime|toll|splash/],
+  ["texture", /bed|rain|ambien|room|wind|crackle|hum|drone|night/],
+];
+function assignRoles(pads) {
+  const role = new Array(pads.length).fill(null), taken = new Set();
+  const text = (p) => `${p.item.name} ${p.item.title}`.toLowerCase();
+  for (const [r, rx] of ROLE_RX) {
+    const i = pads.findIndex((p, j) => role[j] === null && !taken.has(r) && (r === "texture" ? (p.item.kind === "ambience" || rx.test(text(p))) : rx.test(text(p))));
+    if (i >= 0) { role[i] = r; taken.add(r); }
+  }
+  // what is left fills the drum roles still empty, shortest sounds first (a short sound is a better hat than a kick)
+  const left = pads.map((p, i) => i).filter((i) => role[i] === null).sort((a, b) => pads[a].item.duration - pads[b].item.duration);
+  for (const r of ["hat", "kick", "snare", "perc", "rim", "clap", "openhat", "cymbal"]) { if (taken.has(r) || !left.length) continue; role[left.shift()] = r; taken.add(r); }
+  return role;
 }
+
+// ---------- grooves, in CRATE's format: [step, velocity, late (fraction of a 16th), ratchet] over `bars` bars ----------
+const hats8 = (v1, v2, late = 0, bars = 2) => Array.from({ length: bars * 8 }, (_, n) => [n * 2, n % 2 ? v2 : v1, n % 2 ? late : 0]);
+const STYLES = {
+  boombap: { label: "BOOM BAP", bpm: 93, swing: 55, bars: 2, words: ["boom bap", "boombap", "90s", "golden era", "east coast"],
+    lanes: { kick: [[0, 122, 0], [3, 70, 0.04], [10, 114, 0.02], [16, 122, 0], [19, 88, 0.02], [24, 104, 0.02], [26, 110, 0]], snare: [[4, 120, 0.03], [12, 122, 0.03], [20, 120, 0.03], [28, 122, 0.03], [31, 48, 0.05]], hat: hats8(94, 58, 0.02) } },
+  dilla: { label: "DILLA", bpm: 88, swing: 57, bars: 2, words: ["dilla", "donuts", "laid back", "wonky", "drunk"],
+    lanes: { kick: [[0, 118, -0.03], [6, 86, 0.14], [9, 106, 0.08], [16, 120, -0.02], [21, 90, 0.16], [25, 104, 0.06], [30, 78, 0.18]], snare: [[4, 110, 0.24], [12, 116, 0.22], [20, 112, 0.26], [28, 118, 0.22]], hat: hats8(80, 60, 0.2), rim: [[15, 46, 0.3], [31, 52, 0.28]] } },
+  jazzhop: { label: "JAZZ HOP", bpm: 89, swing: 59, bars: 2, words: ["jazz", "jazzhop", "jazz hop", "nujabes", "jazzy"],
+    lanes: { kick: [[0, 114, 0], [10, 100, 0.05], [16, 114, 0], [18, 76, 0.05], [27, 98, 0.05]], snare: [[4, 106, 0.08], [12, 110, 0.08], [20, 106, 0.08], [28, 112, 0.08]], hat: hats8(78, 60, 0.06), rim: [[7, 42, 0.1], [23, 44, 0.1]] } },
+  lofi: { label: "LO-FI", bpm: 78, swing: 60, bars: 2, words: ["lofi", "lo-fi", "lo fi", "chill", "study", "bedroom", "cozy", "rainy"],
+    lanes: { kick: [[0, 110, 0], [6, 80, 0.06], [10, 98, 0.04], [16, 110, 0], [25, 96, 0.04]], snare: [[4, 98, 0.12], [12, 102, 0.12], [20, 98, 0.12], [28, 104, 0.14]], hat: hats8(62, 44, 0.08), texture: [[0, 96, 0]] } },
+  rnb: { label: "R&B", bpm: 70, swing: 60, bars: 1, words: ["r&b", "rnb", "slow jam", "soul", "smooth"],
+    lanes: { kick: [[0, 116, 0], [7, 90, 0.05], [10, 102, 0]], snare: [[4, 104, 0.06], [12, 108, 0.06]], clap: [[4, 86, 0.08], [12, 90, 0.08]], hat: Array.from({ length: 16 }, (_, s) => [s, s % 2 ? 42 : 62, 0]) } },
+  house: { label: "HOUSE", bpm: 124, swing: 54, bars: 1, words: ["house", "four on the floor", "club", "dance", "disco"],
+    lanes: { kick: [[0, 124, 0], [4, 120, 0], [8, 124, 0], [12, 120, 0]], clap: [[4, 110, 0], [12, 112, 0]], snare: [[4, 96, 0.02], [12, 98, 0.02]], openhat: [[2, 94, 0], [6, 90, 0], [10, 94, 0], [14, 90, 0]], hat: Array.from({ length: 8 }, (_, n) => [n * 2 + 1, n % 2 ? 64 : 56, 0]), perc: [[7, 68, 0], [11, 62, 0]] } },
+  trap: { label: "TRAP", bpm: 140, swing: 50, bars: 2, words: ["trap", "atl", "808", "hard"],
+    lanes: { kick: [[0, 124, 0], [6, 110, 0], [11, 116, 0], [16, 124, 0], [22, 106, 0], [27, 112, 0]], clap: [[8, 118, 0], [24, 118, 0]], snare: [[8, 108, 0], [24, 108, 0], [31, 76, 0]],
+      hat: [...Array.from({ length: 32 }, (_, s) => [s, s % 2 ? 64 : 90, 0]).filter(([s]) => ![7, 15, 23, 30].includes(s)), [7, 82, 0, 2], [15, 84, 0, 3], [23, 82, 0, 2], [30, 88, 0, 4]] } },
+  drill: { label: "DRILL", bpm: 142, swing: 50, bars: 2, words: ["drill", "uk drill", "slide"],
+    lanes: { kick: [[0, 122, 0], [10, 104, 0], [16, 120, 0], [23, 100, 0], [26, 98, 0]], snare: [[8, 118, 0], [24, 118, 0], [29, 96, 0]], hat: [[0, 90, 0], [3, 70, 0], [6, 84, 0], [9, 72, 0], [12, 86, 0], [14, 70, 0, 3], [16, 90, 0], [19, 70, 0], [22, 84, 0], [25, 72, 0], [28, 86, 0], [30, 76, 0, 3]], perc: [[5, 64, 0], [21, 66, 0]] } },
+};
+const STYLE_ORDER = ["jazzhop", "boombap", "dilla", "lofi", "rnb", "house", "trap", "drill"];
+
+// ---------- the 16 FX pads (FXType.swift layout, top row first) ----------
+const FX = [
+  ["repeat", "BEAT REPEAT", "1/8 · 1/16 · 1/32"], ["crush", "CRUSH", "BITS ↓"], ["delay", "DELAY", "3/16 SYNC"], ["reverb", "REVERB", "HALL"],
+  ["ring", "RING MOD", "80 → 1.5K"], ["lofi", "LOFI", "WOW · DUST"], ["color", "COLOR", "DRIVE"], ["grain", "GRANULAR", "SMEAR"],
+  ["comb", "COMB", "10 → 1.5 MS"], ["lp", "LP FILTER", "CUTOFF ↓"], ["hp", "HP FILTER", "CUTOFF ↑"], ["bp", "BP FILTER", "SWEEP"],
+  ["half", "HALF SPEED", "× 0.5"], ["radio", "RADIO", "BAND"], ["dub", "DUB ECHO", "3/8 FEED"], ["punch", "PUNCH", "THE HINGE"],
+];
 
 const wavUrl = (p, seed) => {
   const knobs = { ...p.knobs, ...(seed === undefined ? {} : { seed }) };
   const q = Object.keys(knobs).length ? `?p=${encodeURIComponent(JSON.stringify(knobs))}` : "";
   return p.item.licence ? `/api/licenses/${p.item.licence}/render.wav${q}` : `/api/assets/${encodeURIComponent(p.item.assetId)}/render.wav${q}`;
 };
-const cardUrl = (p) => `/api/assets/${encodeURIComponent(p.item.assetId)}/render.png?w=320${Object.keys(p.knobs).length ? `&p=${encodeURIComponent(JSON.stringify(p.knobs))}` : ""}`;
+const cardUrl = (p) => `/api/assets/${encodeURIComponent(p.item.assetId)}/render.png?w=480${Object.keys(p.knobs).length ? `&p=${encodeURIComponent(JSON.stringify(p.knobs))}` : ""}`;
+const fmtHz = (f) => (f >= 1000 ? `${(f / 1000).toFixed(f >= 10000 ? 0 : 1)}k` : `${Math.round(f)}`);
 
 export async function pagePads(app, id) {
-  app.innerHTML = `<div class="pd-page"><div class="wrap"><div class="skel" style="height:520px;border-radius:var(--r-lg)"></div></div></div>`;
+  app.innerHTML = `<div class="cr-page"><div class="wrap"><div class="skel" style="height:640px;border-radius:14px"></div></div></div>`;
   let kit;
   try { kit = await api(`/api/kits/${encodeURIComponent(id)}`); } catch { app.innerHTML = `<div class="wrap split2"><div><h1>That kit doesn't exist.</h1><p class="lede">Make one from a vibe, then play it here.</p><p style="margin-top:24px"><a class="btn primary" href="#/kits">Make a kit</a></p></div></div>`; return; }
   const details = await Promise.all(kit.items.map((it) => api(`/api/assets/${encodeURIComponent(it.assetId)}`).catch(() => null)));
-  const pads = kit.items.slice(0, 16).map((item, i) => ({ i, item, detail: details[i], key: KEYS[i], knobs: { ...(item.knobs || {}) }, rr: 4, vol: 0.85, pitch: 0, mute: false, takes: [], next: 0, loading: null }));
+  const pads = kit.items.slice(0, 16).map((item, i) => ({ i, item, detail: details[i], key: KEYS[i], knobs: { ...(item.knobs || {}) }, rr: 4, takes: [], next: 0, loading: null, lit: 0, ms: 0 }));
+  const roles = assignRoles(pads);
+  pads.forEach((p, i) => (p.role = roles[i]));
   const hasSeed = (p) => !!p.detail?.knobs?.seed;
   const ac = audio();
 
-  // ---------- the master chain: pads -> fold (lowpass + drive) -> master -> the page's bus ----------
-  const padsBus = ac.createGain(), lp = ac.createBiquadFilter(), drive = ac.createWaveShaper(), master = ac.createGain();
-  lp.type = "lowpass"; lp.frequency.value = 20000; lp.Q.value = 0.7;
-  const curve = (k) => { const n = 1024, c = new Float32Array(n); for (let i = 0; i < n; i++) { const x = (i / (n - 1)) * 2 - 1; c[i] = k > 0 ? Math.tanh(x * (1 + k * 6)) / Math.tanh(1 + k * 6) : x; } return c; };
-  drive.curve = curve(0); drive.oversample = "2x";
-  master.gain.value = 0.9;
-  lp.connect(drive).connect(master).connect(output());
-  // the look sits first, so the fold darkens a hall's tail too (public/fx.js; Polyfork's looks, for sound)
-  let lookId = "dry", look = buildLook(ac, lookId);
-  padsBus.connect(look.input); look.output.connect(lp);
-  const setLook = (id) => { const old = look; padsBus.disconnect(); lookId = id; look = buildLook(ac, id); padsBus.connect(look.input); look.output.connect(lp); setTimeout(() => old.stop(), 60); };
-  /** The fold, Crate's hinge as one fader: 0 is open (flat), 1 is folded shut (dark, driven, ringing). */
-  let fold = 0;
-  const setFold = (f, glide = 0.03) => {
-    fold = Math.max(0, Math.min(1, f));
-    const t = ac.currentTime;
-    lp.frequency.setTargetAtTime(20000 * Math.pow(220 / 20000, fold), t, glide);
-    lp.Q.setTargetAtTime(0.7 + fold * 9, t, glide);
-    drive.curve = curve(fold * 0.8);
-    master.gain.setTargetAtTime(0.9 * (1 - fold * 0.25), t, glide);
+  // ---------- engine: pads -> breakdown gains -> punch / FX insert -> master -> the page's bus ----------
+  const padsBus = ac.createGain(), master = ac.createGain(); master.gain.value = 0.94;
+  const lane = pads.map(() => { const g = ac.createGain(); g.connect(padsBus); return g; });
+  const shaper = (f) => { const n = 2048, c = new Float32Array(n); for (let i = 0; i < n; i++) c[i] = f((i / (n - 1)) * 2 - 1); const s = ac.createWaveShaper(); s.curve = c; s.oversample = "2x"; return s; };
+  const biq = (type, freq, Q = 0.7, gain = 0) => { const f = ac.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = Q; f.gain.value = gain; return f; };
+  // the hall: Tone.js Reverb.generate()'s impulse (stereo noise, pre-delay, exponential approach), as in public/fx.js
+  const hallIR = (() => { const sr = ac.sampleRate, dec = 2.6, pre = 0.025, n = Math.ceil((dec + pre) * sr), b = ac.createBuffer(2, n, sr), tc = Math.log(dec + 1) / Math.log(200); for (let c = 0; c < 2; c++) { const d = b.getChannelData(c); for (let i = 0; i < n; i++) { const t = i / sr; d[i] = t < pre ? 0 : (Math.random() * 2 - 1) * Math.exp(-(t - pre) / tc); } } return b; })();
+  const seq = { bpm: 90, swing: 56, bars: 2, style: null, playing: false, recording: false, countIn: 0, abs: 0, nextTime: 0, startedAt: 0 };
+  const stepDur = () => 60 / seq.bpm / 4;
+  /** An effect: { input, output, set(p) }, wet over dry. The PUNCH chain is AudioEngine.swift:523-530. */
+  function makeFx(fxId) {
+    const input = ac.createGain(), out = ac.createGain(), dry = ac.createGain(), wet = ac.createGain();
+    input.connect(dry).connect(out); wet.connect(out); dry.gain.value = 1; wet.gain.value = 0;
+    const T = (param, v) => param.setTargetAtTime(v, ac.currentTime, 0.005); // CRATE ramps every change over 20 ms
+    const run = (...nodes) => { nodes.reduce((a, b) => (a.connect(b), b), input); return nodes[nodes.length - 1]; };
+    const fx = { input, output: out, set: () => {}, stops: [] };
+    if (fxId === "punch") {
+      // the lowpass in series (the whole kit darkens), then crush, delay and hall as sends from it
+      input.disconnect(); const lp = biq("lowpass", 20000, 0.9); input.connect(lp); lp.connect(dry);
+      const crush = shaper((x) => Math.round(x * 8) / 8), cw = ac.createGain(); lp.connect(crush).connect(cw).connect(out); cw.gain.value = 0;
+      const dl = ac.createDelay(2), fb = ac.createGain(), dlp = biq("lowpass", 9000), dw = ac.createGain(); fb.gain.value = 0.35; lp.connect(dl); dl.connect(dlp).connect(fb).connect(dl); dlp.connect(dw).connect(out); dw.gain.value = 0;
+      const conv = ac.createConvolver(), rw = ac.createGain(); conv.buffer = hallIR; lp.connect(conv).connect(rw).connect(out); rw.gain.value = 0;
+      fx.set = (p) => { T(lp.frequency, 20000 * Math.pow(180 / 20000, Math.pow(p, 0.85))); T(cw.gain, 0.3 * p * p); dl.delayTime.value = stepDur() * 3; T(dw.gain, 0.22 * p); T(rw.gain, 0.38 * p); };
+    } else if (fxId === "lp" || fxId === "hp" || fxId === "bp") {
+      input.disconnect(); const f = biq(fxId === "lp" ? "lowpass" : fxId === "hp" ? "highpass" : "bandpass", 1000, fxId === "bp" ? 4 : 1.2); input.connect(f).connect(dry);
+      fx.set = (p) => T(f.frequency, fxId === "lp" ? 20000 * Math.pow(160 / 20000, p) : fxId === "hp" ? 10 * Math.pow(6000 / 10, p) : 200 * Math.pow(30, p));
+    } else if (fxId === "crush") {
+      const sh = [4, 5, 6, 8, 12].map((b) => shaper((x) => Math.round(x * 2 ** (b - 1)) / 2 ** (b - 1))); let cur = null;
+      fx.set = (p) => { const s = sh[Math.max(0, Math.min(4, Math.floor((1 - p) * 5)))]; if (s !== cur) { cur?.disconnect(); input.connect(s); s.connect(wet); cur = s; } T(wet.gain, p); T(dry.gain, 1 - p); };
+    } else if (fxId === "delay" || fxId === "dub") {
+      const dl = ac.createDelay(2), fb = ac.createGain(), f = biq("lowpass", fxId === "dub" ? 2500 : 9000), hp = biq("highpass", fxId === "dub" ? 300 : 60);
+      input.connect(dl); dl.connect(f).connect(hp).connect(fb).connect(dl); hp.connect(wet);
+      fx.set = (p) => { dl.delayTime.value = stepDur() * (fxId === "dub" ? 6 : 3); T(fb.gain, fxId === "dub" ? 0.45 + 0.3 * p : 0.35); T(wet.gain, (fxId === "dub" ? 0.7 : 0.5) * p); };
+    } else if (fxId === "reverb") {
+      const conv = ac.createConvolver(); conv.buffer = hallIR; input.connect(conv).connect(wet);
+      fx.set = (p) => { T(wet.gain, 0.8 * p); T(dry.gain, 1 - 0.35 * p); };
+    } else if (fxId === "ring") {
+      const ring = ac.createGain(), o = ac.createOscillator(); ring.gain.value = 0; o.connect(ring.gain); o.start(); fx.stops.push(o); input.connect(ring).connect(wet);
+      fx.set = (p) => { T(o.frequency, 80 * Math.pow(1500 / 80, p)); T(wet.gain, Math.min(1, p * 1.4)); T(dry.gain, 1 - p * 0.8); };
+    } else if (fxId === "lofi") {
+      const dl = ac.createDelay(0.05), lfo = ac.createOscillator(), lg = ac.createGain(); dl.delayTime.value = 0.008; lfo.frequency.value = 0.6; lg.gain.value = 0.0015; lfo.connect(lg).connect(dl.delayTime); lfo.start(); fx.stops.push(lfo);
+      run(biq("highpass", 150), shaper((x) => Math.round(x * 32) / 32), dl, biq("lowpass", 3800)).connect(wet);
+      fx.set = (p) => { T(wet.gain, p); T(dry.gain, 1 - p); };
+    } else if (fxId === "color") {
+      run(biq("peaking", 900, 0.8, 5), shaper((x) => Math.tanh(4 * x) / Math.tanh(4)), biq("highshelf", 5000, 0.7, -4)).connect(wet);
+      fx.set = (p) => { T(wet.gain, p * 0.9); T(dry.gain, 1 - p * 0.7); };
+    } else if (fxId === "comb") {
+      const dl = ac.createDelay(0.05), fb = ac.createGain(); fb.gain.value = 0.82; input.connect(dl); dl.connect(fb).connect(dl); dl.connect(wet);
+      fx.set = (p) => { T(dl.delayTime, 0.010 - 0.0085 * p); T(wet.gain, 0.6 * Math.min(1, p * 2)); };
+    } else if (fxId === "grain") {
+      // an approximation: four short delays wandering on slow LFOs smear the kit into a cloud (no true grain engine)
+      [0.023, 0.041, 0.067, 0.089].forEach((t, k) => { const dl = ac.createDelay(0.2), lfo = ac.createOscillator(), lg = ac.createGain(); dl.delayTime.value = t; lfo.frequency.value = 0.4 + k * 0.37; lg.gain.value = 0.012; lfo.connect(lg).connect(dl.delayTime); lfo.start(); fx.stops.push(lfo); input.connect(dl).connect(wet); });
+      fx.set = (p) => { T(wet.gain, 0.45 * p); T(dry.gain, 1 - 0.6 * p); };
+    } else if (fxId === "radio") {
+      run(biq("highpass", 450, 0.9), biq("peaking", 1800, 1.2, 6), shaper((x) => Math.tanh(2.4 * x) / Math.tanh(2.4)), biq("lowpass", 3400, 0.9)).connect(wet);
+      fx.set = (p) => { T(wet.gain, p * 0.9); T(dry.gain, 1 - p); };
+    } // repeat and half act on the sequencer and on each voice, not on the bus
+    return fx;
+  }
+  let fxId = "punch", fx = makeFx(fxId), punch = 0, repeatAnchor = null;
+  padsBus.connect(fx.input); fx.output.connect(master); master.connect(output());
+  const setFxType = (id2) => {
+    if (id2 === fxId) return;
+    const old = fx; padsBus.disconnect(); fxId = id2; fx = makeFx(id2); padsBus.connect(fx.input); fx.output.connect(master); fx.set(punch); repeatAnchor = null;
+    setTimeout(() => { old.stops.forEach((o) => { try { o.stop(); } catch {} }); try { old.output.disconnect(); } catch {} }, 80);
+    paintTiming();
+  };
+  let breakdown = false;
+  const isDrum = (p) => p.role && p.role !== "texture";
+  const setPunch = (p) => {
+    punch = p < 0.04 ? 0 : Math.min(1, p);
+    fx.set(punch);
+    if (punch < 0.08) repeatAnchor = null;
+    // breakdown: the drums fall away past 0.92 (+9 dB on what is left), back under 0.88 (AudioEngine.swift:534-552)
+    if (!breakdown && punch > 0.92) { breakdown = true; pads.forEach((pd, i) => lane[i].gain.setTargetAtTime(isDrum(pd) ? 0 : 2.8, ac.currentTime, 0.007)); }
+    else if (breakdown && punch < 0.88) { breakdown = false; lane.forEach((g) => g.gain.setTargetAtTime(1, ac.currentTime, 0.007)); }
+    paintPunch();
   };
 
-  // ---------- takes: each pad holds a pool of rendered takes, one per seed, and every hit plays the next ----------
+  // ---------- takes ----------
   const load = (p) => {
     const base = Number(p.knobs.seed ?? p.detail?.knobs?.seed?.default ?? 1);
     const seeds = hasSeed(p) ? Array.from({ length: p.rr }, (_, n) => base + n) : [undefined];
-    const job = Promise.all(seeds.map((s) => loadWav(wavUrl(p, s)))).then((bufs) => { if (p.loading === job) { p.takes = bufs; p.next = 0; p.loading = null; paintPad(p); } return bufs; });
+    const t0 = performance.now();
+    const job = Promise.all(seeds.map((s) => loadWav(wavUrl(p, s)))).then((bufs) => { if (p.loading === job) { p.takes = bufs; p.next = 0; p.loading = null; p.ms = Math.round(performance.now() - t0); paintPad(p); paintTiming(); if (p.i === selected) paintLid(); } return bufs; });
     p.loading = job; paintPad(p);
     return job;
   };
-  const queue = []; // { kind: "hit" | "step", i, time }
-  const trigger = (p, when = ac.currentTime, accent = false) => {
-    if (!p.takes.length || p.mute) return;
-    const buf = p.takes[p.next % p.takes.length]; p.next++;
-    const src = ac.createBufferSource(), g = ac.createGain();
-    src.buffer = buf; src.playbackRate.value = Math.pow(2, p.pitch / 12);
-    g.gain.value = p.vol * (accent ? 1 : 0.72);
-    src.connect(g).connect(padsBus);
-    src.start(when);
-    queue.push({ kind: "hit", i: p.i, time: when, take: (p.next - 1) % p.takes.length });
+  const queue = []; // what sounds, for drawing: { kind: "hit" | "step" | "count", ..., time }
+  const trigger = (p, when, vel = 110) => {
+    if (!p || !p.takes.length) return;
+    const n = p.next++ % p.takes.length, src = ac.createBufferSource(), g = ac.createGain();
+    src.buffer = p.takes[n];
+    if (fxId === "half" && punch > 0) src.playbackRate.value = 1 - 0.5 * punch;
+    g.gain.value = Math.pow(vel / 127, 1.6);
+    src.connect(g).connect(lane[p.i]); src.start(when);
+    queue.push({ kind: "hit", i: p.i, take: n, time: when });
   };
 
-  // ---------- the sequencer ----------
-  const rows = starter(pads);
-  const seq = { bpm: 92, swing: 0.12, playing: false, recording: false, step: 0, nextTime: 0, startedAt: 0, shown: -1 };
-  const stepDur = () => 60 / seq.bpm / 4;
+  // ---------- the pattern: per pad, per step across `bars`: null or { v, late, r } ----------
+  let rows = pads.map(() => new Array(seq.bars * STEPS).fill(null));
+  const undo = [], redo = [];
+  const state = () => JSON.stringify({ rows, bpm: seq.bpm, swing: seq.swing, bars: seq.bars, style: seq.style });
+  const restore = (j) => { const s = JSON.parse(j); rows = s.rows; seq.bpm = s.bpm; seq.swing = s.swing; seq.bars = s.bars; seq.style = s.style; paintAll(); };
+  const snapshot = () => { undo.push(state()); if (undo.length > 30) undo.shift(); redo.length = 0; };
+  const applyStyle = (key) => {
+    const st = STYLES[key]; if (!st) return;
+    snapshot();
+    seq.style = key; seq.bpm = st.bpm; seq.swing = st.swing; seq.bars = st.bars;
+    rows = pads.map(() => new Array(st.bars * STEPS).fill(null));
+    for (const [r, hits] of Object.entries(st.lanes)) {
+      const i = pads.findIndex((p) => p.role === r); if (i < 0) continue;
+      for (const [s, v, late = 0, ratchet = 1] of hits) if (s < st.bars * STEPS) rows[i][s] = { v, late, r: ratchet };
+    }
+    paintAll();
+  };
+  const setBars = (n) => { rows = rows.map((r) => Array.from({ length: n * STEPS }, (_, s) => r[s % r.length])); seq.bars = n; paintAll(); };
+
   const schedule = () => {
     while (seq.nextTime < ac.currentTime + 0.1) {
-      const s = seq.step, t = seq.nextTime + (s % 2 ? seq.swing * stepDur() : 0);
-      pads.forEach((p, i) => { if (rows[i][s]) trigger(p, t, rows[i][s] === 2); });
-      queue.push({ kind: "step", step: s, time: t });
-      seq.nextTime += stepDur(); seq.step = (s + 1) % STEPS;
+      const d = stepDur(), t0 = seq.nextTime;
+      if (seq.countIn > 0) { // a click per beat for one bar before REC writes (UISupport.swift:105-130)
+        const n = 16 - seq.countIn; if (n % 4 === 0) click(t0, n === 0);
+        queue.push({ kind: "count", n, time: t0 });
+        seq.countIn--; seq.nextTime += d; if (seq.countIn === 0) { seq.abs = 0; seq.startedAt = seq.nextTime; } continue;
+      }
+      const len = seq.bars * STEPS, s = seq.abs % len, swingLate = s % 2 ? (2 * seq.swing / 100 - 1) * d : 0;
+      // beat repeat holds the steps under it and loops a slice: 1/8 under half, 1/16 from half, 1/32 near the top
+      const repeating = fxId === "repeat" && punch >= 0.08;
+      let src = s, ratMul = 1;
+      if (repeating) { const span = punch >= 0.5 ? 1 : 2; if (repeatAnchor === null) repeatAnchor = s - (s % span); src = repeatAnchor + (((s - repeatAnchor) % span) + span) % span; ratMul = punch >= 0.85 ? 2 : 1; }
+      pads.forEach((p, i) => {
+        const h = rows[i][src]; if (!h) return;
+        const r = (h.r || 1) * ratMul;
+        for (let k = 0; k < r; k++) trigger(p, t0 + swingLate + h.late * d + (k * d) / r, Math.round(h.v * Math.pow(0.85, k)));
+      });
+      queue.push({ kind: "step", s, bar: Math.floor(s / STEPS), time: t0 + swingLate });
+      seq.abs++; seq.nextTime += d;
     }
   };
+  const click = (t, accent) => { const o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = accent ? 1760 : 1320; g.gain.setValueAtTime(0.18, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05); o.connect(g).connect(master); o.start(t); o.stop(t + 0.06); };
   const timer = new Worker(URL.createObjectURL(new Blob([`let t=null;onmessage=(e)=>{if(e.data==="start"){clearInterval(t);t=setInterval(()=>postMessage("tick"),25);}else{clearInterval(t);t=null;}};`], { type: "text/javascript" })));
   timer.onmessage = () => seq.playing && schedule();
-  const start = async () => { await unlock(); seq.playing = true; seq.step = 0; seq.nextTime = ac.currentTime + 0.06; seq.startedAt = seq.nextTime; timer.postMessage("start"); paintTransport(); };
-  const stop = () => { seq.playing = false; seq.recording = false; timer.postMessage("stop"); seq.shown = -1; $$(".pd-col.now", app).forEach((c) => c.classList.remove("now")); paintTransport(); };
-  /** The step a live hit lands on while recording: the nearest 16th to now, on the clock the sequencer runs. */
-  const nearestStep = () => {
-    const d = stepDur(), rel = ac.currentTime - seq.startedAt;
-    return ((Math.round(rel / d) % STEPS) + STEPS) % STEPS;
-  };
+  const play = async ({ countIn = false } = {}) => { await unlock(); seq.playing = true; seq.abs = 0; seq.countIn = countIn ? 16 : 0; seq.nextTime = ac.currentTime + 0.06; seq.startedAt = seq.nextTime + (countIn ? 16 * stepDur() : 0); timer.postMessage("start"); paintTransport(); };
+  const stop = () => { seq.playing = false; seq.recording = false; seq.countIn = 0; timer.postMessage("stop"); queue.length = 0; paintTransport(); paintSeqHead(-1); };
+  /** Where a live hit lands while recording: the nearest 16th, less 25 ms of touch latency (AudioSequencer.swift:570-588). */
+  const recStep = () => { const len = seq.bars * STEPS, rel = ac.currentTime - 0.025 - seq.startedAt; return ((Math.round(rel / stepDur()) % len) + len) % len; };
 
-  let selected = 0;
-  app.innerHTML = `<div class="pd-page">
+  let selected = 0, fxMode = false, fxLatched = false, lidMode = "seq", shownBar = 0;
+  app.innerHTML = `<div class="cr-page">
     <div class="wrap">
       <nav class="a-crumb" aria-label="Breadcrumb"><a href="#/kits">Kits</a><span>/</span><a href="#/kit/${esc(kit.id)}">${esc(kit.title)}</a><span>/</span><span>Pads</span></nav>
-      <header class="pd-head">
-        <div><h1>${esc(kit.title)}</h1><p class="pd-vibe">“${esc(kit.vibe)}”</p></div>
-        <div class="pd-transport" role="group" aria-label="Transport">
-          <button class="pd-btn pd-play" id="pd-play" type="button" aria-label="Play" title="Play (Space)">${icon("play")}</button>
-          <button class="pd-btn pd-rec" id="pd-rec" type="button" aria-pressed="false" title="Record pads into the pattern (Enter)">${icon("record")}<span>Rec</span></button>
-          <label class="pd-num"><span>BPM</span><input id="pd-bpm" type="number" min="60" max="180" step="1" value="${seq.bpm}" class="num"></label>
-          <label class="pd-num"><span>Swing</span><input id="pd-swing" type="range" min="0" max="0.5" step="0.01" value="${seq.swing}"></label>
-          <button class="pd-btn" id="pd-export" type="button" title="Render two bars to a WAV">${icon("download-simple")}<span>Export loop</span></button>
-        </div>
-      </header>
-
-      <div class="pd-deck">
-        <div class="pd-looks"><span>Look</span><div id="pd-look" aria-label="Look"></div><small>Kept in the export: the loop renders through the same chain.</small></div>
-        <div class="pd-pads" id="pd-pads" role="group" aria-label="Pads">${pads.map((p) => `
-          <button class="pd-pad" type="button" data-i="${p.i}" aria-label="${esc(p.item.name)}, key ${KEY_LABEL(p.key)}">
-            <img src="${esc(cardUrl(p))}" alt="" width="320" height="160" loading="lazy">
-            <span class="pd-key">${KEY_LABEL(p.key)}</span>
-            <span class="pd-name">${esc(p.item.name)}</span>
-            <span class="pd-rr" aria-hidden="true"></span>
-          </button>`).join("")}${Array.from({ length: (4 - (pads.length % 4)) % 4 }, () => `<span class="pd-pad empty" aria-hidden="true"></span>`).join("")}
-        </div>
-
-        <aside class="pd-side">
-          <div class="pd-fold">
-            <div class="pd-fold-head"><b>Fold</b><span id="pd-fold-v" class="num">open</span></div>
-            <div class="pd-fold-track" id="pd-fold" role="slider" tabindex="0" aria-label="Fold: darkens and drives the whole kit; let go for the drop" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i class="pd-fold-fill"></i><i class="pd-fold-thumb"></i></div>
-            <p class="pd-help">Drag down to fold the kit shut. Let go and it snaps open for the drop. Hold <kbd>Shift</kbd> to keep it folded.</p>
+      <div class="cr-device" id="cr">
+        <section class="cr-lid" aria-label="Display">
+          <div class="cr-title"><div><b id="cr-style">KIT</b><span>${esc(kit.title.toUpperCase())} · ${pads.length} PROGRAMS</span></div><button class="cr-loop" id="cr-loop" type="button" aria-label="Loop length"><span>LOOP · <b id="cr-bars">2</b> BARS</span><i id="cr-segs"></i></button></div>
+          <div class="cr-hero">
+            <button class="cr-read" id="cr-bpm-b" type="button"><b class="num" id="cr-bpm">90</b><span>BPM</span></button>
+            <button class="cr-read" id="cr-swing-b" type="button"><b class="num" id="cr-swing">56</b><span>SWING</span></button>
+            <div class="cr-read"><b class="num" id="cr-pos">1.1</b><span>BAR</span></div>
+            <div class="cr-drop" id="cr-drop" aria-live="polite">DROP</div>
           </div>
-          <div class="pd-edit" id="pd-edit"></div>
-        </aside>
+          <div class="cr-tempo" id="cr-tempo" hidden>
+            <button type="button" data-t="tap">TAP</button><button type="button" data-t="-1">−1</button><button type="button" data-t="+1">+1</button>
+            <span>SWING</span>${[50, 54, 58, 62, 66, 70].map((s) => `<button type="button" data-sw="${s}">${s}</button>`).join("")}
+          </div>
+          <div class="cr-padline" id="cr-padline"></div>
+          <div class="cr-main" id="cr-main"></div>
+          <div class="cr-punch" id="cr-punch" hidden><i id="cr-cells"></i><b class="num" id="cr-punch-v"></b><span id="cr-punch-t"></span></div>
+          <div class="cr-timing" id="cr-timing"></div>
+          <form class="cr-prompt" id="cr-prompt" autocomplete="off"><span aria-hidden="true">›</span><input id="cr-q" placeholder="Describe a beat: boom bap, bpm 96, looser, take out the hats" aria-label="Describe a beat"><button type="button" data-c="undo" title="Undo (Cmd-Z)">↶ UNDO</button><button type="button" data-c="redo" title="Redo (Shift-Cmd-Z)">↷ REDO</button></form>
+          <div class="cr-chips" id="cr-chips">${STYLE_ORDER.map((k) => `<button type="button" data-style="${k}">${STYLES[k].label}</button>`).join("")}</div>
+        </section>
+        <div class="cr-hinge" aria-hidden="true"></div>
+        <section class="cr-deck" aria-label="Deck">
+          <div class="cr-left">
+            <button class="cr-key" id="cr-fx" type="button" aria-pressed="false" title="Hold for FX pads, tap to latch">FX</button>
+            <button class="cr-key" id="cr-edit" type="button" aria-pressed="false" title="The selected pad's program knobs">EDIT</button>
+            <button class="cr-key" id="cr-export" type="button" title="Render the loop to a WAV">BOUNCE</button>
+            <div class="cr-mark"><b>OASIS</b><span>PADS</span><em>after CRATE CR-16</em></div>
+          </div>
+          <div class="cr-pads" id="cr-pads">${DRAW_ORDER.map((i) => `<button class="cr-pad" type="button" data-i="${i}"><span class="cr-n">${i + 1}</span><span class="cr-k">${KEY_LABEL(KEYS[i])}</span><span class="cr-name"></span><span class="cr-hint"></span></button>`).join("")}</div>
+          <div class="cr-right">
+            <div class="cr-fader-w"><span class="cr-silk">FX · HINGE</span>
+              <div class="cr-fader-row"><div class="cr-fader" id="cr-fader" role="slider" tabindex="0" aria-label="Hinge: the punch amount. Pull it down fast from above 60 for the drop." aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i class="cr-cap"></i></div>
+              <span class="cr-scale" aria-hidden="true"><i>100</i><i>75</i><i>50</i><i>25</i><i>0</i></span></div>
+            </div>
+            <div class="cr-tx">
+              <button class="cr-key rec" id="cr-rec" type="button" aria-pressed="false" title="Record (Return)"><i></i>REC</button>
+              <button class="cr-key" id="cr-play" type="button" title="Play (Space)">PLAY</button>
+              <button class="cr-key" id="cr-stop" type="button" title="Stop">STOP</button>
+            </div>
+          </div>
+        </section>
       </div>
-
-      <section class="pd-seq" aria-label="Pattern">
-        <div class="pd-steps-head"><span></span>${Array.from({ length: STEPS }, (_, s) => `<span class="pd-col-h${s % 4 === 0 ? " beat" : ""}">${s % 4 === 0 ? s / 4 + 1 : ""}</span>`).join("")}</div>
-        <div id="pd-rows">${pads.map((p, i) => `<div class="pd-row" data-i="${i}">
-          <button class="pd-row-name" type="button" data-sel="${i}"><span class="pd-key">${KEY_LABEL(p.key)}</span>${esc(p.item.name)}</button>
-          ${Array.from({ length: STEPS }, (_, s) => `<button class="pd-cell pd-col${s % 4 === 0 ? " beat" : ""}" type="button" data-i="${i}" data-s="${s}" data-col="${s}" aria-label="${esc(p.item.name)} step ${s + 1}" aria-pressed="false"></button>`).join("")}
-        </div>`).join("")}</div>
-        <p class="pd-help">Click a step to add a hit, again for an accent, again to clear. Every hit plays the next take of that pad's program, so a run of sixteenths never repeats the same sample.</p>
-      </section>
+      <p class="cr-foot">Keys <kbd>Z X C V</kbd> pads 1-4, <kbd>A S D F</kbd> 5-8, <kbd>Q W E R</kbd> 9-12, <kbd>1 2 3 4</kbd> 13-16. <kbd>Space</kbd> play, <kbd>Return</kbd> record, <kbd>/</kbd> the prompt. Where you strike a pad is how hard. Pull the hinge up for the punch, then down fast for the drop. Every hit is the next take rendered from that pad's program.</p>
     </div>
   </div>`;
 
   // ---------- painting ----------
   function paintPad(p) {
-    const el = $(`.pd-pad[data-i="${p.i}"]`, app); if (!el) return;
+    const el = $(`.cr-pad[data-i="${p.i}"]`, app); if (!el) return;
     el.classList.toggle("loading", !!p.loading);
-    el.classList.toggle("muted", p.mute);
-    el.classList.toggle("sel", p.i === selected);
-    $(".pd-rr", el).innerHTML = hasSeed(p) ? Array.from({ length: p.takes.length || p.rr }, (_, n) => `<i data-n="${n}"></i>`).join("") : "";
+    el.classList.toggle("sel", p.i === selected && !fxMode);
+    const f = FX[DRAW_ORDER.indexOf(p.i)];
+    $(".cr-name", el).textContent = fxMode ? f[1] : p.item.name;
+    $(".cr-hint", el).textContent = fxMode ? f[2] : (p.role || "").toUpperCase();
   }
-  const paintCells = () => $$(".pd-cell", app).forEach((c) => { const v = rows[c.dataset.i][c.dataset.s]; c.dataset.v = v; c.setAttribute("aria-pressed", v > 0); });
-  function paintTransport() {
-    $("#pd-play").innerHTML = icon(seq.playing ? "stop" : "play"); $("#pd-play").setAttribute("aria-label", seq.playing ? "Stop" : "Play");
-    $("#pd-play").classList.toggle("on", seq.playing);
-    $("#pd-rec").classList.toggle("on", seq.recording); $("#pd-rec").setAttribute("aria-pressed", seq.recording);
+  function paintFxPads() {
+    $("#cr").classList.toggle("fx", fxMode);
+    $$(".cr-pad", app).forEach((el) => {
+      const i = Number(el.dataset.i), f = FX[DRAW_ORDER.indexOf(i)];
+      el.classList.toggle("fxon", fxMode && f[0] === fxId);
+      if (i >= pads.length) { el.classList.toggle("empty", !fxMode); $(".cr-name", el).textContent = fxMode ? f[1] : ""; $(".cr-hint", el).textContent = fxMode ? f[2] : ""; }
+    });
+    pads.forEach(paintPad);
+    $("#cr-fx").classList.toggle("on", fxMode); $("#cr-fx").setAttribute("aria-pressed", fxMode);
   }
-  function paintEdit() {
+  function paintLid() {
+    $("#cr-style").textContent = seq.style ? STYLES[seq.style].label : "KIT";
+    $("#cr-bpm").textContent = Math.round(seq.bpm); $("#cr-swing").textContent = seq.swing; $("#cr-bars").textContent = seq.bars;
+    $("#cr-segs").innerHTML = Array.from({ length: seq.bars }, (_, b) => `<i data-b="${b}"></i>`).join("");
+    $$("[data-style]", app).forEach((c) => c.classList.toggle("on", c.dataset.style === seq.style));
+    const p = pads[selected];
+    $("#cr-padline").innerHTML = `<span class="cr-tag">${selected + 1}</span><img src="${esc(cardUrl(p))}" alt="" width="480" height="240"><div class="cr-pl-t"><b>${esc(p.item.name.toUpperCase())}</b><span>${esc(p.item.title)} by ${esc(p.item.author)}</span></div><span class="cr-takes" id="cr-takes">${hasSeed(p) ? Array.from({ length: p.takes.length || p.rr }, (_, n) => `<i data-n="${n}"></i>`).join("") : ""}<em>${hasSeed(p) ? `${p.takes.length || p.rr} TAKES` : "1 TAKE"}</em></span><button type="button" class="cr-chip${lidMode === "edit" ? " on" : ""}" id="cr-edit2">EDIT</button>`;
+    $("#cr-edit2").addEventListener("click", toggleEdit);
+    paintMain(); paintTiming();
+  }
+  function paintMain() {
+    const main = $("#cr-main");
+    if (lidMode === "edit") return paintEdit(main);
+    const lanes = pads.map((p, i) => i).filter((i) => i === selected || rows[i].some(Boolean));
+    main.innerHTML = `<div class="cr-seq"><div class="cr-ruler"><span></span>${Array.from({ length: STEPS }, (_, s) => `<i>${s % 4 === 0 ? s + 1 : ""}</i>`).join("")}</div>${lanes.map((i) => `<div class="cr-lane${i === selected ? " sel" : ""}" data-i="${i}"><button type="button" class="cr-lname" data-sel="${i}" title="Long-press to clear the lane">${esc(pads[i].item.name.toUpperCase())}</button>${Array.from({ length: STEPS }, (_, s) => `<button type="button" class="cr-dot" data-i="${i}" data-s="${s}" aria-label="${esc(pads[i].item.name)} step ${s + 1}"></button>`).join("")}</div>`).join("")}</div>`;
+    paintDots();
+  }
+  /** The lid shows the bar under the playhead (bar 1 when stopped); a dot is the hit at that step of that bar. */
+  function paintDots() {
+    $$(".cr-dot", app).forEach((d) => {
+      const h = rows[d.dataset.i][shownBar * STEPS + Number(d.dataset.s)];
+      d.className = `cr-dot${h ? (h.v < 60 ? " ghost" : h.v >= 110 ? " hit acc" : " hit") : ""}${h?.r > 1 ? " rat" : ""}`;
+    });
+  }
+  function paintSeqHead(s) {
+    $$(".cr-dot.now", app).forEach((d) => d.classList.remove("now"));
+    if (s >= 0) $$(`.cr-dot[data-s="${s % STEPS}"]`, app).forEach((d) => d.classList.add("now"));
+  }
+  function paintEdit(main) {
     const p = pads[selected], d = p.detail;
     const entries = d ? Object.entries(d.knobs).filter(([k]) => k !== "seed") : [];
     const vals = { ...Object.fromEntries(entries.map(([k, def]) => [k, def.default])), ...(p.item.values || {}), ...p.knobs };
-    $("#pd-edit").innerHTML = `
-      <div class="pd-edit-head"><span class="pd-key">${KEY_LABEL(p.key)}</span><div><b>${esc(p.item.name)}</b><span>${esc(p.item.title)} by ${esc(p.item.author)}</span></div><a class="pd-open" href="#/a/${esc(p.item.assetId)}${p.item.licence ? `?lic=${esc(p.item.licence)}` : ""}" title="Open the program">${icon("arrow-square-out")}</a></div>
-      ${d?.presets?.length ? `<div class="pd-presets" role="group" aria-label="Presets">${d.presets.map((name) => `<button type="button" data-preset="${esc(name)}">${esc(name)}</button>`).join("")}</div>` : ""}
-      <div class="a-dials pd-dials">${entries.filter(([, def]) => def.type === "range" || def.type === "choice").map(([k, def]) => control(k, { ...def, default: vals[k] })).join("")}</div>
-      <div class="pd-mix">
-        <label><span>Takes</span><select id="pd-rrsel"${hasSeed(p) ? "" : " disabled"}>${[1, 2, 4, 8].map((n) => `<option value="${n}"${n === (hasSeed(p) ? p.rr : 1) ? " selected" : ""}>${n === 1 ? "same take" : `${n} takes`}</option>`).join("")}</select></label>
-        <label><span>Pitch</span><input type="range" id="pd-pitch" min="-12" max="12" step="1" value="${p.pitch}"><output class="num">${p.pitch > 0 ? "+" : ""}${p.pitch}</output></label>
-        <label><span>Level</span><input type="range" id="pd-vol" min="0" max="1" step="0.01" value="${p.vol}"></label>
-        <button type="button" class="pd-mute${p.mute ? " on" : ""}" id="pd-mute" aria-pressed="${p.mute}">${icon(p.mute ? "speaker-slash" : "speaker-high")} ${p.mute ? "Muted" : "Mute"}</button>
-      </div>
-      <p class="pd-help">${hasSeed(p) ? "Knobs re-render this pad from its program. Takes is how many seeds a run cycles through." : "Knobs re-render this pad from its program. This program has no seed knob, so every hit is the same take."}</p>`;
-    // the dials glide to their values once their element upgrades; a change re-renders the pool after a breath
+    main.innerHTML = `<div class="cr-edit">
+      <div class="a-dials cr-dials">${entries.filter(([, def]) => def.type === "range" || def.type === "choice").map(([k, def]) => control(k, { ...def, default: vals[k] })).join("")}</div>
+      <div class="cr-edit-side">
+        ${d?.presets?.length ? `<div class="cr-presets">${d.presets.map((n) => `<button type="button" class="cr-chip" data-preset="${esc(n)}">${esc(n.toUpperCase())}</button>`).join("")}</div>` : ""}
+        <label class="cr-rr">TAKES <select id="cr-rrsel"${hasSeed(p) ? "" : " disabled"}>${[1, 2, 4, 8].map((n) => `<option value="${n}"${n === (hasSeed(p) ? p.rr : 1) ? " selected" : ""}>${n}</option>`).join("")}</select></label>
+        <a class="cr-chip" href="#/a/${esc(p.item.assetId)}${p.item.licence ? `?lic=${esc(p.item.licence)}` : ""}">OPEN PROGRAM ↗</a>
+        <p>${hasSeed(p) ? "A knob re-renders this pad from its program. Takes is how many seeds a run of hits cycles through." : "A knob re-renders this pad from its program. It has no seed knob, so every hit is the same take."}</p>
+      </div></div>`;
     let t = 0;
-    $$("oasis-knob", $("#pd-edit")).forEach((kn) => kn.addEventListener("change", () => {
+    $$("oasis-knob", main).forEach((kn) => kn.addEventListener("change", () => {
       const k = kn.dataset.k, def = d.knobs[k];
       if (kn.value === def.default) delete p.knobs[k]; else p.knobs[k] = kn.value;
-      clearTimeout(t); t = setTimeout(() => { load(p).then(() => trigger(p)); $(`.pd-pad[data-i="${p.i}"] img`, app).src = cardUrl(p); }, 160);
+      clearTimeout(t); t = setTimeout(() => load(p).then(() => { trigger(p, ac.currentTime, 110); const img = $("#cr-padline img"); if (img) img.src = cardUrl(p); }), 160);
     }));
-    $$("[data-preset]", $("#pd-edit")).forEach((b) => b.addEventListener("click", async () => {
+    $$("[data-preset]", main).forEach((b) => b.addEventListener("click", async () => {
       const pv = d.presetValues?.[b.dataset.preset]; if (!pv) return;
       p.knobs = Object.fromEntries(Object.entries(pv).filter(([k, v]) => k !== "seed" && d.knobs[k] && v !== d.knobs[k].default));
-      await load(p); trigger(p); $(`.pd-pad[data-i="${p.i}"] img`, app).src = cardUrl(p); paintEdit();
+      await load(p); trigger(p, ac.currentTime, 110);
     }));
-    $("#pd-rrsel").addEventListener("change", (e) => { p.rr = Number(e.target.value); load(p); });
-    $("#pd-pitch").addEventListener("input", (e) => { p.pitch = Number(e.target.value); e.target.nextElementSibling.textContent = `${p.pitch > 0 ? "+" : ""}${p.pitch}`; });
-    $("#pd-pitch").addEventListener("change", () => trigger(p));
-    $("#pd-vol").addEventListener("input", (e) => { p.vol = Number(e.target.value); });
-    $("#pd-mute").addEventListener("click", () => { p.mute = !p.mute; paintPad(p); paintEdit(); });
+    $("#cr-rrsel")?.addEventListener("change", (e) => { p.rr = Number(e.target.value); load(p); });
   }
-  const select = (i) => { const was = selected; selected = i; paintPad(pads[was]); paintPad(pads[i]); $$(".pd-row", app).forEach((r) => r.classList.toggle("sel", Number(r.dataset.i) === i)); paintEdit(); };
+  function paintTransport() {
+    $("#cr-play").classList.toggle("on", seq.playing && seq.countIn === 0);
+    $("#cr-rec").classList.toggle("on", seq.recording); $("#cr-rec").setAttribute("aria-pressed", seq.recording);
+  }
+  function paintPunch() {
+    $("#cr-fader").style.setProperty("--p", punch); $("#cr-fader").setAttribute("aria-valuenow", Math.round(punch * 100));
+    const show = punch > 0.04;
+    $("#cr-punch").hidden = !show; $("#cr-timing").hidden = show;
+    if (!show) return;
+    const lit = Math.round(punch * 24);
+    $("#cr-cells").innerHTML = Array.from({ length: 24 }, (_, n) => `<i class="${n < lit ? "on" : ""}"></i>`).join("");
+    $("#cr-punch-v").textContent = `${Math.round(punch * 100)}%`;
+    const name = FX.find((f) => f[0] === fxId)[1];
+    $("#cr-punch-t").textContent = fxId === "punch" ? `LPF ${fmtHz(20000 * Math.pow(180 / 20000, Math.pow(punch, 0.85)))} · VERB ${Math.round(38 * punch)}${breakdown ? " · BREAKDOWN" : ""}` : `${name}${fxId === "repeat" ? ` ${punch >= 0.85 ? "1/32" : punch >= 0.5 ? "1/16" : "1/8"}` : ""}`;
+  }
+  function paintTiming() {
+    const loaded = pads.filter((p) => p.takes.length), ms = loaded.length ? Math.round(loaded.reduce((s, p) => s + p.ms, 0) / loaded.length) : 0;
+    $("#cr-timing").innerHTML = `<span>RENDER ${ms} MS / PAD · ${loaded.reduce((s, p) => s + p.takes.length, 0)} TAKES FROM ${pads.length} PROGRAMS</span><span>${fxMode ? "FX PADS" : lidMode === "edit" ? "EDIT" : "SEQ"} · ${FX.find((f) => f[0] === fxId)[1]}</span>`;
+  }
+  function paintAll() { paintLid(); paintTransport(); pads.forEach(paintPad); }
+  const select = (i) => { if (i >= pads.length) return; const was = selected; selected = i; paintPad(pads[was]); paintPad(pads[i]); paintLid(); };
+  function toggleEdit() { lidMode = lidMode === "edit" ? "seq" : "edit"; $("#cr-edit").classList.toggle("on", lidMode === "edit"); $("#cr-edit").setAttribute("aria-pressed", lidMode === "edit"); paintLid(); }
 
-  // ---------- input ----------
-  const hit = async (i, { fromKey = false } = {}) => {
+  // ---------- input: pads ----------
+  const velOf = (e, el) => { const r = el.getBoundingClientRect(); return Math.round(127 - 57 * Math.max(0, Math.min(1, (e.clientY - r.top) / r.height))); };
+  const hit = async (i, vel) => {
     const p = pads[i]; if (!p) return;
     await unlock();
-    trigger(p, ac.currentTime, true);
-    if (seq.playing && seq.recording) { rows[i][nearestStep()] = rows[i][nearestStep()] || 1; paintCells(); }
-    if (!fromKey || selected !== i) select(i);
+    trigger(p, ac.currentTime, vel);
+    if (seq.playing && seq.recording && seq.countIn === 0) { const s = recStep(); snapshot(); rows[i][s] = rows[i][s] || { v: vel, late: 0, r: 1 }; paintMain(); }
+    if (selected !== i) select(i);
   };
-  $("#pd-pads").addEventListener("pointerdown", (e) => { const b = e.target.closest(".pd-pad[data-i]"); if (!b) return; e.preventDefault(); hit(Number(b.dataset.i)); });
-  $("#pd-rows").addEventListener("click", (e) => {
-    const c = e.target.closest(".pd-cell"); const n = e.target.closest("[data-sel]");
-    if (n) return select(Number(n.dataset.sel));
-    if (!c) return;
-    const i = Number(c.dataset.i), s = Number(c.dataset.s);
-    rows[i][s] = (rows[i][s] + 1) % 3; paintCells();
-    if (rows[i][s] && !seq.playing) { unlock().then(() => trigger(pads[i], ac.currentTime, rows[i][s] === 2)); }
+  let fxHeld = null;
+  const fxAmount = (e, el) => { const r = el.getBoundingClientRect(); return 0.25 + 0.75 * Math.max(0, Math.min(1, 1 - (e.clientY - r.top) / r.height)); };
+  $("#cr-pads").addEventListener("pointerdown", (e) => {
+    const el = e.target.closest(".cr-pad"); if (!el) return; e.preventDefault();
+    const i = Number(el.dataset.i), slot = DRAW_ORDER.indexOf(i);
+    if (fxMode) { // punch the effect under the finger in, its height the amount; lifting puts the last one back
+      fxHeld = { el, prev: { id: fxId, p: punch }, pointer: e.pointerId };
+      el.setPointerCapture(e.pointerId); unlock(); setFxType(FX[slot][0]); setPunch(fxAmount(e, el)); paintFxPads();
+      return;
+    }
+    if (i >= pads.length) return;
+    el.classList.add("down"); hit(i, velOf(e, el));
   });
-  $("#pd-play").addEventListener("click", () => (seq.playing ? stop() : start()));
-  $("#pd-rec").addEventListener("click", async () => { seq.recording = !seq.recording; if (seq.recording && !seq.playing) await start(); paintTransport(); });
-  $("#pd-bpm").addEventListener("change", (e) => { seq.bpm = Math.max(60, Math.min(180, Number(e.target.value) || 92)); e.target.value = seq.bpm; });
-  $("#pd-swing").addEventListener("input", (e) => { seq.swing = Number(e.target.value); });
-  const onKey = (e) => {
-    if (e.target.closest("input, select, textarea, oasis-knob") || e.metaKey || e.ctrlKey || e.altKey) return;
-    if (e.code === "Space") { e.preventDefault(); if (!e.repeat) seq.playing ? stop() : start(); return; }
-    if (e.code === "Enter") { e.preventDefault(); $("#pd-rec").click(); return; }
-    const i = KEYS.indexOf(e.code);
-    if (i >= 0 && !e.repeat) { e.preventDefault(); hit(i, { fromKey: true }); $(`.pd-pad[data-i="${i}"]`, app)?.classList.add("down"); }
+  $("#cr-pads").addEventListener("pointermove", (e) => { if (fxHeld && e.pointerId === fxHeld.pointer) setPunch(fxAmount(e, fxHeld.el)); });
+  const padUp = (e) => {
+    $$(".cr-pad.down", app).forEach((el) => el.classList.remove("down"));
+    if (fxHeld && e.pointerId === fxHeld.pointer) { const { prev } = fxHeld; fxHeld = null; if (!fxLatched) { setFxType(prev.id); setPunch(prev.p); } else setPunch(0); paintFxPads(); }
   };
-  const onKeyUp = (e) => { const i = KEYS.indexOf(e.code); if (i >= 0) $(`.pd-pad[data-i="${i}"]`, app)?.classList.remove("down"); };
+  $("#cr-pads").addEventListener("pointerup", padUp); $("#cr-pads").addEventListener("pointercancel", padUp);
+
+  // FX: hold for momentary FX pads, a tap under 0.3 s latches them (UISupport.swift:151-155)
+  let fxDownAt = 0;
+  $("#cr-fx").addEventListener("pointerdown", () => { fxDownAt = performance.now(); if (fxLatched) { fxLatched = false; fxMode = false; } else fxMode = true; paintFxPads(); paintTiming(); });
+  $("#cr-fx").addEventListener("pointerup", () => { if (!fxMode) return; if (performance.now() - fxDownAt < 300) fxLatched = true; else if (!fxLatched) fxMode = false; paintFxPads(); paintTiming(); });
+  $("#cr-edit").addEventListener("click", toggleEdit);
+
+  // ---------- input: the lid ----------
+  $("#cr-main").addEventListener("click", (e) => {
+    const n = e.target.closest("[data-sel]"); if (n) return select(Number(n.dataset.sel));
+    const d = e.target.closest(".cr-dot"); if (!d) return;
+    // a tap writes the step in every bar, cycling hit, accent, ghost, rest (LidPanels.swift: toggle across bars)
+    const i = Number(d.dataset.i), s = Number(d.dataset.s), cur = rows[i][shownBar * STEPS + s];
+    const next = !cur ? { v: VEL.x, late: 0, r: 1 } : cur.v >= 110 ? { v: VEL.g, late: 0, r: 1 } : cur.v < 60 ? null : { v: VEL.X, late: 0, r: 1 };
+    snapshot();
+    for (let b = 0; b < seq.bars; b++) rows[i][b * STEPS + s] = next ? { ...next, late: cur?.late || 0 } : null;
+    paintDots();
+    if (next && !seq.playing) unlock().then(() => trigger(pads[i], ac.currentTime, next.v));
+  });
+  let longT = 0; // a long press on a lane name clears the lane
+  $("#cr-main").addEventListener("pointerdown", (e) => { const n = e.target.closest(".cr-lname"); if (!n) return; longT = setTimeout(() => { snapshot(); rows[Number(n.dataset.sel)].fill(null); paintMain(); }, 500); });
+  $("#cr-main").addEventListener("pointerup", () => clearTimeout(longT));
+  $("#cr-loop").addEventListener("click", () => { const opts = [1, 2, 4, 8]; snapshot(); setBars(opts[(opts.indexOf(seq.bars) + 1) % opts.length]); });
+  const taps = [], tempo = $("#cr-tempo");
+  $("#cr-bpm-b").addEventListener("click", () => (tempo.hidden = !tempo.hidden));
+  $("#cr-swing-b").addEventListener("click", () => (tempo.hidden = !tempo.hidden));
+  tempo.addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.t === "tap") { const now = performance.now(); if (taps.length && now - taps[taps.length - 1] > 2000) taps.length = 0; taps.push(now); if (taps.length > 5) taps.shift(); if (taps.length >= 2) seq.bpm = Math.max(50, Math.min(200, Math.round(60000 / ((taps[taps.length - 1] - taps[0]) / (taps.length - 1))))); }
+    else if (b.dataset.t) seq.bpm = Math.max(50, Math.min(200, seq.bpm + Number(b.dataset.t)));
+    else if (b.dataset.sw) seq.swing = Number(b.dataset.sw);
+    paintLid();
+  });
+  $("#cr-chips").addEventListener("click", (e) => { const c = e.target.closest("[data-style]"); if (!c) return; applyStyle(c.dataset.style); if (!seq.playing) play(); });
+  // the prompt: CRATE's direct commands and style words, parsed here (KeywordParser.swift, Orchestrator+Edit.swift:329-378)
+  const nudge = (dir) => rows.forEach((r, i) => r.forEach((h) => { if (!h) return; const amt = /snare|clap/.test(pads[i].role || "") ? 0.08 : pads[i].role === "hat" ? 0.04 : 0; h.late = Math.max(-0.3, Math.min(0.4, h.late + dir * amt)); }));
+  const command = (text) => {
+    const q = text.toLowerCase().trim(); if (!q) return "";
+    let m;
+    if (q === "undo") return doUndo(), "UNDO";
+    if (q === "redo") return doRedo(), "REDO";
+    if ((m = q.match(/(\d{2,3})\s*bpm|bpm\s*(\d{2,3})/))) { snapshot(); seq.bpm = Math.max(50, Math.min(200, Number(m[1] || m[2]))); paintLid(); return `BPM ${seq.bpm}`; }
+    if (/faster|speed up|quicker/.test(q)) { snapshot(); seq.bpm = Math.min(200, seq.bpm + 5); paintLid(); return `BPM ${seq.bpm}`; }
+    if (/slower|slow down/.test(q)) { snapshot(); seq.bpm = Math.max(50, seq.bpm - 5); paintLid(); return `BPM ${seq.bpm}`; }
+    if (/half ?time/.test(q)) { snapshot(); seq.bpm = Math.max(50, Math.round(seq.bpm / 2)); paintLid(); return `HALF TIME · ${seq.bpm}`; }
+    if ((m = q.match(/(\d)\s*bars?/)) && [1, 2, 4, 8].includes(Number(m[1]))) { snapshot(); setBars(Number(m[1])); return `${m[1]} BARS`; }
+    if (/looser|swing it|more swing|lazier/.test(q)) { snapshot(); seq.swing = Math.min(75, seq.swing + 4); nudge(1); paintLid(); return `SWING ${seq.swing}`; }
+    if (/tighter|straight|less swing|quantize/.test(q)) { snapshot(); seq.swing = Math.max(50, seq.swing - 4); nudge(-1); paintLid(); return `SWING ${seq.swing}`; }
+    if ((m = q.match(/(?:take out|remove|drop|mute|no) (?:the )?(\w+)/))) {
+      const word = m[1].replace(/s$/, ""), alias = { hihat: "hat", hi: "hat", drum: "kick", crash: "cymbal" }[word] || word;
+      const hitLanes = pads.map((p, i) => i).filter((i) => pads[i].role === alias || pads[i].item.name.toLowerCase().includes(word));
+      if (hitLanes.length) { snapshot(); hitLanes.forEach((i) => rows[i].fill(null)); paintMain(); return `CLEARED ${alias.toUpperCase()}`; }
+    }
+    const style = STYLE_ORDER.find((k) => q.includes(k) || STYLES[k].words.some((w) => q.includes(w)));
+    if (style) { applyStyle(style); if (!seq.playing) play(); return STYLES[style].label; }
+    return "?";
+  };
+  const doUndo = () => { if (!undo.length) return; redo.push(state()); restore(undo.pop()); };
+  const doRedo = () => { if (!redo.length) return; undo.push(state()); restore(redo.pop()); };
+  $("#cr-prompt").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const r = command($("#cr-q").value); $("#cr-q").value = "";
+    $("#cr-q").placeholder = r === "?" ? "Try a style (boom bap, dilla, house), bpm 96, faster, looser, 4 bars, take out the hats" : `✓ ${r}`; $("#cr-q").blur();
+  });
+  $("#cr-prompt").addEventListener("click", (e) => { const b = e.target.closest("[data-c]"); if (!b) return; b.dataset.c === "undo" ? doUndo() : doRedo(); });
+
+  // ---------- input: transport and the hinge fader ----------
+  $("#cr-play").addEventListener("click", () => { if (!seq.playing) play(); });
+  $("#cr-stop").addEventListener("click", stop);
+  $("#cr-rec").addEventListener("click", async () => { if (seq.recording) { seq.recording = false; paintTransport(); return; } seq.recording = true; if (!seq.playing) await play({ countIn: true }); paintTransport(); });
+  const fader = $("#cr-fader");
+  const faderAt = (e) => { const r = fader.getBoundingClientRect(); return 1 - Math.max(0, Math.min(1, (e.clientY - r.top) / r.height)); };
+  const trail = []; // recent punch values, for the DROP gesture (HingeFX.swift:36-56)
+  let lastDrop = 0;
+  const watchDrop = () => {
+    const now = performance.now(); trail.push([now, punch]); while (trail.length && now - trail[0][0] > 450) trail.shift();
+    if (punch < 0.1 && trail.some(([, v]) => v > 0.6) && now - lastDrop > 1000) { lastDrop = now; trail.length = 0; drop(); }
+  };
+  function drop() {
+    setPunch(0);
+    const t = ac.currentTime + 0.005, cym = pads.find((p) => p.role === "cymbal") || pads.find((p) => p.role === "openhat"), kick = pads.find((p) => p.role === "kick");
+    if (cym) trigger(cym, t, 118);
+    if (kick) trigger(kick, t, 124);
+    const el = $("#cr-drop"); el.classList.remove("on"); void el.offsetWidth; el.classList.add("on");
+  }
+  let dragging = false;
+  fader.addEventListener("pointerdown", (e) => { dragging = true; fader.setPointerCapture(e.pointerId); unlock(); setPunch(faderAt(e)); watchDrop(); });
+  fader.addEventListener("pointermove", (e) => { if (!dragging) return; setPunch(faderAt(e)); watchDrop(); });
+  fader.addEventListener("pointerup", (e) => { if (dragging) setPunch(faderAt(e)); dragging = false; watchDrop(); });
+  fader.addEventListener("keydown", (e) => { const d = { ArrowUp: 0.05, ArrowDown: -0.05, PageUp: 0.25, PageDown: -0.25, Home: -1, End: 1 }[e.key]; if (d === undefined) return; e.preventDefault(); e.stopPropagation(); setPunch(Math.max(0, Math.min(1, punch + d))); watchDrop(); });
+
+  // ---------- input: keys ----------
+  const onKey = (e) => {
+    if (e.target.closest("input, select, textarea, oasis-knob")) { if (e.key === "Escape") e.target.blur(); return; }
+    if ((e.metaKey || e.ctrlKey) && e.code === "KeyZ") { e.preventDefault(); e.shiftKey ? doRedo() : doUndo(); return; }
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.code === "Space") { e.preventDefault(); if (!e.repeat) seq.playing ? stop() : play(); return; }
+    if (e.code === "Enter") { e.preventDefault(); $("#cr-rec").click(); return; }
+    if (e.key === "/") { e.preventDefault(); $("#cr-q").focus(); return; }
+    const i = KEYS.indexOf(e.code);
+    if (i >= 0 && !e.repeat) { e.preventDefault(); hit(i, 110); $(`.cr-pad[data-i="${i}"]`, app)?.classList.add("down"); }
+  };
+  const onKeyUp = (e) => { const i = KEYS.indexOf(e.code); if (i >= 0) $(`.cr-pad[data-i="${i}"]`, app)?.classList.remove("down"); };
   addEventListener("keydown", onKey); addEventListener("keyup", onKeyUp);
 
-  // the fold fader: pointer drag down folds; release springs it open unless Shift is held (keep it folded)
-  const foldEl = $("#pd-fold"), foldV = $("#pd-fold-v");
-  const paintFold = () => { foldEl.style.setProperty("--f", fold); foldEl.setAttribute("aria-valuenow", Math.round(fold * 100)); foldV.textContent = fold < 0.02 ? "open" : fold > 0.98 ? "shut" : `${Math.round(fold * 100)}%`; app.querySelector(".pd-deck").style.setProperty("--fold", fold); };
-  const foldAt = (e) => { const r = foldEl.getBoundingClientRect(); return (e.clientY - r.top) / r.height; };
-  let dragging = false;
-  foldEl.addEventListener("pointerdown", async (e) => { await unlock(); dragging = true; foldEl.setPointerCapture(e.pointerId); setFold(foldAt(e)); paintFold(); });
-  foldEl.addEventListener("pointermove", (e) => { if (!dragging) return; setFold(foldAt(e)); paintFold(); });
-  const release = (e) => {
-    if (!dragging) return; dragging = false;
-    if (e.shiftKey) return;
-    // the drop: open in one beat, on a spring-ish exponential glide
-    const from = fold, t0 = performance.now(), dur = Math.min(600, stepDur() * 4 * 1000);
-    setFold(0, dur / 4000);
-    const anim = (now) => { const k = Math.min(1, (now - t0) / dur); fold = from * Math.pow(1 - k, 3); paintFold(); if (k < 1 && !dragging) requestAnimationFrame(anim); else if (!dragging) { fold = 0; paintFold(); } };
-    requestAnimationFrame(anim);
-  };
-  foldEl.addEventListener("pointerup", release); foldEl.addEventListener("pointercancel", release);
-  foldEl.addEventListener("keydown", (e) => { const d = { ArrowDown: 0.1, ArrowUp: -0.1, PageDown: 0.25, PageUp: -0.25, Home: -1, End: 1 }[e.key]; if (d === undefined) return; e.preventDefault(); e.stopPropagation(); setFold(fold + d); paintFold(); });
-
-  // ---------- draw: what has sounded, read back against the audio clock (metronome.js draw()) ----------
+  // ---------- draw what has sounded, against the audio clock (metronome.js draw()) ----------
   let raf = 0;
   const draw = () => {
     const now = ac.currentTime;
     while (queue.length && queue[0].time <= now) {
       const q = queue.shift();
       if (q.kind === "step") {
-        if (q.step !== seq.shown) { $$(".pd-col.now", app).forEach((c) => c.classList.remove("now")); $$(`.pd-col[data-col="${q.step}"]`, app).forEach((c) => c.classList.add("now")); $$(".pd-col-h", app).forEach((h, s) => h.classList.toggle("now", s === q.step)); seq.shown = q.step; }
+        if (q.bar !== shownBar) { shownBar = q.bar; paintDots(); }
+        paintSeqHead(q.s);
+        $("#cr-pos").textContent = `${q.bar + 1}.${Math.floor((q.s % STEPS) / 4) + 1}`;
+        $$("#cr-segs i", app).forEach((g) => { const b = Number(g.dataset.b); g.className = b === q.bar ? "now" : b < q.bar ? "past" : ""; });
+      } else if (q.kind === "count") {
+        $("#cr-pos").textContent = `−${4 - Math.floor(q.n / 4)}`;
       } else {
-        const el = $(`.pd-pad[data-i="${q.i}"]`, app);
-        if (el) { el.classList.remove("hit"); void el.offsetWidth; el.classList.add("hit"); $$(".pd-rr i", el).forEach((d) => d.classList.toggle("on", Number(d.dataset.n) === q.take)); }
+        const p = pads[q.i]; p.lit = now + 0.1; // lit for 100 ms after a hit (Theme.swift:104)
+        $(`.cr-pad[data-i="${q.i}"]`, app)?.classList.add("lit");
+        if (q.i === selected) $$("#cr-takes i", app).forEach((d) => d.classList.toggle("on", Number(d.dataset.n) === q.take));
       }
     }
+    for (const p of pads) if (p.lit && now > p.lit) { p.lit = 0; $(`.cr-pad[data-i="${p.i}"]`, app)?.classList.remove("lit"); }
     raf = requestAnimationFrame(draw);
   };
   raf = requestAnimationFrame(draw);
 
-  // ---------- export: two bars rendered offline through the same chain, open (fold at 0), to a WAV ----------
-  $("#pd-export").addEventListener("click", async () => {
-    const b = $("#pd-export"); b.disabled = true; b.innerHTML = `${icon("circle-notch")}<span>Rendering</span>`;
+  // ---------- bounce: the loop rendered offline, dry, to a WAV ----------
+  $("#cr-export").addEventListener("click", async () => {
+    const b = $("#cr-export"); b.disabled = true; b.textContent = "…";
     try {
       await Promise.all(pads.map((p) => p.loading || p.takes));
-      const sr = 44100, bars = 2, d = stepDur(), tail = 2, len = Math.ceil((bars * STEPS * d + tail) * sr);
-      const off = new OfflineAudioContext(1, len, sr), bus = off.createGain(), offLook = buildLook(off, lookId); bus.gain.value = 0.9; bus.connect(offLook.input); offLook.output.connect(off.destination);
+      const sr = 44100, d = stepDur(), len = seq.bars * STEPS, total = Math.ceil((len * d + 2) * sr);
+      const off = new OfflineAudioContext(1, total, sr), bus = off.createGain(); bus.gain.value = 0.94; bus.connect(off.destination);
       const counters = pads.map(() => 0);
-      for (let bar = 0; bar < bars; bar++) for (let s = 0; s < STEPS; s++) {
-        const t = (bar * STEPS + s) * d + (s % 2 ? seq.swing * d : 0);
+      for (let s = 0; s < len; s++) {
+        const swingLate = s % 2 ? (2 * seq.swing / 100 - 1) * d : 0;
         pads.forEach((p, i) => {
-          if (!rows[i][s] || p.mute || !p.takes.length) return;
-          const src = off.createBufferSource(), g = off.createGain();
-          src.buffer = p.takes[counters[i]++ % p.takes.length]; src.playbackRate.value = Math.pow(2, p.pitch / 12);
-          g.gain.value = p.vol * (rows[i][s] === 2 ? 1 : 0.72);
-          src.connect(g).connect(bus); src.start(t);
+          const h = rows[i][s]; if (!h || !p.takes.length) return;
+          const r = h.r || 1;
+          for (let k = 0; k < r; k++) { const src = off.createBufferSource(), g = off.createGain(); src.buffer = p.takes[counters[i]++ % p.takes.length]; g.gain.value = Math.pow(Math.round(h.v * Math.pow(0.85, k)) / 127, 1.6); src.connect(g).connect(bus); src.start(Math.max(0, s * d + swingLate + h.late * d + (k * d) / r)); }
         });
       }
       const out = (await off.startRendering()).getChannelData(0);
@@ -314,18 +595,19 @@ export async function pagePads(app, id) {
       if (peak > 0.98) for (let i = 0; i < out.length; i++) out[i] *= 0.98 / peak;
       const a = document.createElement("a");
       a.href = URL.createObjectURL(new Blob([wav(out, sr)], { type: "audio/wav" }));
-      a.download = `${kit.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${seq.bpm}bpm${lookId === "dry" ? "" : `-${lookId}`}.wav`;
+      a.download = `${kit.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${seq.style || "kit"}-${Math.round(seq.bpm)}bpm.wav`;
       document.body.appendChild(a); a.click(); a.remove();
-      const unpaid = pads.some((p) => !p.item.licence && p.item.price > 0 && rows[p.i].some(Boolean));
-      b.innerHTML = `${icon("check")}<span>${unpaid ? "Exported, with preview ticks" : "Exported"}</span>`;
-    } catch (err) { b.innerHTML = `${icon("warning")}<span>${esc(err.message)}</span>`; }
-    setTimeout(() => { b.disabled = false; b.innerHTML = `${icon("download-simple")}<span>Export loop</span>`; }, 2600);
+      b.textContent = "✓";
+    } catch (err) { b.textContent = "×"; console.error(err); }
+    setTimeout(() => { b.disabled = false; b.textContent = "BOUNCE"; }, 1600);
   });
 
-  segment($("#pd-look"), LOOKS, lookId, (id) => setLook(id));
-  paintCells(); paintTransport(); paintFold(); select(0);
+  // a first groove from what the kit is, the way CRATE starts every kit on its style's groove: a kit with a bed and no
+  // drum names gets lo-fi, anything else boom bap
+  applyStyle(pads.some((p) => p.role === "texture") && !pads.some((p) => /kick|808|drum|snare/.test(p.item.name.toLowerCase())) ? "lofi" : "boombap");
+  undo.length = 0;
+  paintFxPads(); paintAll(); setPunch(0);
   pads.forEach(load);
 
-  // leaving the page stops the clock and frees the chain
-  addEventListener("hashchange", () => { stop(); timer.terminate(); cancelAnimationFrame(raf); removeEventListener("keydown", onKey); removeEventListener("keyup", onKeyUp); try { padsBus.disconnect(); master.disconnect(); look.stop(); } catch {} }, { once: true });
+  addEventListener("hashchange", () => { stop(); timer.terminate(); cancelAnimationFrame(raf); removeEventListener("keydown", onKey); removeEventListener("keyup", onKeyUp); try { padsBus.disconnect(); master.disconnect(); fx.stops.forEach((o) => o.stop()); } catch {} }, { once: true });
 }
