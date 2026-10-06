@@ -36,10 +36,13 @@ export function build(p, c) {
   for (let k = 0; k < N; k++) { st.push(f * Math.pow(2, (k - 1.5) * (2 + 10 * p.spread) / 1200 + (r() - 0.5) * 0.002) / sr); ph.push(r()); vr.push(TAU * (4.6 + 1.4 * r()) / sr); vp.push(r() * TAU); }
   const vd = 0.004 + 0.004 * p.spread, a = p.attack * sr, rs = (p.attack + hold) * sr, rl = p.release * sr;
   const nz = c.noise(r, n), bg = 0.05 + 1.2 * p.breath;
-  let z1 = 0, y1 = 0;
+  let z1 = 0, y1 = 0, p0 = ph[0], p1 = ph[1], p2 = ph[2], p3 = ph[3];
+  const inc = new Float64Array(N);
   for (let i = 0; i < n; i++) {
-    let x = 0;
-    for (let k = 0; k < N; k++) { ph[k] += st[k] * (1 + vd * Math.sin(vr[k] * i + vp[k])); if (ph[k] >= 1) ph[k] -= 1; x += 1 - 2 * ph[k]; }
+    if ((i & 15) === 0) for (let k = 0; k < N; k++) inc[k] = st[k] * (1 + vd * Math.sin(vr[k] * i + vp[k])); // vibrato, per 16 samples
+    p0 += inc[0]; p1 += inc[1]; p2 += inc[2]; p3 += inc[3];
+    if (p0 >= 1) p0 -= 1; if (p1 >= 1) p1 -= 1; if (p2 >= 1) p2 -= 1; if (p3 >= 1) p3 -= 1;
+    const x = 4 - 2 * (p0 + p1 + p2 + p3);
     const tz = (x + 0.9 * z1) / 1.9; z1 = x; y1 = 0.9 * y1 + 0.1 * tz;
     const e = i < a ? i / a : i < rs ? 1 : Math.max(0, 1 - (i - rs) / rl);
     src[i] = (y1 * 2 + nz[i] * bg * 0.25) * e;
