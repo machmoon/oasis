@@ -59,7 +59,7 @@ the sandbox), so the same knobs give the same samples in the server's QuickJS sa
 licensed import. The contract is `factory/CONTRACT-SOUND.md`; the server runs programs with
 `server/sandbox.js renderSound` (two host-registered modules, nothing else importable, 6 s and 48 MB caps) and
 serves `render.wav`, `sound.json` (seconds, peak, RMS, centroid, waveform and spectrogram data), `waveform.png`,
-`spectrogram.png`, the catalogue card, and a per-seed `walk` (300 takes on one timeline, 1.4 s on the worker pool).
+`spectrogram.png`, the catalogue card, and a per-seed `walk` (300 takes on one timeline, about 3.5 to 6.5 s on the worker pool of a 10-core laptop).
 
 Measured in the sandbox (QuickJS, Apple Silicon): footstep 20-35 ms, UI click 13-17 ms, kick 30 ms, door 50-65 ms,
 a 3 s rain bed 280-350 ms at 22.05 kHz. V8 does the same work in a few ms, which is why the sound page renders free
