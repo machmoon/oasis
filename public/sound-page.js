@@ -149,7 +149,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
         <div class="row fk-row">
           <div class="fk-f"><label class="fk-l" for="fork-author">Creator name</label><input id="fork-author" maxlength="40" autocomplete="nickname"></div>
           <div class="fk-f"><label class="fk-l" for="fork-email">PayPal email <span>optional</span></label><input id="fork-email" type="email" maxlength="80" autocomplete="email"></div>
-          <div class="fk-f fk-price"><label class="fk-l" for="fork-price">Price, $</label><input id="fork-price" type="number" min="0" max="50" step="0.5" placeholder="0"></div>
+          <div class="fk-f fk-price"><label class="fk-l" for="fork-price">Price, $</label><input id="fork-price" type="number" min="0" max="50" step="0.5" value="${a.price}"></div>
         </div>
         <div class="row"><button class="btn primary" type="submit" id="fork-go">${icon("sparkle")} Fork with AI</button><span class="note" id="fork-note"></span></div>
       </form>

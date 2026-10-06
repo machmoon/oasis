@@ -501,3 +501,11 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
 @media (max-width: 899px) { .kt-row { grid-template-columns: 96px minmax(0, 1fr) 70px 34px; } .kt-row .s-c:not(.s-price) { display: none; } .kt-mini { width: 96px; height: 44px; } }
 @media (max-width: 899px) { .kt-pads span { display: none; } .kt-pads { padding: 0; width: 34px; } }
 .a-group[hidden] { display: none; }
+
+/* takes and fork are panes of the tool, not landing bands: a heading and one line above a full-width card (a Splice
+   sample page's sections, a Linear issue's sub-panels); the seed loop snippet was decoration */
+.sp-walk, .sp-fork { grid-template-columns: minmax(0, 1fr); gap: 14px; align-items: start; padding-top: 56px; }
+.sp-walk > div:first-child, .sp-fork > div:first-child { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
+.sp-walk > div:first-child h2, .sp-fork > div:first-child h2 { margin: 0; }
+.sp-walk > div:first-child .lede, .sp-fork > div:first-child .lede { margin: 0; font-size: var(--fs-sm); max-width: none; }
+#sp-walk-code { display: none; }
