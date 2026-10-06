@@ -50,7 +50,7 @@ export async function pageHome(app, ctx) {
       <h1 class="hero-h1">Sound effects you tune, licensed per kit</h1>
       <p class="lede">Every sound is a program with knobs and a seed, so each play can be a fresh take. Describe a vibe, get a tuned kit, and one PayPal order books every creator's share.</p>
       <form class="hero-dig" id="hero-dig" autocomplete="off"><label class="sr-only" for="hero-vibe">Describe a kit</label><input id="hero-vibe" maxlength="200" placeholder="medieval market with bells and an anvil"><button class="btn primary" type="submit">Make a kit</button></form>
-      <p class="hero-alt">Or <a class="link" href="#/sounds">browse all the sounds</a></p>
+      <p class="hero-alt">Free to try: previews are watermarked and nothing is charged until you license a kit. Or <a class="link" href="#/sounds">browse all the sounds</a>.</p>
     </div></div>
     <div class="hero-readout" id="readout" aria-live="polite"><i class="live"></i><span>rendering a footstep</span></div>
     <div class="hero-pay" id="hero-pay" hidden><div class="hero-chips" id="hero-chips"></div><span class="btn paypal pay" id="pay-btn">${icon("paypal-logo")} Pay <span class="money num" id="pay-money">$0.00</span></span></div>

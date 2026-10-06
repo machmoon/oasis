@@ -233,6 +233,9 @@ export async function pageSounds(app) {
       && (!q || `${a.title} ${a.kit || ""} ${a.author} ${a.description || ""}`.toLowerCase().includes(q)));
     const by = { name: (x, y) => x.title.localeCompare(y.title), kit: (x, y) => String(x.kit).localeCompare(String(y.kit)) || x.title.localeCompare(y.title), "price-asc": (x, y) => x.price - y.price || x.title.localeCompare(y.title), "price-desc": (x, y) => y.price - x.price || x.title.localeCompare(y.title), length: (x, y) => y.duration - x.duration, knobs: (x, y) => y.knobCount - x.knobCount }[state.sort];
     out = out.sort(by);
+    // a search ranks a word in the title first, then the collection, then the description (Freesound's relevance
+    // order), unless the visitor picked another sort; "door" lists the doors before "Access Denied"
+    if (q && state.sort === "name") { const w = new RegExp(`\\b${q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "i"); const rank = (a) => (w.test(a.title) ? 0 : w.test(a.kit || "") ? 1 : 2); out = out.sort((x, y) => rank(x) - rank(y) || x.title.localeCompare(y.title)); }
     last = out; paint();
     $("#k-count").innerHTML = out.length === list.length ? `<b class="num">${list.length}</b> sounds from <b class="num">${creators.length}</b> creators in <b class="num">${kits.length}</b> collections` : `<b class="num">${out.length}</b> of ${list.length} sounds`;
     $("#k-empty").hidden = out.length > 0;
