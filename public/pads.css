@@ -67,7 +67,7 @@ a.cr-chip { display: inline-flex; align-items: center; text-decoration: none; }
 .cr-ruler > :nth-child(4n + 2):not(:nth-child(2)), .cr-lane > :nth-child(4n + 2):not(:nth-child(2)) { margin-left: 10px; }
 .cr-ruler i { font: 10px var(--font-mono); font-style: normal; color: var(--cr-g2); text-align: center; }
 .cr-lane { position: relative; height: 23px; }
-.cr-lane.sel::before { content: ""; position: absolute; inset: 0 -8px; background: rgb(250 91 28 / .10); border-radius: 4px; pointer-events: none; }
+.cr-lane.sel::before { content: ""; position: absolute; inset: 0 -8px; background: color-mix(in srgb, var(--cr-orange) 12%, transparent); border-radius: 4px; pointer-events: none; }
 .cr-lname { position: relative; padding: 0 8px 0 0; border: 0; background: none; text-align: left; font: var(--w-medium) 12.5px var(--font-sans) !important; color: var(--cr-g1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cr-lane.sel .cr-lname { color: var(--cr-lid-ink); }
 .cr-dot { position: relative; height: 23px; padding: 0; border: 0; background: none; }
@@ -179,7 +179,8 @@ a.cr-chip { display: inline-flex; align-items: center; text-decoration: none; }
 @keyframes cr-blink { 50% { opacity: .15; } }
 @media (max-width: 1023px) {
   .cr-deck { grid-template-columns: minmax(0, 1fr) 110px; }
-  .cr-left { grid-column: 1 / -1; grid-template-columns: repeat(3, 1fr) 2fr; align-items: center; }
+  .cr-left { grid-column: 1 / -1; grid-template-columns: repeat(4, 1fr); align-items: center; }
+  .cr-left .cr-mark { grid-column: 1 / -1; margin: 0; }
   .cr-mark { margin: 0; }
   .cr-ruler, .cr-lane { grid-template-columns: 110px repeat(16, minmax(0, 1fr)); }
   .cr-edit { grid-template-columns: 1fr; }
@@ -230,3 +231,23 @@ a.cr-chip { display: inline-flex; align-items: center; text-decoration: none; }
 .cs-drop.on { animation: cr-drop 280ms linear; }
 @media (max-aspect-ratio: 1/1) { .cr-stage { grid-template-columns: 1fr; align-content: center; } .cs-grid { max-width: 86vw; } }
 @media (prefers-reduced-motion: reduce) { .cs-drop.on { animation: none; } .cs-cell i { transition: none; } }
+
+/* phones: nothing leaves the card. The pattern scrolls sideways inside its own viewport with the lane names held
+   (shadcn/ui scroll-area.tsx: an overflow viewport; the sticky first column is the table pattern), the prompt's
+   buttons drop under the field (input-group.tsx's block-end addon), the style chips scroll in one row */
+@media (max-width: 639px) {
+  .cr-main { overflow-x: auto; margin: 0 -14px; padding: 0 14px; scrollbar-width: none; }
+  .cr-seq { min-width: 560px; }
+  .cr-ruler, .cr-lane { grid-template-columns: 96px repeat(16, minmax(0, 1fr)); }
+  .cr-lname, .cr-ruler > span:first-child { position: sticky; left: -14px; z-index: 1; background: #000; padding-left: 0; }
+  .cr-prompt { flex-wrap: wrap; height: auto; padding: 8px 10px; gap: 6px; }
+  .cr-prompt input { flex: 1 1 calc(100% - 24px); height: 30px; }
+  .cr-prompt button { flex: 1; white-space: nowrap; padding: 0 6px; font-size: 11px !important; }
+  .cr-title b { white-space: nowrap; }
+  .cr-title > div { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .cr-lic { margin-left: 0; }
+  .cr-foot { display: none; }
+  .cr-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -14px; padding: 0 14px; }
+  .cr-chips button { flex: none; }
+  .cr-hero { flex-wrap: wrap; }
+}

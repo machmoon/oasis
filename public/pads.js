@@ -334,7 +334,7 @@ export async function pagePads(app, id) {
             <button class="cr-key" id="cr-stagebtn" type="button" title="Full-screen stage view for the room (Esc leaves)">STAGE</button>
             <p class="cr-mark">The layout and the hinge are <a href="https://github.com/odoisveryverygood/crate-duo" target="_blank" rel="noopener">CRATE</a>'s, the iPhone Duo MPC that won Bitrig Hacks.</p>
           </div>
-          <div class="cr-pads" id="cr-pads">${DRAW_ORDER.filter((i) => pads.length > 12 || i < 12).map((i) => `<button class="cr-pad" type="button" data-i="${i}"><span class="cr-win">${pads[i] ? `<img src="${esc(cardUrl(pads[i]))}" alt="" loading="lazy" width="480" height="240">` : ""}</span><span class="cr-n">${i + 1}</span><span class="cr-k">${KEY_LABEL(KEYS[i])}</span><span class="cr-name"></span><span class="cr-hint"></span></button>`).join("")}</div>
+          <div class="cr-pads" id="cr-pads">${DRAW_ORDER.filter((i) => i < Math.max(8, Math.ceil(pads.length / 4) * 4)).map((i) => `<button class="cr-pad" type="button" data-i="${i}"><span class="cr-win">${pads[i] ? `<img src="${esc(cardUrl(pads[i]))}" alt="" loading="lazy" width="480" height="240">` : ""}</span><span class="cr-n">${i + 1}</span><span class="cr-k">${KEY_LABEL(KEYS[i])}</span><span class="cr-name"></span><span class="cr-hint"></span></button>`).join("")}</div>
           <div class="cr-right">
             <div class="cr-fader-w"><span class="cr-silk">FX · HINGE</span>
               <div class="cr-fader-row"><div class="cr-fader" id="cr-fader" role="slider" tabindex="0" aria-label="Hinge: the punch amount. Pull it down fast from above 60 for the drop." aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i class="cr-cap"></i></div>
