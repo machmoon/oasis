@@ -70,7 +70,9 @@ function assignRoles(pads) {
   }
   // what is left fills the drum roles still empty, shortest sounds first (a short sound is a better hat than a kick)
   const left = pads.map((p, i) => i).filter((i) => role[i] === null).sort((a, b) => pads[a].item.duration - pads[b].item.duration);
-  for (const r of ["hat", "kick", "snare", "perc", "rim", "clap", "openhat", "cymbal"]) { if (taken.has(r) || !left.length) continue; role[left.shift()] = r; taken.add(r); }
+  const guessed = new Set();
+  for (const r of ["hat", "kick", "snare", "perc", "rim", "clap", "openhat", "cymbal"]) { if (taken.has(r) || !left.length) continue; const i = left.shift(); role[i] = r; guessed.add(i); taken.add(r); }
+  role.guessed = guessed; // a role given by elimination plays the groove's lane but is not printed as what the sound is
   return role;
 }
 
@@ -120,7 +122,7 @@ export async function pagePads(app, id) {
   const details = await Promise.all(kit.items.map((it) => api(`/api/assets/${encodeURIComponent(it.assetId)}`).catch(() => null)));
   const pads = kit.items.slice(0, 16).map((item, i) => ({ i, item, detail: details[i], key: KEYS[i], knobs: { ...(item.knobs || {}) }, rr: 4, takes: [], next: 0, loading: null, lit: 0, ms: 0 }));
   const roles = assignRoles(pads);
-  pads.forEach((p, i) => (p.role = roles[i]));
+  pads.forEach((p, i) => { p.role = roles[i]; p.guess = roles.guessed.has(i); });
   const hasSeed = (p) => !!p.detail?.knobs?.seed;
   const ac = audio();
 
@@ -311,7 +313,7 @@ export async function pagePads(app, id) {
           <div class="cr-hero">
             <button class="cr-read" id="cr-bpm-b" type="button"><b class="num" id="cr-bpm">90</b><span>BPM</span></button>
             <button class="cr-read" id="cr-swing-b" type="button"><b class="num" id="cr-swing">56</b><span>SWING</span></button>
-            <div class="cr-read"><b class="num" id="cr-pos">1.1</b><span>BAR</span></div>
+            <div class="cr-read"><b class="num" id="cr-pos">1.1</b><span>BAR · BEAT</span></div>
             <div class="cr-drop" id="cr-drop" aria-live="polite">DROP</div>
           </div>
           <div class="cr-tempo" id="cr-tempo" hidden>
@@ -359,7 +361,7 @@ export async function pagePads(app, id) {
     el.classList.toggle("sel", p.i === selected && !fxMode);
     const f = FX[DRAW_ORDER.indexOf(p.i)];
     $(".cr-name", el).textContent = fxMode ? f[1] : p.item.name;
-    $(".cr-hint", el).textContent = fxMode ? f[2] : (p.role || "").toUpperCase();
+    $(".cr-hint", el).textContent = fxMode ? f[2] : p.guess ? "" : (p.role || "").toUpperCase();
   }
   function paintFxPads() { if (!document.getElementById("cr")) return; // the visitor has left the page
     $("#cr").classList.toggle("fx", fxMode);
