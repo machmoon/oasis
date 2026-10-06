@@ -104,7 +104,7 @@ export function planByKeywords(vibe, { count = 8 } = {}) {
   const t4 = titleWords.slice(0, 4); while (t4.length > 1 && STOP.has(t4[t4.length - 1].toLowerCase())) t4.pop();
   const title = t4.map((w) => w[0].toUpperCase() + w.slice(1)).join(" ").replace(/[,:;.]+$/, "") || "Untitled Kit";
   const raw = vibe.toLowerCase().split(/[^a-z0-9-]+/).filter(Boolean), allTerms = [...new Set([...raw, ...terms])];
-  return { title, unmatched, items: picked.map(([a, , hit], i) => { const tune = tuneByWords(a, allTerms, raw); return { assetId: a.id, knobs: { ...tune.knobs, ...(a.params.knobs.seed ? { seed: 1 + (hash(`${vibe}|${a.id}|${i * 7919}`) % 9999) } : {}) }, name: a.title,
+  return { title, unmatched, nothing: words.length > 0 && unmatched.length === words.length, items: picked.map(([a, , hit], i) => { const tune = tuneByWords(a, allTerms, raw); return { assetId: a.id, knobs: { ...tune.knobs, ...(a.params.knobs.seed ? { seed: 1 + (hash(`${vibe}|${a.id}|${i * 7919}`) % 9999) } : {}) }, name: a.title,
     tuned: tune.why,
     reason: (() => { const own = hit.filter((h) => words.includes(h)), near = hit.filter((h) => !words.includes(h)); return own.length ? `matched ${own.slice(0, 3).map((h) => `"${h}"`).join(", ")}${near.length ? `, near ${near.slice(0, 2).map((h) => `"${h}"`).join(", ")}` : ""}` : near.length ? `near words ${near.slice(0, 3).map((h) => `"${h}"`).join(", ")}` : "nothing in the registry matched; picked as the closest sound"; })() }; }) };
 }
@@ -145,7 +145,11 @@ export async function planKit(vibe) {
       Object.assign(plannerHealth, { ok: false, error: e.error?.error?.message || e.message, at: new Date().toISOString() });
     }
   }
-  if (!plan) plan = planByKeywords(v);
+  if (!plan) {
+    plan = planByKeywords(v);
+    // a vibe none of whose words the registry knows gets an answer, not a priced grab-bag
+    if (plan.nothing) throw Object.assign(new Error(`Nothing in the registry matches "${v}" yet. Try the scene's things: footsteps, doors, rain, coins, bells.`), { status: 422, code: "ENOMATCH" });
+  }
   return cleanKit(v, plan, planner);
 }
 

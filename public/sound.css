@@ -534,3 +534,5 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
   .s-sels { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; }
   .s-sels .s-sel { justify-content: space-between; }
 }
+.kv-miss.warn { color: var(--accent-text); }
+.kv-part .amt small.again { color: var(--accent-text); }

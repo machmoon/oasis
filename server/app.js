@@ -325,7 +325,7 @@ export async function createApp() {
     const kitOf = new Map((await store.list("kits")).filter((k) => k.licence?.orderId).map((k) => [k.licence.orderId, { id: k.id, title: kits.tidyTitle(k.title), parts: k.items.length }]));
     res.json(orders.slice(0, 40).map(commerce.saleEvent).map((e, i) => ({ ...e, at: orders[i].createdAt, captureId: orders[i].captureId || null, payout: orders[i].payoutHold?.status || null, kit: kitOf.get(orders[i].id) || null,
       refunded: (orders[i].partialRefunds || []).map((r) => ({ id: r.id, usd: r.usd })),
-      repeated: (() => { const n = {}; for (const it of orders[i].items) n[it.assetId] = (n[it.assetId] || 0) + 1; return Object.values(n).some((c) => c > 1); })() })));
+      repeated: (() => { const seen = new Set(); let usd = 0; for (const it of orders[i].items) { if (it.price > 0 && seen.has(it.assetId)) usd += it.price; seen.add(it.assetId); } return usd; })() })));
   }));
 
   // Kits: a vibe becomes 6-10 tuned sound programs (server/kits.js), licensed in one PayPal order.
@@ -335,7 +335,7 @@ export async function createApp() {
     const vibe = String(req.body?.vibe || "").slice(0, 300);
     if (!vibe.trim()) throw Object.assign(new Error("Say what the kit is for"), { status: 400 });
     // quick: the keyword planner, not saved (the home hero's demo bill), so a page view never spends a model call
-    if (req.body?.quick) return res.json(kits.view({ id: null, ...kits.cleanKit(vibe, kits.planByKeywords(vibe)), licence: null }));
+    if (req.body?.quick) { const plan = kits.planByKeywords(vibe); if (plan.nothing) throw Object.assign(new Error(`Nothing in the registry matches "${vibe}" yet.`), { status: 422, code: "ENOMATCH" }); return res.json(kits.view({ id: null, ...kits.cleanKit(vibe, plan), licence: null })); }
     res.json(kits.view(await kits.save(await kits.planKit(vibe))));
   }));
   // One sound, licensed on its own: a one-part kit with the knobs the buyer set, so it goes through the same itemised
@@ -357,11 +357,10 @@ export async function createApp() {
     // (a keyword kit where nothing matched, or a vibe with markup in it, stays reachable by link but is not listed)
     // keyword kits planned before whole-word matching (2558069) picked "platform" sounds for a subway; unlisted
     const KEYWORDS_FIXED = "2026-10-06T08:48:00Z";
-    const chargedTwice = (k) => { const seen = new Set(); return k.items.some((l) => l.price > 0 && (seen.has(l.assetId) || !seen.add(l.assetId))); };
     // a kit most of whose parts are stand-ins (the planner says "no kettle exists, so…") is not a kit of the scene
     const standIns = (k) => k.items.filter((l) => /stand[s-]? ?in|stand-in|no .{1,30} (exists|in the catalogue)|closest/i.test(l.reason || "")).length >= k.items.length / 2;
     const honestKeywords = (k) => k.planner !== "keywords" || (Array.isArray(k.unmatched) && !k.unmatched.length);
-    const listed = (k) => (k.licence && !chargedTwice(k)) || (!k.licence && honestKeywords(k) && !standIns(k) && !k.copiedFrom && !(k.planner === "keywords" && String(k.createdAt) < KEYWORDS_FIXED) && !/[<>]/.test(k.vibe) && (k.planner !== "keywords" || k.items.filter((l) => !/^nothing/.test(l.reason || "")).length >= Math.ceil(k.items.length * 0.75)));
+    const listed = (k) => k.licence || (!k.licence && honestKeywords(k) && !standIns(k) && !k.copiedFrom && !(k.planner === "keywords" && String(k.createdAt) < KEYWORDS_FIXED) && !/[<>]/.test(k.vibe) && (k.planner !== "keywords" || k.items.filter((l) => !/^nothing/.test(l.reason || "")).length >= Math.ceil(k.items.length * 0.75)));
     const all = (await store.list("kits")).filter((k) => k.planner !== "single" && k.items.length >= 4 && listed(k)).sort((a, b) => (!!b.licence - !!a.licence) || b.updatedAt.localeCompare(a.updatedAt))
       .filter((k) => { const t = `t:${key(kits.tidyTitle(k.title))}`, v = `v:${key(k.vibe)}`; if (seen.has(t) || seen.has(v) || (!k.licence && paidTitles.has(t))) return false; seen.add(t); seen.add(v); return true; }).slice(0, 24);
     // the tile's picture: its first four parts as tuned in the kit (the same card render a part shows on the kit page)
@@ -610,17 +609,20 @@ export async function createApp() {
     // until the 14-day refund window closes it is held, and a refund cancels it. Having a PayPal email is not enough.
     const allOrders = await store.list("orders");
     const hold = Object.fromEntries(allOrders.map((o) => [o.id, o.payoutHold?.status || null]));
-    // a partial refund shrinks every share of its order in proportion (commerce.refund does the same to the hold)
-    const keep = Object.fromEntries(allOrders.map((o) => { const back = (o.partialRefunds || []).reduce((t, x) => t + x.usd, 0); return [o.id, o.total ? (o.total - back) / o.total : 1]; }));
     const byAuthor = {};
-    for (const r0 of rows) {
-      const r = { ...r0, cents: Math.round(r0.cents * (keep[r0.orderId] ?? 1)) }, k = r.author;
+    for (const r of rows) {
+      const k = r.author;
       byAuthor[k] ||= { author: k, cents: 0, sales: 0, paidOut: 0, held: 0 };
       byAuthor[k].cents += r.cents;
       byAuthor[k].sales += 1;
       if (r.role === "platform") continue;
       if (r.email && (hold[r.orderId] === "SENT" || (hold[r.orderId] === "PARTLY_SENT" && !/(^|\.)example$/i.test(r.email.split("@")[1] || "")))) byAuthor[k].paidOut += r.cents;
       else if (r.held || (r.email && hold[r.orderId] === "HELD")) byAuthor[k].held += r.cents;
+    }
+    // refunded repeat lines (commerce.refund repeats) give back exactly the shares those lines created
+    for (const o of allOrders) for (const i of o.refundedRepeats || []) {
+      const it = o.items[i], asset = catalog.getAsset(it.assetId); if (!asset) continue;
+      for (const sh of commerce.royaltySplit(asset, it.price)) { const b = byAuthor[sh.author]; if (!b) continue; b.cents -= sh.cents; if (sh.role !== "platform") b.held = Math.max(0, b.held - sh.cents); }
     }
     res.json({ authors: Object.values(byAuthor).sort((a, b) => b.cents - a.cents), recent: rows.sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, 30) });
   }));

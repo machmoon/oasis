@@ -121,7 +121,7 @@ export async function sendPayouts(batchId, items) {
     method: "POST",
     headers: { Authorization: `Bearer ${await accessToken()}`, "Content-Type": "application/json", "PayPal-Request-Id": batchId },
     body: JSON.stringify({
-      sender_batch_header: { sender_batch_id: batchId, email_subject: "You earned a royalty on Oasis", email_message: "Someone licensed a remix built on your work." },
+      sender_batch_header: { sender_batch_id: batchId, email_subject: "Your share of an Oasis sale", email_message: "Someone licensed your sound on Oasis. This is your share of their PayPal order." },
       items: items.map((i) => ({ recipient_type: "EMAIL", receiver: i.email, amount: { value: i.amount.toFixed(2), currency: "USD" }, note: i.note, sender_item_id: i.ref })),
     }),
   });

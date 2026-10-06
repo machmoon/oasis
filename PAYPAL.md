@@ -208,13 +208,14 @@ A kit paid by the refunded order loses its licence too (`markRefunded()` clears 
 on the kit), so its page goes back to watermarked previews. One limit: there is no refund button in the UI, only
 this endpoint.
 
-**Partial refunds.** `POST /api/orders/:id/refund` with `{ "amountUsd": 8, "reason": "…" }` (and the buyer's
-`X-Oasis-Claim` header) refunds part of the capture through the same Payments call with an `amount`, keeps the
-licences, records the refund on the order, and shrinks the held creator shares in proportion; the ledger shows
-"Partially refunded $8.00 · <refund id>". Tested against a stubbed PayPal (*a partial refund returns part of the
-money…*); it has not been run against the sandbox. The first kit order, 9SS52993P3394003X, billed one footstep
-program three times and one click program three times ($8 more than charge-once pricing); refunding that $8 would
-be its first real run.
+**Refunding repeated lines.** `POST /api/orders/:id/refund` with `{ "repeats": true, "reason": "…" }` (and the
+buyer's `X-Oasis-Claim` header) refunds, through the same Payments call with an `amount`, the lines that billed a
+program again. The licences stay; each extra line's money comes back out of the shares that line created and no
+one else's (its hold items and ledger shares), and the ledger shows "Partially refunded $X · <refund id>". Tested
+against a stubbed PayPal (*refunding repeated lines returns their money from the shares those lines created…*); not
+run against the sandbox. The first kit order, 9SS52993P3394003X, billed the footstep program three times and the
+click program three times: the refund would return $8 ($6 from foleyroom's footstep lines, $2 from quietmachine's
+click lines) and leave stormfront's share whole.
 
 ## What has actually run
 

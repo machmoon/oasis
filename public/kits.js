@@ -59,7 +59,7 @@ export async function pageKits(app) {
       <datalist id="kt-sugg">${EXAMPLES.map((e) => `<option value="${esc(e)}"></option>`).join("")}</datalist>
     </form>
     <div id="kt-status" hidden></div>
-    <section class="kt-recent"><h2>Recent kits</h2><div class="kt-list" id="kt-list"><div class="skel" style="height:72px"></div></div></section>
+    <section class="kt-recent"><h2>Featured kits</h2><div class="kt-list" id="kt-list"><div class="skel" style="height:72px"></div></div></section>
   </div>`;
 
   $("#kt-form").addEventListener("submit", async (e) => {
@@ -119,7 +119,7 @@ export async function pageKit(app, id) {
     app.innerHTML = `<div class="wrap a-page">
       <nav class="a-crumb" aria-label="Breadcrumb"><a href="#/kits">Kits</a><span>/</span><span>${esc(k.title)}</span></nav>
       <header class="kv-head">
-        <div><h1>${esc(k.title)}</h1><p class="kv-vibe">${k.planner === "single" ? `One sound, licensed on its own with the knobs set on its page.` : `${k.vibe.trim().toLowerCase() !== k.title.trim().toLowerCase() ? `${esc(k.vibe.charAt(0).toUpperCase() + k.vibe.slice(1))}. ` : ""}<span title="${k.planner === "keywords" ? "The Claude planner was offline" : esc(k.planner)}">${k.planner === "keywords" ? "Matched by keyword" : "Picked by Claude"}</span>.`}</p>${paid && k.items.some((it, i) => it.price > 0 && k.items.slice(0, i).some((x) => x.assetId === it.assetId && x.price > 0)) ? `<p class="kv-miss">${icon("info")} This was the first kit order, placed before kits charged each program once: the parts marked "billed again" were charged a second time.</p>` : ""}${k.unmatched?.length ? `<p class="kv-miss">${icon("info")} Nothing in the registry for ${k.unmatched.map((w) => `“${esc(w)}”`).join(", ")} yet; these parts match the rest of the vibe.</p>` : ""}</div>
+        <div><h1>${esc(k.title)}</h1><p class="kv-vibe">${k.planner === "single" ? `One sound, licensed on its own with the knobs set on its page.` : `${k.vibe.trim().toLowerCase() !== k.title.trim().toLowerCase() ? `${esc(k.vibe.charAt(0).toUpperCase() + k.vibe.slice(1))}. ` : ""}<span title="${k.planner === "keywords" ? "The Claude planner was offline" : esc(k.planner)}">${k.planner === "keywords" ? "Matched by keyword" : "Picked by Claude"}</span>.`}</p>${paid && k.items.some((it, i) => it.price > 0 && k.items.slice(0, i).some((x) => x.assetId === it.assetId && x.price > 0)) ? `<p class="kv-miss warn">${icon("warning")} This first kit order was placed before kits charged each program once: the parts marked "billed again" ($${k.items.reduce((t, it, i) => t + (it.price > 0 && k.items.slice(0, i).some((x) => x.assetId === it.assetId && x.price > 0) ? it.price : 0), 0).toFixed(2)}) were charged a second time. A refund of those lines is pending.</p>` : ""}${k.unmatched?.length ? `<p class="kv-miss">${icon("info")} Nothing in the registry for ${k.unmatched.map((w) => `“${esc(w)}”`).join(", ")} yet; these parts match the rest of the vibe.</p>` : ""}</div>
         <div class="kv-side">
           ${paid ? (k.owner ? "" : `<span class="kv-state">${icon("waveform")} Licensed by its buyer; previews here</span>`) : `<span class="kv-state">${icon("waveform")} Watermarked preview until paid</span>`}
           <div class="kv-share"><input id="kv-url" type="hidden" value="${esc(kitUrl)}"><button class="btn small" id="kv-copy" type="button">${icon("link-simple")} <span>Copy link</span></button></div>
@@ -156,7 +156,7 @@ export async function pageKit(app, id) {
       <div class="who"><b class="kv-name"${it.reason ? ` title="${esc(it.reason)}${it.tuned?.length ? `; ${esc(it.tuned.join(", "))}` : ""}"` : ""}>${esc(it.name)}</b><span class="kv-meta">${esc(it.title !== it.name ? `${it.title} by ${it.author}` : `by ${it.author}`)}${it.reason && /^nothing/.test(it.reason) ? `<em class="kv-why"> · nothing in the registry matched this vibe</em>` : ""}</span>${(() => { const shown = knobs.filter(([k, v]) => k !== "seed" && v !== false); return shown.length ? `<span class="kv-knobs" title="Knobs tuned for this kit">${shown.map(([k, v]) => `${esc(k)} <b>${esc(String(v))}</b>`).join(", ")}</span>` : ""; })()}
 </div>
       <span class="kv-acts"><a href="#/a/${esc(it.assetId)}${it.licence ? `?lic=${esc(it.licence)}` : ""}" title="Open with knobs" aria-label="Open ${esc(it.name)} with knobs">${icon("sliders-horizontal")}</a>${it.wav ? `<a href="${esc(it.wav)}" title="WAV, 44.1 kHz" aria-label="Download ${esc(it.name)} as WAV">${icon("download-simple")}</a><button type="button" class="kv-code" aria-expanded="false" aria-controls="kv-code-${i}" title="Import line" aria-label="Show the import line">${icon("code")}</button>` : ""}</span>
-      <div class="amt num${paid || it.price === 0 ? " clean" : ""}">${it.covered ? "included" : price(it.price)}<small>${it.covered ? "same program" : paid && k.items.slice(0, i).some((x) => x.assetId === it.assetId && x.price > 0) ? "billed again" : paid ? "" : it.price === 0 ? "free" : "preview"}</small></div>
+      <div class="amt num${paid || it.price === 0 ? " clean" : ""}">${it.covered ? "included" : price(it.price)}<small${paid && !it.covered && k.items.slice(0, i).some((x) => x.assetId === it.assetId && x.price > 0) ? ' class="again"' : ""}>${it.covered ? "same program" : paid && k.items.slice(0, i).some((x) => x.assetId === it.assetId && x.price > 0) ? "billed again" : paid ? "" : it.price === 0 ? "free" : "preview"}</small></div>
       ${it.wav ? `<div class="links" id="kv-code-${i}" hidden><code>import { play } from "${esc(it.module)}"</code></div>` : ""}
     </div>`;
   }
@@ -201,7 +201,7 @@ export async function pageKit(app, id) {
       `Kit page: ${location.origin}/#/kit/${k.id}`, ""].join("\n") });
     files.push({ name: `${kitSlug}/LICENSE.txt`, data: [own ? `Licensed with PayPal order ${k.licence.orderId} on ${new Date(k.licence.at).toUTCString()}.` : "Not licensed yet. These files are previews.", "",
       "Parts, their programs and who made them:", ...manifest.parts.map((p) => `  ${p.name}: ${p.title} (${p.program}) by ${p.author}`), "",
-      own ? "What the order bought, in the registry's words: a \"license to import and ship\" each program (the description on every program's HTTP 402). Oasis has not published fuller terms yet (commercial use, credit, redistribution); check the kit page for them before you ship." : "",
+      own ? "What the order bought, in the registry's words: a \"license to import and ship\" each program (the description on every program's HTTP 402). Oasis has not published fuller terms yet (commercial use, credit, redistribution); until it does, that one line is the whole license." : "",
       own ? "Refunds: an order can be refunded for 14 days; a refund revokes its licenses.\n" : "",
       `Suggested credit line: Sounds from Oasis by ${[...new Set(manifest.parts.map((p) => p.author))].join(", ")}.`, ""].join("\n") });
     const { zip } = await import("/zip.js");

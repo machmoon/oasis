@@ -356,15 +356,18 @@ test("payouts never go to a placeholder address: those shares stay booked and th
   assert.equal(o.payoutHold.notSent.length, 1);
 });
 
-test("a partial refund returns part of the money, keeps the licences, and shrinks the held creator shares", async () => {
+test("refunding repeated lines returns their money from the shares those lines created, and keeps the licences", async () => {
   const store = await import("../server/store.js"), commerce = await import("../server/commerce.js");
-  await store.put("orders", "PARTIAL-1", { id: "PARTIAL-1", status: "COMPLETED", total: 23, captureId: "CAP-P1", createdAt: new Date().toISOString(), items: [], licenses: [{ token: "lic-p1" }],
-    payoutHold: { status: "HELD", releaseAfter: new Date(Date.now() + 864e5).toISOString(), items: [{ email: "a@example.com", amount: 13.5, ref: "r" }] } });
-  await store.put("licenses", "lic-p1", { token: "lic-p1", revoked: false });
-  const o = await commerce.refund("PARTIAL-1", { amountUsd: 8, reason: "billed twice" });
+  const items = [{ assetId: "fs", price: 3 }, { assetId: "rain", price: 4 }, { assetId: "fs", price: 3 }, { assetId: "fs", price: 3 }];
+  const hold = items.map((it, i) => ({ email: it.assetId === "fs" ? "foley@example.com" : "storm@example.com", amount: it.price * 0.9, ref: `REP-1-${i}-creator` }));
+  await store.put("orders", "REP-1", { id: "REP-1", status: "COMPLETED", total: 13, captureId: "CAP-R1", createdAt: new Date().toISOString(), items, licenses: [{ token: "lic-r1" }],
+    payoutHold: { status: "HELD", releaseAfter: new Date(Date.now() + 864e5).toISOString(), items: hold } });
+  await store.put("licenses", "lic-r1", { token: "lic-r1", revoked: false });
+  const o = await commerce.refund("REP-1", { repeats: true, reason: "billed twice" });
   assert.equal(o.status, "COMPLETED");
-  assert.equal(o.partialRefunds[0].usd, 8);
-  assert.equal((await store.get("licenses", "lic-p1")).revoked, false);
-  assert.equal(o.payoutHold.items[0].amount, +(13.5 * 15 / 23).toFixed(2));
-  await assert.rejects(commerce.refund("PARTIAL-1", { amountUsd: 20 }), /less than what is left/);
+  assert.equal(o.partialRefunds[0].usd, 6, "two extra footstep lines");
+  assert.deepEqual(o.refundedRepeats, [2, 3]);
+  assert.deepEqual(o.payoutHold.items.map((h) => h.ref), ["REP-1-0-creator", "REP-1-1-creator"], "the rain creator keeps their whole share");
+  assert.equal((await store.get("licenses", "lic-r1")).revoked, false);
+  await assert.rejects(commerce.refund("REP-1", { repeats: true }), /already refunded/);
 });
