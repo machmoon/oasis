@@ -303,3 +303,34 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
 @media (max-width: 599px) { .kv-all .kv-live { display: none; } }
 .sp-axis.spec { left: auto; right: 10px; }
 .hero-sound .hs-pic { overflow: hidden; }
+
+/* ---------- the keyboard strip (public/keys.js): a voice's notes, playable with the pointer or the computer keys ---------- */
+.ks { display: grid; gap: 10px; min-width: 0; padding: 14px 16px 12px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); }
+.sp-keys { margin-top: 12px; }
+.ks-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; min-width: 0; }
+.ks-title { font-weight: var(--w-semibold); color: var(--ink); }
+.ks-status { flex: 1 1 auto; min-width: 0; font: var(--fs-xs) var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.ks-status.err { color: var(--danger, #C2412D); }
+.ks-oct { display: inline-flex; align-items: center; gap: 6px; font: var(--fs-xs) var(--font-mono); color: var(--muted); }
+.ks-ob { width: 26px; height: 26px; display: grid; place-items: center; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--sunk); color: var(--ink); font: 600 12px var(--font-mono); text-transform: uppercase; cursor: pointer; }
+.ks-ob:hover { border-color: var(--accent); }
+.ks-ob:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ks-row { min-width: 58px; text-align: center; }
+.ks oasis-keys { --keys-h: clamp(96px, 22vw, 140px); min-width: 0; }
+.ks-hint { margin: 0; font-size: var(--fs-xs); color: var(--muted); line-height: 1.6; }
+.ks-hint kbd { display: inline-block; min-width: 1.5em; padding: 0 4px; border: 1px solid var(--line-strong); border-bottom-width: 2px; border-radius: 4px; background: var(--sunk); color: var(--ink); font: 600 11px/1.5 var(--font-mono); text-align: center; }
+/* touch screens have no computer keys to map: keep the keys, drop the octave row and the hint */
+@media (pointer: coarse) and (hover: none) { .ks-oct, .ks-hint { display: none; } }
+@media (max-width: 599px) { .ks { padding: 12px 12px 10px; } }
+
+/* the kit's "Play the kit" strip: a voice picker over the same keyboard */
+.kp { display: grid; gap: 10px; margin: 0 0 24px; min-width: 0; }
+.kp-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.kp-head h2 { margin: 0; font-size: var(--fs-lg); letter-spacing: var(--ls-snug); }
+.kp-head p { margin: 0; font-size: var(--fs-sm); color: var(--muted); }
+.kp-voices { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 2px; margin: -2px; }
+.kp-voices::-webkit-scrollbar { display: none; }
+.kp-voices button { flex: none; height: 32px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: var(--r-pill); background: var(--surface); color: var(--ink); font: 500 var(--fs-sm) var(--font-sans); cursor: pointer; white-space: nowrap; }
+.kp-voices button[aria-checked="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.kp-voices button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.kp-voice { min-height: 120px; }

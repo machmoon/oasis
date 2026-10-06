@@ -10,6 +10,8 @@ import { audio, unlock, loadWav, toBuffer, play, renderInWorker, analyse } from 
 import { mountWave, mountLive, WaveSurfer, Minimap, Regions, ROSEUS_STOPS, onTheme } from "/wave.js";
 import { scaleLinear, scaleLog, scaleSqrt } from "d3-scale";
 import "/knob.js";
+import { mountKeys } from "/keys.js";
+import { playableNotes, noteKnob } from "/keys-core.js";
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -49,17 +51,20 @@ export function controls(entries) {
   return `${dial.length ? `<div class="a-dials">${dial.map(([k, d]) => control(k, d)).join("")}</div>` : ""}${rest.map(([k, d]) => control(k, d)).join("")}`;
 }
 
-/** The renderer a page uses: Worker when the source is in hand, server otherwise. Resolves { buffer, analysis, ms, watermarked }. */
-export function makeRenderer(a, { licence = null } = {}) {
+/** The renderer a page uses: Worker when the source is in hand, server otherwise. Resolves { buffer, analysis, ms, watermarked }.
+ * `analysis: false` skips the numbers (the keyboard renders a note per key and only needs the buffer). */
+export function makeRenderer(a, { licence = null, analysis = true } = {}) {
   const source = a.source || null;
   return async (knobs) => {
     const t0 = performance.now();
     if (source) {
       const { samples, sr, ms } = await renderInWorker(source, knobs, audio().sampleRate);
-      return { buffer: toBuffer(samples, sr), analysis: analyse(samples, sr, { cols: 320 }), ms, watermarked: false, where: "worker" };
+      return { buffer: toBuffer(samples, sr), analysis: analysis ? analyse(samples, sr, { cols: 320 }) : null, ms, watermarked: false, where: "worker" };
     }
     const p = `?p=${encodeURIComponent(JSON.stringify(knobs))}`;
     const url = licence ? `/api/licenses/${licence}/render.wav${p}` : `/api/assets/${a.id}/render.wav${p}`;
+    // the keyboard (public/keys.js) asks for the samples only: same WAV route, so an unpaid preview keeps its watermark
+    if (!analysis) { const buffer = await loadWav(url); return { buffer, analysis: null, ms: Math.round(performance.now() - t0), watermarked: buffer.oasisWatermarked, where: "server" }; }
     const [buffer, an] = await Promise.all([loadWav(url), api(licence ? `/api/assets/${a.id}/sound.json${p}&lic=${licence}` : `/api/assets/${a.id}/sound.json${p}`)]);
     return { buffer, analysis: an, ms: Math.round(performance.now() - t0), watermarked: buffer.oasisWatermarked, where: "server" };
   };
@@ -74,6 +79,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
   const licence = params.get("lic");
   const others = Object.entries(knobs).filter(([k]) => k !== "seed");
   const kitName = a.kit || a.worldKit;
+  const notes = playableNotes(knobs); // a voice with a note knob gets a keyboard under the stage
 
   app.innerHTML = `<div class="wrap a-page">
     <nav class="a-crumb" aria-label="Breadcrumb"><a href="#/sounds">Sounds</a>${kitName ? `<span>/</span><a href="#/sounds?kit=${encodeURIComponent(kitName)}">${esc(kitName)}</a>` : ""}<span>/</span><span>${esc(a.title)}</span></nav>
@@ -104,6 +110,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
           <div class="sp-readout" id="sp-readout" aria-live="polite"><span class="skel"></span><span class="skel" style="width:80px"></span></div>
           <div class="sp-tools"><button class="btn small" id="sp-ab" aria-pressed="false" title="Play the defaults, then your remix">${icon("arrows-left-right")} A/B</button></div>
         </div>
+        ${notes.length ? `<section class="sp-keys" id="sp-keys" aria-label="Play ${esc(a.title)} on a keyboard"></section>` : ""}
       </div>
       <aside class="a-knobs">
         <h2>Knobs <button type="button" id="a-reset">Reset</button></h2>
@@ -171,6 +178,10 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
     walkCode();
   };
   const playCurrent = () => { if (current) wave.play(); };
+  // the keyboard: every note at the current knobs, rendered ahead through the same renderer (public/keys.js)
+  const keyKnob = notes.length ? noteKnob(knobs) : null;
+  const keyStrip = notes.length ? mountKeys($("#sp-keys"), { notes, knobName: keyKnob, render: makeRenderer(a, { licence, analysis: false }), values: () => values, title: "Play it", label: `${a.title} keyboard` }) : null;
+  if (keyStrip) addEventListener("hashchange", () => setTimeout(() => { if (!stage.isConnected) keyStrip.destroy(); }, 0), { once: true });
   const rebuild = async (what) => {
     const run = ++n; stage.classList.add("busy"); $("#sp-err").hidden = true;
     let res;
@@ -199,6 +210,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
     const d = knobs[k];
     clearTimeout(rebuild.t);
     rebuild.t = setTimeout(() => rebuild(label || `${d.label || k} ${fmt(d, old)} → ${fmt(d, val)}`), 60);
+    if (k !== keyKnob) keyStrip?.changed(); // the note knob only picks the stage's note; the keys already hold every note
   };
   const paint = () => {
     for (const [k, d] of Object.entries(knobs)) {
@@ -217,7 +229,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
   });
   $("#a-dice")?.addEventListener("click", () => { const d = knobs.seed; const v = d.min + Math.floor(Math.random() * (d.max - d.min + 1)); $("#k-seed").value = v; setKnob("seed", v, `new take, seed ${v}`); });
   $("#sp-retry").addEventListener("click", () => rebuild(current ? "retried" : null));
-  $("#a-reset").addEventListener("click", () => { if (!Object.keys(diff()).length) return; for (const [k, d] of Object.entries(knobs)) values[k] = d.default; hot = null; paint(); clearTimeout(rebuild.t); rebuild.t = setTimeout(() => rebuild("reset to defaults"), 40); });
+  $("#a-reset").addEventListener("click", () => { if (!Object.keys(diff()).length) return; for (const [k, d] of Object.entries(knobs)) values[k] = d.default; hot = null; paint(); clearTimeout(rebuild.t); rebuild.t = setTimeout(() => rebuild("reset to defaults"), 40); keyStrip?.changed(); });
   $("#sp-play").addEventListener("click", async () => { await unlock(); if (wave.playing) { loop = false; $("#sp-loop").classList.remove("on"); $("#sp-loop").setAttribute("aria-pressed", "false"); wave.stop(); return; } playCurrent(); });
   $("#sp-loop").addEventListener("click", async () => { loop = !loop; $("#sp-loop").classList.toggle("on", loop); $("#sp-loop").setAttribute("aria-pressed", loop); if (loop && !wave.playing) { await unlock(); playCurrent(); } });
   $("#sp-ab").addEventListener("click", async () => {
