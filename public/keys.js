@@ -22,13 +22,16 @@ const css = `
 .k.w { height: 100%; background: var(--surface); color: var(--muted); z-index: 1; }
 .k.b { height: 61%; background: var(--ink); color: var(--bg); border-color: var(--ink); z-index: 2; border-radius: 0 0 4px 4px; padding-bottom: 5px; font-size: 9.5px; }
 .k.off.w { background: var(--sunk); color: color-mix(in srgb, var(--muted) 55%, transparent); cursor: default; }
-.k.off.b { background: color-mix(in srgb, var(--ink) 42%, var(--sunk)); border-color: transparent; cursor: default; }
+.k.off.b { background: color-mix(in srgb, var(--ink) 30%, var(--bg)); border-color: transparent; cursor: default; }
+.k:not(.off)::before { content: ""; order: -1; width: 5px; height: 5px; margin-bottom: 3px; border-radius: 50%; background: var(--accent); } /* a playable key */
+.k.w:not(.off) .n { color: var(--ink); }
 .k.on { background: var(--accent) !important; color: var(--accent-ink) !important; border-color: var(--accent) !important; transform: translateY(1px); }
 .k.wait:not(.on) { background-image: linear-gradient(0deg, color-mix(in srgb, var(--accent) 22%, transparent), transparent 60%); }
 .k:focus-visible { box-shadow: inset 0 0 0 2px var(--accent), 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); z-index: 3; }
 .k .q { opacity: .9; text-transform: uppercase; }
 .k .n { font-weight: 500; opacity: .75; }
 .k.b .n { display: none; }
+@media (pointer: coarse) and (hover: none) { .k .q { display: none; } } /* no computer keys on a phone: no letters */
 @media (max-width: 599px) { .k { font-size: 9px; padding-bottom: 5px; } .k.b { font-size: 8px; } }
 @media (prefers-reduced-motion: reduce) { .k { transition: none; } .k.on { transform: none; } }
 `;
@@ -124,7 +127,7 @@ class OasisKeys extends HTMLElement {
     if (e.pointerType === "mouse" && e.button !== 0) return;
     const m = this._at(e.clientX, e.clientY);
     e.preventDefault(); // no text selection, no focus-scroll, no emulated mouse events after a touch
-    if (m !== null && this.playable.has(m)) { const b = this._btn(m); this._rove(b); b.focus({ preventScroll: true }); }
+    if (m !== null && this.playable.has(m)) { const b = this._btn(m); this._rove(b); b.focus({ preventScroll: true, focusVisible: false }); }
     this.bed.setPointerCapture?.(e.pointerId);
     this.pointers.set(e.pointerId, m);
     this._press(m);
@@ -238,7 +241,7 @@ const escAttr = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;
  * `notes` from keys-core playableNotes(knobs); `values()` the knob values to play with (the page's live object). */
 export function mountKeys(host, { notes, knobName, render, values, title = "Play it", label = "Keyboard" }) {
   host.classList.add("ks");
-  host.innerHTML = `<div class="ks-head"><b class="ks-title">${escAttr(title)}</b><span class="ks-status" aria-live="polite"></span>
+  host.innerHTML = `<div class="ks-head">${title ? `<b class="ks-title">${escAttr(title)}</b>` : ""}<span class="ks-status" aria-live="polite"></span>
     <span class="ks-oct" role="group" aria-label="Computer keyboard octave"><button type="button" class="ks-ob" data-d="-1" aria-label="Octave down (Z)">z</button><span class="ks-row"></span><button type="button" class="ks-ob" data-d="1" aria-label="Octave up (X)">x</button></span></div>
     <oasis-keys label="${escAttr(label)}" notes="${escAttr(notes.map((n) => n.name).join("|"))}"></oasis-keys>
     <p class="ks-hint">Click or tap the keys, drag across them, or play <kbd>a</kbd>&#8202;<kbd>w</kbd>&#8202;<kbd>s</kbd>&#8202;<kbd>e</kbd>&#8202;<kbd>d</kbd> … <kbd>k</kbd> on your keyboard; <kbd>z</kbd> <kbd>x</kbd> change octave.</p>`;
@@ -280,7 +283,7 @@ export function mountKitPlayer(host, voices, { renderFor, title = "Play the kit"
     group.querySelectorAll("button").forEach((b) => { const on = Number(b.dataset.i) === i; b.setAttribute("aria-checked", on); b.tabIndex = on ? 0 : -1; });
     strip?.destroy();
     const values = { ...Object.fromEntries(Object.entries(v.knobs).map(([k, d]) => [k, d.default])), ...(v.values || {}) };
-    strip = mountKeys(slot, { notes: v.notes, knobName: noteKnobOf(v.knobs), render: renderFor(v), values: () => values, title: v.title, label: `${v.title} keyboard` });
+    strip = mountKeys(slot, { notes: v.notes, knobName: noteKnobOf(v.knobs), render: renderFor(v), values: () => values, title: "", label: `${v.title} keyboard` });
   };
   group.addEventListener("click", (e) => { const b = e.target.closest("button[data-i]"); if (b) pick(Number(b.dataset.i)); });
   // a radiogroup moves with the arrow keys (WAI-ARIA radio pattern); stopPropagation keeps them off the note keys
