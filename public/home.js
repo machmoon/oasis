@@ -53,7 +53,7 @@ export async function pageHome(app, ctx) {
       <p class="hero-alt">Or <a class="link" href="#/sounds">browse all the sounds</a></p>
     </div></div>
     <div class="hero-readout" id="readout" aria-live="polite"><i class="live"></i><span>rendering a footstep</span></div>
-    <div class="hero-pay" id="hero-pay"><div class="hero-chips" id="hero-chips"></div><span class="btn paypal pay" id="pay-btn">${icon("paypal-logo")} Pay <span class="money num" id="pay-money">$0.00</span></span></div>
+    <div class="hero-pay" id="hero-pay" hidden><div class="hero-chips" id="hero-chips"></div><span class="btn paypal pay" id="pay-btn">${icon("paypal-logo")} Pay <span class="money num" id="pay-money">$0.00</span></span></div>
   </section>
 
   <section class="wrap band">

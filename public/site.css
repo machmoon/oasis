@@ -386,7 +386,7 @@ body > main { flex: 1 0 auto; }
 
 /* the hero shows the product, not a picture of a payment button: the fake Pay pill and its chips are gone (the real
    checkout is on every kit), and the readout is plain text without an always-on status dot */
-.hero-pay { display: none; }
+#hero-pay[hidden] { display: none !important; } /* the old animated Pay pill: a span dressed as PayPal's button; real checkout lives on each kit */
 .hero-readout i { display: none; }
 
 /* the hero's live caption repeats the knob strip above it: kept for screen readers (aria-live), not drawn */
@@ -405,3 +405,10 @@ body > main { flex: 1 0 auto; }
   background: hsl(var(--av-h) 55% 90%); color: hsl(var(--av-h) 45% 28%); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .av { background: hsl(var(--av-h) 35% 22%); color: hsl(var(--av-h) 60% 82%); } }
 :root[data-theme="dark"] .av { background: hsl(var(--av-h) 35% 22%); color: hsl(var(--av-h) 60% 82%); }
+
+/* kit receipt: one line per creator, the parts behind a disclosure (a Stripe invoice's line-item summary) */
+.receipt details.r-who > summary { list-style: none; cursor: pointer; }
+.receipt details.r-who > summary::-webkit-details-marker { display: none; }
+.receipt details.r-who > summary small { color: var(--muted); font-weight: 400; font-size: var(--fs-xs); margin-left: 6px; }
+.receipt details.r-who > summary span::after { content: "›"; display: inline-block; margin-left: 6px; color: var(--muted); transition: transform var(--t); }
+.receipt details.r-who[open] > summary span::after { transform: rotate(90deg); }
