@@ -249,6 +249,20 @@ function niceStep(dur, target) {
   return [1, 2, 5, 10].map((m) => m * p).find((s) => s >= raw) || raw;
 }
 
+/** A take without its trailing digital silence (below -60 dBFS), keeping 80 ms of tail, so the waveform and the
+ * spectrogram fill their frame instead of running a flat line to the edge. Nothing audible is cut. */
+function trimTail(buf) {
+  if (!buf || buf.numberOfChannels !== 1) return buf;
+  const d = buf.getChannelData(0); let last = d.length - 1;
+  while (last > 0 && Math.abs(d[last]) < 0.001) last--;
+  const keep = Math.min(d.length, last + Math.round(0.08 * buf.sampleRate));
+  if (keep >= d.length * 0.95) return buf;
+  const out = new AudioBuffer({ length: keep, sampleRate: buf.sampleRate, numberOfChannels: 1 });
+  out.copyToChannel(d.subarray(0, keep), 0);
+  for (const k of ["oasisWatermarked", "oasisTakes"]) if (buf[k] !== undefined) out[k] = buf[k];
+  return out;
+}
+
 /**
  * Mounts a waveform. Options: height, spectrogram (px height or 0), timeline (an element to hold the ticks),
  * hover, barWidth/barGap/barRadius, compact (no interaction), onState(playing).
@@ -292,6 +306,7 @@ export function mountWave(container, opts = {}) {
     get playing() { return !media.paused; },
     /** Shows a take. When a picture is already up, the old bars glide into the new ones. */
     async show(buf, { dim: d = false, morph = true } = {}) {
+      buf = trimTail(buf);
       const was = !media.paused;
       if (was) ws.pause();
       dim = d; state.dim = d; buffer = buf;
