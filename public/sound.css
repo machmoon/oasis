@@ -420,3 +420,5 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
 .fk-row { display: grid !important; grid-template-columns: 1fr 1.3fr 110px; gap: 10px; margin-top: 12px; }
 .fk-f input { width: 100%; }
 @media (max-width: 599px) { .fk-row { grid-template-columns: 1fr; } }
+
+@media (max-width: 599px) { .kv-all { flex-wrap: wrap; } .kv-all .kv-pads { flex: 1 1 100%; justify-content: center; } .kv-body > * { min-width: 0; } }

@@ -26,13 +26,18 @@ function catalogLines() {
 const STOP = new Set(["a", "an", "the", "in", "at", "of", "with", "and", "for", "on", "to", "by", "my", "some", "kit", "sounds", "sound"]);
 const NEAR = { haunted: ["horror", "ghost", "creak", "night"], spooky: ["horror", "ghost", "night"], creepy: ["horror", "creak"], scary: ["horror"], ocean: ["sea", "harbour", "wave", "gull"], sea: ["harbour", "wave"], beach: ["wave", "harbour", "gull"], city: ["street", "traffic", "rain"], urban: ["street", "traffic"], space: ["sci-fi", "console", "laser"], spaceship: ["sci-fi", "console", "servo"], robot: ["sci-fi", "servo", "console"], cyberpunk: ["neon", "rain", "sci-fi", "street"], medieval: ["market", "anvil", "tavern"], fantasy: ["tavern", "market", "magic"], cafe: ["office", "mug", "cup", "kitchen"], coffee: ["mug", "cup", "kitchen"], cooking: ["kitchen"], car: ["engine", "door", "car"], drive: ["car", "engine"], game: ["arcade", "coin", "blip"], retro: ["arcade", "chip", "pixel"], arcade: ["coin", "blip", "pixel"], drums: ["kick", "snare", "hat"], beat: ["kick", "snare", "hat"], woods: ["forest", "owl", "night"], forest: ["owl", "night", "wind"], lighthouse: ["harbour", "sea", "wind", "foghorn"], storm: ["rain", "thunder", "wind"], ui: ["click", "interface", "toggle"], menu: ["click", "interface", "ui"] };
 export function planByKeywords(vibe, { count = 8 } = {}) {
-  const words = vibe.toLowerCase().split(/[^a-z0-9-]+/).filter((t) => t.length > 2 && !STOP.has(t));
+  // plurals match their singular ("footsteps" finds Footstep, "clicks" finds Click)
+  const words = [...new Set(vibe.toLowerCase().split(/[^a-z0-9-]+/).filter((t) => t.length > 2 && !STOP.has(t)).map((t) => (t.length > 4 && t.endsWith("s") && !t.endsWith("ss") ? t.slice(0, -1) : t)))];
   const terms = [...new Set(words.flatMap((t) => [t, ...(NEAR[t] || [])]))];
-  const scored = sounds().map((a) => {
-    const hay = `${a.title} ${a.tags.join(" ")} ${a.description} ${a.kind} ${a.worldKit || ""}`.toLowerCase();
+  // a word that matches half the registry says little; a word that matches three sounds says a lot: each term is
+  // weighted by its inverse document frequency, ln(N / df), the weighting of classic TF-IDF (Lucene's TFIDFSimilarity)
+  const all = sounds(), hays = new Map(all.map((a) => [a.id, `${a.title} ${a.tags.join(" ")} ${a.description} ${a.kind} ${a.worldKit || ""}`.toLowerCase()]));
+  const idf = Object.fromEntries(terms.map((t) => { const df = all.filter((a) => hays.get(a.id).includes(t)).length; return [t, Math.log((all.length + 1) / (df + 1)) + 0.2]; }));
+  const scored = all.map((a) => {
+    const hay = hays.get(a.id);
     let s = 0; const hit = [];
     for (const t of terms) {
-      const w = words.includes(t) ? 1 : 0.6; // a near word counts for less than the person's own word
+      const w = (words.includes(t) ? 1 : 0.6) * idf[t]; // a near word counts for less than the person's own word
       let ts = 0;
       if (a.title.toLowerCase().includes(t)) ts += 4; if (a.tags.some((x) => x.includes(t))) ts += 3; if ((a.worldKit || "").toLowerCase().includes(t)) ts += 2; if (hay.includes(t)) ts += 1;
       if (ts) { s += ts * w; hit.push(t); }
@@ -41,13 +46,17 @@ export function planByKeywords(vibe, { count = 8 } = {}) {
   }).sort((x, y) => y[1] - x[1]);
   const picked = [], kinds = {};
   for (const e of scored) { if (picked.length >= count) break; if ((kinds[e[0].kind] || 0) >= Math.ceil(count / 3)) continue; picked.push(e); kinds[e[0].kind] = (kinds[e[0].kind] || 0) + 1; }
-  for (const e of scored) { if (picked.length >= count) break; if (!picked.includes(e)) picked.push(e); }
+  // a part that matched nothing is not sold as part of the kit; only if the vibe matched almost nothing does the kit
+  // fall back to the closest sounds, and then each says so
+  const matched = picked.filter((e) => e[2].length);
+  const final = matched.length >= 4 ? matched : picked.slice(0, Math.max(4, matched.length));
+  picked.length = 0; picked.push(...final);
   const titleWords = vibe.split(/\s+/).filter(Boolean);
   while (titleWords.length && STOP.has(titleWords[0].toLowerCase())) titleWords.shift();
   const t4 = titleWords.slice(0, 4); while (t4.length > 1 && STOP.has(t4[t4.length - 1].toLowerCase())) t4.pop();
   const title = t4.map((w) => w[0].toUpperCase() + w.slice(1)).join(" ").replace(/[,:;.]+$/, "") || "Untitled Kit";
   return { title, items: picked.map(([a, , hit], i) => ({ assetId: a.id, knobs: a.params.knobs.seed ? { seed: 1 + (hash(vibe + i) % 500) } : {}, name: a.title,
-    reason: hit.length ? `matched ${hit.slice(0, 3).map((h) => `"${h}"`).join(", ")}` : "nothing in the registry matched; picked to round out the kit" })) };
+    reason: (() => { const own = hit.filter((h) => words.includes(h)), near = hit.filter((h) => !words.includes(h)); return own.length ? `matched ${own.slice(0, 3).map((h) => `"${h}"`).join(", ")}${near.length ? `, near ${near.slice(0, 2).map((h) => `"${h}"`).join(", ")}` : ""}` : near.length ? `near words ${near.slice(0, 3).map((h) => `"${h}"`).join(", ")}` : "nothing in the registry matched; picked as the closest sound"; })() })) };
 }
 
 const SYSTEM = `You are the sound supervisor for Oasis, a registry where every sound is a program with typed knobs. A person gives you a one-line vibe; you build them a kit of 6 to 10 sounds from the catalogue, each with knobs tuned to the vibe (materials, weight, wetness, distance, brightness, pitch, a different seed per part), so the kit plays as one place. Cover what the vibe asks for first, then round it out (a bed, a few one-shots, a UI or impact if it fits). Name each part the way a sample pack would ("Alley Step L", "Neon Click"). Keep the total modest.
@@ -76,7 +85,7 @@ export async function planKit(vibe) {
 /** Only real sounds, knobs resolved against their schemas, 6-10 parts, priced from the catalogue. */
 export function cleanKit(vibe, plan, planner = "keywords") {
   let items = (plan.items || []).map((it) => { const a = catalog.getAsset(it.assetId); return a && a.format === "sound" ? { a, it } : null; }).filter(Boolean).slice(0, 10);
-  if (items.length < 6 && planner !== "single") { const fill = planByKeywords(vibe, { count: 10 }).items.filter((f) => !items.some((x) => x.a.id === f.assetId)); for (const f of fill) { if (items.length >= 6) break; items.push({ a: catalog.getAsset(f.assetId), it: f }); } }
+  if (items.length < 6 && planner !== "single" && planner !== "keywords") { const fill = planByKeywords(vibe, { count: 10 }).items.filter((f) => !items.some((x) => x.a.id === f.assetId)); for (const f of fill) { if (items.length >= 6) break; items.push({ a: catalog.getAsset(f.assetId), it: f }); } }
   // A licence is to the program, so a kit charges each program once: a second part on the same program is covered.
   const seen = new Set();
   const lines = items.map(({ a, it }, i) => {

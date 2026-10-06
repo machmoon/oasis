@@ -528,6 +528,9 @@ export async function pagePads(app, id) {
   });
   $("#cr-chips").addEventListener("click", (e) => { const c = e.target.closest("[data-style]"); if (!c) return; applyStyle(c.dataset.style); if (!seq.playing) play(); });
   // the prompt: CRATE's direct commands and style words, parsed here (KeywordParser.swift, Orchestrator+Edit.swift:329-378)
+  // a style is named by whole words: "house" picks House, "lighthouse" is a vibe to dig
+  const wordRx = (w) => new RegExp(`(^|[^a-z0-9&])${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}($|[^a-z0-9&])`);
+  const styleIn = (q) => STYLE_ORDER.find((k) => [k, ...STYLES[k].words].some((w) => wordRx(w).test(q)));
   const nudge = (dir) => rows.forEach((r, i) => r.forEach((h) => { if (!h) return; const amt = /snare|clap/.test(pads[i].role || "") ? 0.08 : pads[i].role === "hat" ? 0.04 : 0; h.late = Math.max(-0.3, Math.min(0.4, h.late + dir * amt)); }));
   const command = (text) => {
     const q = text.toLowerCase().trim(); if (!q) return "";
@@ -546,7 +549,7 @@ export async function pagePads(app, id) {
       const hitLanes = pads.map((p, i) => i).filter((i) => pads[i].role === alias || pads[i].item.name.toLowerCase().includes(word));
       if (hitLanes.length) { snapshot(); hitLanes.forEach((i) => rows[i].fill(null)); paintMain(); return `CLEARED ${alias.toUpperCase()}`; }
     }
-    const style = STYLE_ORDER.find((k) => q.includes(k) || STYLES[k].words.some((w) => q.includes(w)));
+    const style = styleIn(q);
     if (style) { applyStyle(style); if (!seq.playing) play(); return STYLES[style].label; }
     return "?";
   };
@@ -564,7 +567,7 @@ export async function pagePads(app, id) {
     // several commands in one line ("boom bap, bpm 96, take out the hats") run in order, a style first so the
     // rest edit its groove
     const text = $("#cr-q").value.trim(), bits = text.split(/\s*(?:,|;|\band then\b|\bthen\b)\s*/).filter(Boolean);
-    const rank = (b) => (STYLE_ORDER.some((k) => b.toLowerCase().includes(k) || STYLES[k].words.some((w) => b.toLowerCase().includes(w))) ? 0 : 1);
+    const rank = (b) => (styleIn(b.toLowerCase()) ? 0 : 1);
     const results = bits.length > 1 ? [...bits].sort((a, b) => rank(a) - rank(b)).map(command) : [command(text)];
     const r = results.every((x) => x === "?") ? "?" : results.filter((x) => x !== "?").join(" · ");
     if (r === "?" && text.split(/\s+/).length >= 2) return dig(text);
