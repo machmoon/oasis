@@ -358,7 +358,7 @@ export async function pagePads(app, id) {
           </div>
         </section>
       </div>
-      <p class="cr-foot">Keys <kbd>Z X C V</kbd> pads 1-4, <kbd>A S D F</kbd> 5-8, <kbd>Q W E R</kbd> 9-12, <kbd>1 2 3 4</kbd> 13-16. <kbd>Space</kbd> play, <kbd>Return</kbd> record, <kbd>/</kbd> the prompt. Where you strike a pad is how hard. Pull the hinge up for the punch, then down fast for the drop. Every hit is the next take rendered from that pad's program.</p>
+      <p class="cr-foot">Keys ${[["Z X C V", "1-4"], ["A S D F", "5-8"], ["Q W E R", "9-12"], ["1 2 3 4", "13-16"]].slice(0, Math.ceil(pads.length / 4)).map(([k, r]) => `<kbd>${k}</kbd> pads ${r}`).join(", ")}. <kbd>Space</kbd> play, <kbd>Return</kbd> record, <kbd>/</kbd> the prompt. Where you strike a pad is how hard. Pull the hinge up for the punch, then down fast for the drop. Every hit is the next take rendered from that pad's program.</p>
       <p class="cr-credit">The layout and the hinge are <a href="https://github.com/odoisveryverygood/crate-duo" target="_blank" rel="noopener">CRATE</a>'s, the iPhone Duo MPC that won Bitrig Hacks.</p>
     </div>
   </div>`;
