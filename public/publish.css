@@ -136,3 +136,6 @@
 @media (max-width: 599px) { .cr-avatar { width: 64px; height: 64px; } .cr-head2 { gap: 14px; } }
 .cr-head2 > div { min-width: 0; }
 .cr-pay { flex-wrap: wrap; } .cr-pay .mono { overflow-wrap: anywhere; }
+
+/* publish: before any check has run the list has no status gutter at all */
+.pb-gates:not(:has(.pb-gate.ok, .pb-gate.warn, .pb-gate.fail)) .pb-gate { grid-template-columns: 0 minmax(0, 1fr); column-gap: 0; }
