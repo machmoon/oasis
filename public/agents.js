@@ -19,28 +19,39 @@ const TOOLS = [
 
 export async function pageAgents(app) {
   const cmd = `claude mcp add --transport http oasis ${location.origin}/mcp`;
+  const mcpUrl = `${location.origin}/mcp`;
+  const clients = [
+    ["claude", "Claude Code", cmd],
+    ["cursor", "Cursor", JSON.stringify({ mcpServers: { oasis: { url: mcpUrl } } }, null, 2)],
+    ["http", "Any client", `POST ${mcpUrl}\nContent-Type: application/json\n\n{"jsonrpc":"2.0","id":1,"method":"tools/list"}`],
+  ];
+  // the order of Stripe's MCP doc (docs.stripe.com/mcp): a title and one sentence, install per client in tabs, the
+  // tools as a table, then what governs spending; plus the live proof only this server can show
   app.innerHTML = `<div class="wrap ag-page">
     <header class="ag-head"><h1>For agents</h1><p class="lede">An MCP server: agents search, preview and license sounds inside a budget you approve in PayPal.</p></header>
-    <div class="ag-flow">
-      <section class="ag-step"><h2>Connect</h2><p>One line in Claude Code. Seven tools appear.</p><div class="ag-cmd"><code id="ag-cmd">${esc(cmd)}</code><button type="button" class="btn small" id="ag-copy">${icon("copy")} Copy</button></div></section>
-      <section class="ag-step"><h2>Give it a budget</h2><p>You approve a cap and an expiry in PayPal. Oasis holds the token, enforces the cap and charges your saved PayPal wallet per order.</p><a class="btn primary" href="#/budget">${icon("wallet")} Set a budget</a></section>
-      <section class="ag-step"><h2>It licenses inside the cap</h2><p>An order over the cap, past the expiry or after you revoke is refused before PayPal is called.</p><a class="link" href="#/ledger">Every order lands in the ledger</a></section>
-    </div>
+    <section class="ag-sec"><h2>Connect</h2>
+      <div class="cr-tabs ag-tabs" role="tablist" aria-label="Client">${clients.map(([id, label], i) => `<button type="button" role="tab" id="agt-${id}" aria-controls="agp-${id}" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}">${label}</button>`).join("")}</div>
+      ${clients.map(([id, , text], i) => `<div class="ag-cmd" role="tabpanel" id="agp-${id}" aria-labelledby="agt-${id}"${i ? " hidden" : ""}><code>${esc(text)}</code><button type="button" class="btn small ag-copy" data-copy="${esc(text)}">${icon("copy")} Copy</button></div>`).join("")}
+    </section>
+    <section class="ag-sec"><h2>Tools</h2>
+      <table class="ag-table"><thead><tr><th>Tool</th><th>What it does</th><th class="num">Calls</th></tr></thead><tbody>${TOOLS.map(([t, d]) => `<tr><td><code>${t}</code></td><td>${esc(d)}</td><td class="num ag-n" data-tool="${t}">0</td></tr>`).join("")}</tbody></table>
+      <p id="ag-stats" class="ag-muted"></p>
+    </section>
     <div class="ag-grid">
-      <section class="ag-tools" aria-labelledby="ag-tools-h"><h2 id="ag-tools-h">The tools</h2><dl id="ag-tools">${TOOLS.map(([t, d]) => `<div><dt><code>${t}</code><span class="ag-n" data-tool="${t}"></span></dt><dd>${esc(d)}</dd></div>`).join("")}</dl></section>
-      <aside class="ag-side">
-        <section class="ag-live"><h2>Used so far</h2><p id="ag-stats" class="ag-muted">Loading the server's MCP counter…</p></section>
-        <section class="ag-402"><h2>Without a licence, a 402</h2><p>An agent that imports a paid program it has not licensed gets HTTP 402 with an x402 <code>PAYMENT-REQUIRED</code> header, fetched live from this server:</p><pre id="ag-402">GET /cdn/footstep.mjs …</pre></section>
-        <p class="ag-muted">The whole protocol for machines is <a class="link" href="/llms.txt">llms.txt</a>.</p>
-      </aside>
+      <section class="ag-sec"><h2>Spending</h2><p>You approve a cap and an expiry in PayPal. Oasis holds the token and charges your saved PayPal wallet per order; an order over the cap, past the expiry or after you revoke is refused before PayPal is called. Every order lands in the <a class="link" href="#/ledger">ledger</a>.</p><p style="margin-top:14px"><a class="btn primary" href="#/budget">${icon("wallet")} Set a budget</a></p></section>
+      <section class="ag-sec ag-402"><h2>Without a licence</h2><p>An import of a paid program answers HTTP 402 with an x402 <code>PAYMENT-REQUIRED</code> header. This one was fetched from this server just now:</p><pre id="ag-402">GET /cdn/footstep.mjs …</pre></section>
     </div>
+    <p class="ag-muted">The protocol for machines: <a class="link" href="/llms.txt">llms.txt</a>.</p>
   </div>`;
-  $("#ag-copy").addEventListener("click", async () => { try { await navigator.clipboard.writeText(cmd); $("#ag-copy").innerHTML = `${icon("check")} Copied`; setTimeout(() => ($("#ag-copy").innerHTML = `${icon("copy")} Copy`), 1800); } catch { const r = document.createRange(); r.selectNodeContents($("#ag-cmd")); getSelection().removeAllRanges(); getSelection().addRange(r); } });
+  const tabEls = [...app.querySelectorAll('.ag-tabs [role="tab"]')];
+  const pick = (t) => { tabEls.forEach((x) => { const on = x === t; x.setAttribute("aria-selected", on); x.tabIndex = on ? 0 : -1; document.getElementById(x.getAttribute("aria-controls")).hidden = !on; }); t.focus(); };
+  tabEls.forEach((t, i) => { t.addEventListener("click", () => pick(t)); t.addEventListener("keydown", (e) => { const d = { ArrowRight: 1, ArrowLeft: -1 }[e.key]; if (d) { e.preventDefault(); pick(tabEls[(i + d + tabEls.length) % tabEls.length]); } }); });
+  app.querySelectorAll(".ag-copy").forEach((b) => b.addEventListener("click", async () => { try { await navigator.clipboard.writeText(b.dataset.copy); b.innerHTML = `${icon("check")} Copied`; setTimeout(() => (b.innerHTML = `${icon("copy")} Copy`), 1800); } catch {} }));
   fetch("/api/stats/mcp").then((r) => r.json()).then((s) => {
     if (!$("#ag-stats")) return;
     const clients = Object.keys(s.clients || {});
     $("#ag-stats").innerHTML = `<b class="num">${s.requests}</b> MCP requests since this server started (${new Date(s.since).toLocaleString()})${clients.length ? `, from ${clients.map((c) => `<code>${esc(c)}</code>`).join(" and ")}` : ""}.`;
-    for (const [t, n] of Object.entries(s.tools || {})) { const el = document.querySelector(`.ag-n[data-tool="${t}"]`); if (el) el.textContent = `${n} call${n === 1 ? "" : "s"}`; }
+    for (const [t, n] of Object.entries(s.tools || {})) { const el = document.querySelector(`.ag-n[data-tool="${t}"]`); if (el) el.textContent = n; }
   }).catch(() => { if ($("#ag-stats")) $("#ag-stats").textContent = "The MCP counter is not available."; });
   fetch("/cdn/footstep.mjs", { headers: { Accept: "application/json" } }).then(async (r) => {
     const h = r.headers.get("PAYMENT-REQUIRED"), body = await r.json().catch(() => null);
