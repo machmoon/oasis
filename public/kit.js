@@ -138,6 +138,17 @@ export function soundCard(a) {
     <span class="s-sheet"><a href="#/a/${esc(a.id)}" class="s-link" tabindex="-1" aria-hidden="true"><img src="${soundThumb(a.id)}" alt="" loading="lazy" width="480" height="240"></a><i class="s-cursor" aria-hidden="true"></i><button class="s-play" data-play="${esc(a.id)}" aria-label="Play ${esc(a.title)}">${icon("play")}</button></span>
     <a class="s-meta" href="#/a/${esc(a.id)}"><b>${esc(a.title)}</b><em class="num">${price(a.price)}</em><span class="by">${esc(a.author)}${a.kit ? ` <i>in</i> ${esc(a.kit)}` : ""}</span><span class="facts">${esc(KIND_LABEL[a.kind] || a.kind)}<i>${a.duration} s</i><i>${a.knobCount} knobs</i></span></a></div>`;
 }
+/** A sound as a row, the way a sound library lists results (MTG/freesound templates/search/search.html renders search
+ * results as a vertical list; Splice's sample browser is rows of play, waveform, name, key/BPM, actions). The row reuses
+ * the card's classes, so play, the sweep and the picture's fade-in work unchanged. */
+export function soundRow(a) {
+  return `<div class="s-card s-row" data-id="${esc(a.id)}">
+    <button class="s-play" data-play="${esc(a.id)}" aria-label="Play ${esc(a.title)}">${icon("play")}</button>
+    <span class="s-sheet"><a href="#/a/${esc(a.id)}" class="s-link" tabindex="-1" aria-hidden="true"><img src="${soundThumb(a.id, { w: 320 })}" alt="" loading="lazy" width="320" height="160"></a><i class="s-cursor" aria-hidden="true"></i></span>
+    <a class="s-name" href="#/a/${esc(a.id)}"><b>${esc(a.title)}</b><span>${esc(a.author)}${a.kit ? ` <i>in</i> ${esc(a.kit)}` : ""}</span></a>
+    <span class="s-c s-kind">${esc(KIND_LABEL[a.kind] || a.kind)}</span><span class="s-c num">${a.duration} s</span><span class="s-c num">${a.knobCount} knobs</span>
+    <span class="s-c s-price num">${price(a.price)}</span></div>`;
+}
 const soundSkeleton = (n = 12) => Array.from({ length: n }, () => `<div class="s-skel" aria-hidden="true"><div class="skel"></div><div class="skel t"></div><div class="skel t"></div></div>`).join("");
 export function liveSoundCards(root) {
   $$(".s-sheet img:not([data-wired])", root).forEach((img) => {
@@ -184,7 +195,7 @@ export async function pageSounds(app) {
         <label class="s-sel"><span>Sort</span><select id="k-sort">${options(SORTS, "name")}</select></label>
       </div>
     </div>
-    <p class="s-count" id="k-count" aria-live="polite"></p>
+    <div class="s-countrow"><p class="s-count" id="k-count" aria-live="polite"></p><div class="s-view" role="group" aria-label="View"><button type="button" data-view="list" aria-pressed="true" title="List">${icon("list")}</button><button type="button" data-view="grid" aria-pressed="false" title="Grid">${icon("squares-four")}</button></div></div>
     <section class="kp" id="k-play" hidden aria-label="Play the kit"></section>
     <div class="s-grid" id="k-grid">${soundSkeleton()}</div>
     <div class="s-more" id="k-more" hidden><button class="btn" type="button" id="k-more-b"></button></div>
@@ -202,14 +213,18 @@ export async function pageSounds(app) {
   const grid = $("#k-grid");
   // a page of cards at a time: 265 cards at once is a wall nobody scrolls (the design critic measured 18,000 px)
   const PAGE = 48; let shown = PAGE, last = [];
+  let view = (() => { try { return localStorage.getItem("oasis.sounds.view") || "list"; } catch { return "list"; } })();
+  const setView = (v) => { view = v; try { localStorage.setItem("oasis.sounds.view", v); } catch {} $$("[data-view]", app).forEach((b) => b.setAttribute("aria-pressed", b.dataset.view === v)); grid.className = v === "list" ? "s-rows" : "s-grid"; };
+  $$("[data-view]", app).forEach((b) => b.addEventListener("click", () => { setView(b.dataset.view); paint(); }));
   const paint = () => {
-    grid.innerHTML = last.slice(0, shown).map(soundCard).join("");
+    grid.innerHTML = last.slice(0, shown).map(view === "list" ? soundRow : soundCard).join("");
     const left = last.length - shown;
     $("#k-more").hidden = left <= 0;
     if (left > 0) $("#k-more-b").textContent = `Show ${Math.min(PAGE, left)} more of ${left}`;
     liveSoundCards(grid);
   };
   $("#k-more-b").addEventListener("click", () => { shown += PAGE; paint(); });
+  setView(view);
   const draw = () => {
     shown = PAGE;
     const q = state.q.trim().toLowerCase();
@@ -280,14 +295,18 @@ export async function pageKit(app) {
   const grid = $("#k-grid");
   // a page of cards at a time: 265 cards at once is a wall nobody scrolls (the design critic measured 18,000 px)
   const PAGE = 48; let shown = PAGE, last = [];
+  let view = (() => { try { return localStorage.getItem("oasis.sounds.view") || "list"; } catch { return "list"; } })();
+  const setView = (v) => { view = v; try { localStorage.setItem("oasis.sounds.view", v); } catch {} $$("[data-view]", app).forEach((b) => b.setAttribute("aria-pressed", b.dataset.view === v)); grid.className = v === "list" ? "s-rows" : "s-grid"; };
+  $$("[data-view]", app).forEach((b) => b.addEventListener("click", () => { setView(b.dataset.view); paint(); }));
   const paint = () => {
-    grid.innerHTML = last.slice(0, shown).map(soundCard).join("");
+    grid.innerHTML = last.slice(0, shown).map(view === "list" ? soundRow : soundCard).join("");
     const left = last.length - shown;
     $("#k-more").hidden = left <= 0;
     if (left > 0) $("#k-more-b").textContent = `Show ${Math.min(PAGE, left)} more of ${left}`;
     liveSoundCards(grid);
   };
   $("#k-more-b").addEventListener("click", () => { shown += PAGE; paint(); });
+  setView(view);
   const draw = () => {
     shown = PAGE;
     let out = list.filter((a) => (state.kind === "all" || a.kind === state.kind) && (state.price === "all" || (state.price === "free") === (a.price === 0)) && (state.author === "all" || a.author === state.author));

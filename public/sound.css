@@ -427,3 +427,29 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
 :has(> .lv-spec) { transition: opacity var(--t-slow) var(--ease-out); }
 :has(> .lv-spec):not(.on) { opacity: .22; }
 :has(> .lv-spec):not(.on) .lv-tag { visibility: hidden; }
+
+/* ---------- the sounds list: rows like a sound library (Freesound's results list, Splice's sample rows): play,
+   waveform, name over maker, then the facts in columns, price last; hairlines between rows, one container ---------- */
+.s-countrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 14px 0 10px; }
+.s-countrow .s-count { margin: 0; }
+.s-view { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r-pill); padding: 2px; background: var(--surface); }
+.s-view button { display: grid; place-items: center; width: 32px; height: 28px; border: 0; border-radius: var(--r-pill); background: none; color: var(--muted); cursor: pointer; }
+.s-view button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.s-rows { display: grid; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); overflow: hidden; }
+.s-row { display: grid; grid-template-columns: 36px 168px minmax(0, 1fr) 84px 64px 72px 64px; align-items: center; gap: 16px; padding: 8px 18px 8px 12px; border: 0; border-radius: 0; box-shadow: none; background: none; transition: background var(--t-fast); }
+.s-row + .s-row { border-top: 1px solid var(--line); }
+.s-row:hover, .s-row:focus-within { transform: none; box-shadow: none; background: color-mix(in srgb, var(--ink) 4%, transparent); }
+.s-row .s-sheet { aspect-ratio: auto; height: 44px; border-radius: var(--r-sm); }
+.s-row .s-play { position: static; width: 34px; height: 34px; font-size: 14px; background: var(--ink); color: var(--bg); }
+.s-row .s-play.on { background: var(--accent); color: var(--accent-ink); }
+.s-row:hover .s-sheet img { transform: none; }
+.s-name { min-width: 0; text-decoration: none; color: inherit; display: grid; gap: 2px; }
+.s-name b { font-weight: var(--w-semibold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.s-name span { font-size: var(--fs-sm); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.s-name span i { font-style: normal; color: var(--muted); opacity: .8; }
+.s-name:hover b { text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 3px; }
+.s-c { font-size: var(--fs-sm); color: var(--muted); white-space: nowrap; }
+.s-price { justify-self: end; font-weight: var(--w-semibold); color: var(--ink); }
+.s-rows .s-skel { display: none; }
+@media (max-width: 899px) { .s-row { grid-template-columns: 34px 120px minmax(0, 1fr) 56px; } .s-row .s-c:not(.s-price) { display: none; } }
+@media (max-width: 599px) { .s-row { grid-template-columns: 34px 84px minmax(0, 1fr) auto; gap: 10px; padding: 8px 12px 8px 8px; } .s-row .s-sheet { height: 38px; } }
