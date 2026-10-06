@@ -608,7 +608,7 @@ export async function createApp() {
       byAuthor[k].cents += r.cents;
       byAuthor[k].sales += 1;
       if (r.role === "platform") continue;
-      if (r.email && hold[r.orderId] === "SENT") byAuthor[k].paidOut += r.cents;
+      if (r.email && (hold[r.orderId] === "SENT" || (hold[r.orderId] === "PARTLY_SENT" && !/(^|\.)example$/i.test(r.email.split("@")[1] || "")))) byAuthor[k].paidOut += r.cents;
       else if (r.held || (r.email && hold[r.orderId] === "HELD")) byAuthor[k].held += r.cents;
     }
     res.json({ authors: Object.values(byAuthor).sort((a, b) => b.cents - a.cents), recent: rows.sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, 30) });

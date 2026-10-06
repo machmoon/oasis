@@ -100,7 +100,7 @@ same contract and pass the same harness. Each says so in its header and names th
 npm ci
 cp .env.example .env   # PayPal sandbox client id/secret, Anthropic key (kits and the factory)
 npm start              # http://localhost:8787
-npm test               # 69 tests: commerce, mandates, the sandbox, sound renders, the kit order
+npm test               # 70 tests: commerce, mandates, the sandbox, sound renders, the kit order
 node factory/factory-sound.mjs run 4        # build the planned briefs on 4 lanes
 node factory/harness-sound.mjs sounds       # measure every published sound
 node scripts/kit-license-sandbox.mjs http://localhost:8787 <kitId>   # license a kit through a real sandbox order

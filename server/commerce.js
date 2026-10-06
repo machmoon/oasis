@@ -305,9 +305,15 @@ export async function releaseDuePayouts(now = Date.now()) {
     const h = o.payoutHold;
     if (!h || h.status !== "HELD" || Date.parse(h.releaseAfter) > now) continue;
     if (o.status !== "COMPLETED") { h.status = "CANCELLED"; await store.put("orders", o.id, o); continue; }
+    // a placeholder address (RFC 2606 .example, the seed creators') is never sent money: those shares stay booked,
+    // marked as waiting for a real PayPal email, and the ledger keeps saying held rather than paid out
+    const placeholder = (i) => !i.email || /(^|\.)example$/i.test(String(i.email).split("@")[1] || "");
+    const real = h.items.filter((i) => !placeholder(i)), waiting = h.items.filter(placeholder);
+    if (waiting.length) h.notSent = waiting.map((i) => ({ ref: i.ref, amount: i.amount, reason: "placeholder payout address; waiting for a real PayPal email" }));
+    if (!real.length) { h.status = "WAITING_FOR_EMAIL"; await store.put("orders", o.id, o); continue; }
     try {
-      const batch = await paypal.sendPayouts(`oasis-${o.id}`, h.items);
-      h.status = "SENT";
+      const batch = await paypal.sendPayouts(`oasis-${o.id}`, real);
+      h.status = waiting.length ? "PARTLY_SENT" : "SENT";
       o.payoutBatch = { id: batch.batch_header?.payout_batch_id, status: batch.batch_header?.batch_status, count: h.items.length };
       released.push(o.id);
     } catch (e) {

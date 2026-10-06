@@ -344,3 +344,14 @@ test("a funded mandate refuses an order over what is left, and a decline gives t
   await assert.rejects(commerce.buyWithMandate(token, [{ assetId: "town-shop" }]), /declined/);
   assert.equal((await mandates.get(mandate.id)).remaining_usd, 5);
 });
+
+test("payouts never go to a placeholder address: those shares stay booked and the hold says it is waiting", async () => {
+  const store = await import("../server/store.js"), commerce = await import("../server/commerce.js");
+  const past = new Date(Date.now() - 1000).toISOString();
+  await store.put("orders", "PLACEHOLDER-1", { id: "PLACEHOLDER-1", status: "COMPLETED", items: [], payoutHold: { status: "HELD", releaseAfter: past, items: [{ email: "seed@creators.oasis.example", amount: 2.7, ref: "r1", note: "n" }] } });
+  const released = await commerce.releaseDuePayouts();
+  assert.ok(!released.includes("PLACEHOLDER-1"));
+  const o = await store.get("orders", "PLACEHOLDER-1");
+  assert.equal(o.payoutHold.status, "WAITING_FOR_EMAIL");
+  assert.equal(o.payoutHold.notSent.length, 1);
+});
