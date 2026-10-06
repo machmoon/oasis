@@ -40,7 +40,7 @@ export async function pageAgents(app) {
     <div class="ag-grid">
       <section class="ag-sec"><h2>Spending</h2><p>You approve a cap and an expiry in PayPal. Oasis holds the token and charges your saved PayPal wallet per order; an order over the cap, past the expiry or after you revoke is refused before PayPal is called. Every order lands in the <a class="link" href="#/ledger">ledger</a>.</p><p style="margin-top:14px"><a class="btn primary" href="#/budget">${icon("wallet")} Set a budget</a></p>
         <form class="ag-revoke" id="ag-revoke" autocomplete="off"><label for="ag-tok">Revoke a budget</label><div class="row"><input id="ag-tok" placeholder="mdt_…" spellcheck="false"><button class="btn small" type="submit">Revoke</button></div><p class="ag-muted" id="ag-rv-msg">The token was shown once when you approved it. Revoking stops it at once.</p></form></section>
-      <section class="ag-sec ag-402"><h2>Without a licence</h2><p>An import of a paid program answers HTTP 402 with an x402 <code>PAYMENT-REQUIRED</code> header. This one was fetched from this server just now:</p><pre id="ag-402">GET /cdn/footstep.mjs …</pre></section>
+      <section class="ag-sec ag-402"><h2>Without a license</h2><p>An import of a paid program answers HTTP 402 with an x402 <code>PAYMENT-REQUIRED</code> header. This one was fetched from this server just now:</p><pre id="ag-402">GET /cdn/footstep.mjs …</pre></section>
     </div>
     <p class="ag-muted">The protocol for machines: <a class="link" href="/llms.txt">llms.txt</a>.</p>
   </div>`;

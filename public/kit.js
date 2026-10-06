@@ -388,7 +388,7 @@ export async function pageAsset(app, id) {
         <p class="a-desc">${esc(a.description)}</p>
       </div>
       <div class="a-buy">
-        <span class="a-price">${price(a.price)}<small>${a.price > 0 ? "per licence" : "no licence needed"}</small></span>
+        <span class="a-price">${price(a.price)}<small>${a.price > 0 ? "per license" : "no license needed"}</small></span>
         ${a.price > 0 ? `<a class="btn primary" href="#/budget">${icon("wallet")} License through a budget</a><span class="note">Your agent buys it inside a budget you approve once in PayPal. ${esc(a.author)} is paid from that order.</span>`
           : `<a class="btn primary" href="/api/assets/${esc(a.id)}/download.glb" id="a-glb">${icon("download-simple")} Download GLB</a><span class="note">The GLB is built from the knobs you set here.</span>`}
       </div>
