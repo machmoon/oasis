@@ -91,9 +91,9 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
         <p class="a-desc">${esc(a.description)}</p>
       </div>
       <div class="a-buy">
-        <span class="a-price">${price(a.price)}<small>${a.price > 0 ? "per licence" : "no licence needed"}</small></span>
-        ${licence ? `<span class="btn primary" style="pointer-events:none">${icon("seal-check")} Licensed</span><span class="note">This sound plays clean here: your kit's order paid ${esc(a.author)}.</span>`
-          : a.price > 0 ? `<button class="btn primary" type="button" id="a-license">${icon("seal-check")} License it, ${price(a.price)}</button><a class="btn" href="#/kits?vibe=${encodeURIComponent(a.title + " and what goes with it")}">${icon("sparkle")} Put it in a kit</a>`
+        ${licence ? `<span class="kv-state paid">${icon("seal-check")} Licensed</span>` : `<span class="a-price">${price(a.price)}<small>${a.price > 0 ? "per license" : "free to use"}</small></span>`}
+        ${licence ? `<a class="btn primary" href="/api/licenses/${encodeURIComponent(licence)}/render.wav" download>${icon("download-simple")} Download WAV</a><span class="note">Clean: your kit's order paid ${esc(a.author)}.</span>`
+          : a.price > 0 ? `<button class="btn primary" type="button" id="a-license">${icon("seal-check")} License it</button><a class="btn" href="#/kits?vibe=${encodeURIComponent(a.title + " and what goes with it")}">${icon("sparkle")} Put it in a kit</a>`
           : `<a class="btn primary" href="/api/assets/${esc(a.id)}/download.wav" id="a-wav">${icon("download-simple")} Download WAV</a><span class="note">44.1 kHz, rendered from the knobs you set here.</span>`}
       </div>
     </header>
@@ -183,7 +183,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
       try { localStorage.setItem(`oasis.kit.${k.id}`, JSON.stringify({ orderId: o.order_id, claimToken: o.claim_token, approveUrl: o.approve_url, at: Date.now() })); } catch {}
       location.href = o.approve_url;
     }
-    catch (err) { toast(err.message); b.disabled = false; b.innerHTML = `${icon("seal-check")} License it, ${price(a.price)}`; }
+    catch (err) { toast(err.message); b.disabled = false; b.innerHTML = `${icon("seal-check")} License it`; }
   });
   // a look is for listening here; it comes off when the page does
   $("#sp-look").addEventListener("change", (e) => { setBusLook(e.target.value); e.target.closest(".s-sel").classList.toggle("set", e.target.value !== "dry"); });

@@ -131,3 +131,14 @@
    segmented controls on the site mark a choice (kit.css .seg) */
 .pk-seg .thumb { background: var(--ink); border-color: var(--ink); box-shadow: none; }
 .pk-seg button.on, .pk-seg button[aria-pressed="true"] { color: var(--bg); }
+
+/* the ledger's balances, after Stripe's Balances page: three labelled figures in one row, a dash until the data lands */
+.pk-bal { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0 0 28px; border: 1px solid var(--line); border-radius: var(--pk-r); background: var(--surface); }
+.pk-bal > div { padding: 16px 20px; display: grid; gap: 4px; align-content: start; }
+.pk-bal > div + div { border-left: 1px solid var(--line); }
+.pk-bal dt { font-size: 13px; color: var(--muted); font-weight: var(--w-medium); }
+.pk-bal dd { margin: 0; }
+.pk-bal dd.num { font-size: 28px; line-height: 1.15; letter-spacing: -.02em; font-weight: 700; color: var(--ink); }
+.pk-bal .pk-stat-sub { font-size: 13px; color: var(--muted); }
+.pk-bal .pk-stat-sub b { font-weight: var(--w-semibold); color: var(--ink-2); }
+@media (max-width: 599px) { .pk-bal { grid-template-columns: 1fr; } .pk-bal > div + div { border-left: 0; border-top: 1px solid var(--line); } }
