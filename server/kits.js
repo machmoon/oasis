@@ -182,7 +182,12 @@ export function licenceOf(kit, order, via = "mandate") {
 
 /** A stored title without a dangling stop word ("Haunted Lighthouse In A" from before the planner trimmed them). */
 export function tidyTitle(t) {
-  const w = String(t || "").split(/\s+/).filter(Boolean);
+  // a title ends at its first clause: "Haunted House with Creaking" reads "Haunted House", "Retro Arcade: Coins, Jumps"
+  // keeps its colon, "Ocean Harbour with Gulls" reads "Ocean Harbour" (two words or more before the cut)
+  let w = String(t || "").split(/\s+/).filter(Boolean);
+  const cut = w.findIndex((x, i) => i >= 2 && (/^(with|and|in|at|on)$/i.test(x) || /,$/.test(w[i - 1])));
+  if (cut > 0) w = w.slice(0, cut);
+  w = w.map((x, i) => (i === w.length - 1 ? x.replace(/[,:;.]+$/, "") : x));
   while (w.length > 1 && STOP.has(w[w.length - 1].toLowerCase().replace(/[,:;.]+$/, ""))) w.pop();
   // headline case (Chicago): short articles, conjunctions and prepositions stay lower case unless they lead
   const SMALL = new Set(["a", "an", "the", "and", "or", "but", "of", "in", "on", "at", "to", "for", "with", "by", "from"]);
