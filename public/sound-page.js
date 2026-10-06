@@ -223,7 +223,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
     await wave.show(res.buffer, { dim: res.watermarked });
     const an = res.analysis;
     if ($("#a-dur")) $("#a-dur").textContent = +an.seconds.toFixed(2); // the header length follows the knobs, as the readout does
-    $("#sp-readout").innerHTML = `<span><b>${an.seconds.toFixed(2)}</b> s</span><span>peak <b>${an.peak}</b></span><span>rms <b>${an.rms}</b></span><span>centroid <b>${an.centroid}</b> Hz</span><span>rendered in <b>${res.ms}</b> ms${res.where === "worker" ? " in your browser" : ""}</span>`;
+    $("#sp-readout").innerHTML = `<span>length <b>${an.seconds.toFixed(2)}</b> s</span><span>peak <b>${an.peak}</b></span><span>rms <b>${an.rms}</b></span><span>centroid <b>${an.centroid}</b> Hz</span><span>rendered in <b>${res.ms}</b> ms${res.where === "worker" ? " in your browser" : ""}</span>`;
     const wm = $("#sp-wm"); wm.hidden = false;
     wm.className = `sp-wm${res.watermarked ? "" : " clean"}`; wm.innerHTML = res.watermarked ? `${icon("waveform")} preview: a soft tick until licensed` : `${icon("seal-check")} ${a.price > 0 ? "licensed, clean" : "free, clean"}`;
     if (what) addLog({ what, ms: res.ms, where: res.where === "worker" ? "worker" : "server" });
