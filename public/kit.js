@@ -4,7 +4,8 @@
 // before/after compare over two locked viewers, and the piece shown in its kit's street with one plan call.
 import { createViewer, THREE, partsToGroup } from "/world3d.js";
 import { LOOKS, applyLook } from "/looks.js";
-import { pageSound, KIND_LABEL } from "/sound-page.js";
+import { pageSound, KIND_LABEL, makeRenderer } from "/sound-page.js";
+import { mountKitPlayer } from "/keys.js";
 import { unlock, loadWav, play } from "/audio.js";
 import { lazyWave } from "/wave.js";
 
@@ -175,6 +176,7 @@ export async function pageSounds(app) {
     </div>
     <div class="k-row" id="k-kits"></div>
     <div class="k-row" id="k-creators"></div>
+    <section class="kp" id="k-play" hidden aria-label="Play the kit"></section>
     <div class="s-grid" id="k-grid">${soundSkeleton()}</div>
     <div class="k-empty" id="k-empty" hidden><h3>No sounds match.</h3><p>Clear a filter, or ask for a kit and let Claude find the closest.</p></div>
   </div>`;
@@ -197,6 +199,21 @@ export async function pageSounds(app) {
     grid.innerHTML = out.map(soundCard).join("");
     $("#k-empty").hidden = out.length > 0;
     liveSoundCards(grid);
+    playKit();
+  };
+  // a kit of voices (the Instrument kit: every sound has a note knob) gets "Play the kit" over its grid: pick a voice,
+  // play it on the keyboard (public/keys.js mountKitPlayer, the same strip a sound page has under its stage)
+  let shownKit = null, kp = null;
+  const playKit = async () => {
+    if (state.kit === shownKit) return;
+    const kit = (shownKit = state.kit);
+    kp?.destroy(); kp = null; $("#k-play").hidden = true;
+    if (kit === "all") return;
+    const inKit = list.filter((a) => a.kit === kit).sort((x, y) => x.title.localeCompare(y.title));
+    if (inKit.length > 40) return; // the knobs live on each sound's detail; a kit of voices is a dozen, not a crate
+    const voices = (await Promise.all(inKit.map((a) => detail(a.id).catch(() => null)))).filter(Boolean);
+    if (kit !== shownKit || !$("#k-play")) return;
+    kp = mountKitPlayer($("#k-play"), voices, { renderFor: (v) => makeRenderer(v, { analysis: false }), blurb: "Pick a voice and play it. Every note is rendered from the program, ahead of your key press." });
   };
   app.addEventListener("click", (e) => {
     const b = e.target.closest(".k-chip[data-f]"); if (!b) return;

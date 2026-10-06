@@ -9,7 +9,7 @@
 // canvas with no ARIA; here every key is a <button> with an aria-label, the bed is one tab stop with roving focus
 // (Left/Right between playable keys, Enter/Space plays, the WAI-ARIA toolbar pattern), keys outside the program's
 // note options are drawn greyed and aria-disabled, and the computer keyboard never fires while you type in a field.
-import { midiOf, nameOf, keyRange, layout, QWERTY, QWERTY_LABEL, baseFor, cacheKey } from "/keys-core.js";
+import { midiOf, nameOf, keyRange, layout, QWERTY, QWERTY_LABEL, baseFor, cacheKey, playableNotes as playableNotesOf, noteKnob as noteKnobOf } from "/keys-core.js";
 import { unlock, play } from "/audio.js";
 
 const css = `
@@ -261,4 +261,35 @@ export function mountKeys(host, { notes, knobName, render, values, title = "Play
   host.querySelector(".ks-oct").addEventListener("click", (e) => { const b = e.target.closest(".ks-ob"); if (b) keys.octave(Number(b.dataset.d)); });
   player.warm(500);
   return { keys, player, changed: () => player.warm(), destroy() { player.stop(); host.innerHTML = ""; } };
+}
+
+/** "Play the kit": pick a voice from a kit, play it on the same keyboard. `voices` are asset details with knobs
+ * ({ id, title, knobs, values?, licence? }); `renderFor(voice)` returns that voice's renderer (sound-page makeRenderer
+ * with analysis off, and the kit item's licence when it has one, so paid kits play clean and previews stay marked). */
+export function mountKitPlayer(host, voices, { renderFor, title = "Play the kit", blurb = "" } = {}) {
+  const playable = voices.map((v) => ({ ...v, notes: playableNotesOf(v.knobs) })).filter((v) => v.notes.length);
+  if (!playable.length) { host.hidden = true; host.innerHTML = ""; return null; }
+  host.hidden = false; host.classList.add("kp");
+  host.innerHTML = `<div class="kp-head"><h2>${escAttr(title)}</h2>${blurb ? `<p>${escAttr(blurb)}</p>` : ""}</div>
+    <div class="kp-voices" role="radiogroup" aria-label="Voice">${playable.map((v, i) => `<button type="button" role="radio" data-i="${i}" aria-checked="${i === 0}" tabindex="${i === 0 ? 0 : -1}">${escAttr(v.title)}</button>`).join("")}</div>
+    <div class="kp-voice"></div>`;
+  const slot = host.querySelector(".kp-voice"), group = host.querySelector(".kp-voices");
+  let strip = null;
+  const pick = (i) => {
+    const v = playable[i];
+    group.querySelectorAll("button").forEach((b) => { const on = Number(b.dataset.i) === i; b.setAttribute("aria-checked", on); b.tabIndex = on ? 0 : -1; });
+    strip?.destroy();
+    const values = { ...Object.fromEntries(Object.entries(v.knobs).map(([k, d]) => [k, d.default])), ...(v.values || {}) };
+    strip = mountKeys(slot, { notes: v.notes, knobName: noteKnobOf(v.knobs), render: renderFor(v), values: () => values, title: v.title, label: `${v.title} keyboard` });
+  };
+  group.addEventListener("click", (e) => { const b = e.target.closest("button[data-i]"); if (b) pick(Number(b.dataset.i)); });
+  // a radiogroup moves with the arrow keys (WAI-ARIA radio pattern); stopPropagation keeps them off the note keys
+  group.addEventListener("keydown", (e) => {
+    const d = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key]; if (!d) return;
+    e.preventDefault(); e.stopPropagation();
+    const cur = Number(group.querySelector('[aria-checked="true"]').dataset.i), next = (cur + d + playable.length) % playable.length;
+    pick(next); group.querySelector(`[data-i="${next}"]`).focus();
+  });
+  pick(0);
+  return { destroy() { strip?.destroy(); host.innerHTML = ""; } };
 }

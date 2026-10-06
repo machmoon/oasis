@@ -3,7 +3,8 @@
 // order lands every part turns clean and gets its import line and WAV.
 import { audio, unlock, loadWav, play } from "/audio.js";
 import { lazyWave, mountLive } from "/wave.js";
-import { KIND_LABEL } from "/sound-page.js";
+import { KIND_LABEL, makeRenderer } from "/sound-page.js";
+import { mountKitPlayer } from "/keys.js";
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -80,6 +81,7 @@ export async function pageKit(app, id) {
       <div class="kv-body">
         <div>
           <div class="kv-all"><button class="s-play big" id="kv-all" aria-label="Play the kit" aria-pressed="false">${icon("play")}</button><div class="kv-now" aria-live="polite"><b id="kv-now-t">Play the kit</b><span id="kv-now-s">${k.items.length} parts, one after another</span></div><div class="kv-live" id="kv-live" aria-hidden="true"></div></div>
+          <section class="kp" id="kv-play" hidden aria-label="Play the kit's voices"></section>
           <div class="kv-parts" id="kv-parts">${k.items.map((it, i) => part(it, i, paid)).join("")}</div>
         </div>
         <aside class="kv-bill">
@@ -115,7 +117,14 @@ export async function pageKit(app, id) {
     // it is a watermarked preview; the live spectrum and scope by "play the kit" listen to the master bus
     const waves = k.items.map((it, i) => lazyWave($(`[data-wave="${i}"]`), async () => ({ buffer: await bufFor(i), dim: !paid && it.price > 0 }), { height: 48, barWidth: 2, barGap: 1, barRadius: 1, wsOptions: { cursorWidth: 2 } }));
     const live = mountLive($("#kv-live"));
-    addEventListener("hashchange", () => setTimeout(() => { if (!$("#kv-live")) { stop(); live.destroy(); } }, 0), { once: true });
+    // parts that are voices (a note knob) are playable on a keyboard, with the kit's tuned knobs and, once the kit is
+    // paid, its licence: public/keys.js mountKitPlayer, the same strip the sound page has
+    let kp = null;
+    Promise.all(k.items.map((it) => api(`/api/assets/${encodeURIComponent(it.assetId)}`).then((d) => ({ ...d, title: it.name, values: it.knobs, licence: it.licence || null }), () => null))).then((ds) => {
+      if (!$("#kv-play")) return;
+      kp = mountKitPlayer($("#kv-play"), ds.filter(Boolean), { title: "Play the voices", renderFor: (v) => makeRenderer(v, { licence: v.licence, analysis: false }), blurb: paid ? "Licensed: every note plays clean." : k.total > 0 ? "Watermarked previews until the kit is paid." : "" });
+    });
+    addEventListener("hashchange", () => setTimeout(() => { if (!$("#kv-live")) { stop(); live.destroy(); kp?.destroy(); } }, 0), { once: true });
     // one transport for the page: a single part, or the whole kit in order. Every start takes a new token, so a stop
     // or a newer click ends whatever was playing (its wave pauses, its "finish" wait resolves) and the loop below exits.
     let token = 0, current = null, playingAll = false;
