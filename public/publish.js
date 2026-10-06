@@ -98,7 +98,11 @@ export function build(p, ctx) { … return { samples }; }"></textarea>
   const src = $("#pb-source"), stage = $("#pb-stage");
   let checked = null, playing = null, defaultsBuffer = null;
   const lines = () => { $("#pb-lines").textContent = `${src.value ? src.value.split("\n").length : 0} lines`; };
-  const draft = store.get("oasis.publish.draft"); if (draft) src.value = draft; lines();
+  // the editor opens with a working program, as code playgrounds open with starter code, rather than an empty box
+  const draft = store.get("oasis.publish.draft");
+  if (draft) src.value = draft;
+  else fetch("/api/publish/template").then((r) => r.text()).then((t) => { if (!src.value.trim() && src.isConnected) { src.value = t; lines(); } }).catch(() => {});
+  lines();
   src.addEventListener("input", () => { lines(); store.set("oasis.publish.draft", src.value); if (checked) stale(); });
   const stale = () => { checked = null; $("#pb-form").hidden = true; $("#pb-verdict").textContent = "changed since the last check"; $("#pb-verdict").className = "pb-verdict"; };
   const setErr = (el, html) => { el.hidden = !html; el.innerHTML = html || ""; };
