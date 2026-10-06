@@ -171,3 +171,4 @@
 .sr-st.warn { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent-text); }
 .creators .creator b, .creators .creator .earn { font-size: 14px; font-weight: var(--w-semibold); }
 .sale-row .sr-st.warn { grid-column: 2 / -1; justify-self: start; }
+@media (max-width: 599px) { .sale-row .sr-st.warn { grid-column: 1 / -1; justify-self: start; } }
