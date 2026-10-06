@@ -224,7 +224,9 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
     await wave.show(res.buffer, { dim: res.watermarked });
     const an = res.analysis;
     if ($("#a-dur")) $("#a-dur").textContent = +an.seconds.toFixed(2); // the header length follows the knobs, as the readout does
-    $("#sp-readout").innerHTML = `<span>length <b>${an.seconds.toFixed(2)}</b> s</span><span>peak <b>${an.peak}</b></span><span>rms <b>${an.rms}</b></span><span>centroid <b>${an.centroid}</b> Hz</span><span>rendered in <b>${res.ms}</b> ms${res.where === "worker" ? " in your browser" : ""}</span>`;
+    // what a buyer reads (length, peak, brightness); the render time and RMS are a tooltip for the curious
+    $("#sp-readout").innerHTML = `<span>length <b>${an.seconds.toFixed(2)}</b> s</span><span>peak <b>${an.peak}</b></span><span>brightness <b>${an.centroid}</b> Hz</span>`;
+    $("#sp-readout").title = `RMS ${an.rms}; rendered in ${res.ms} ms${res.where === "worker" ? " in your browser" : ""}`;
     const wm = $("#sp-wm"); wm.hidden = false;
     wm.className = `sp-wm${res.watermarked ? "" : " clean"}`; wm.innerHTML = res.watermarked ? `${icon("waveform")} Preview watermark` : `${icon("seal-check")} ${a.price > 0 ? "Licensed, clean" : "Free, clean"}`;
     if (what) addLog({ what, ms: res.ms, where: res.where === "worker" ? "worker" : "server" });
