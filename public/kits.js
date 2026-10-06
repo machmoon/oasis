@@ -133,7 +133,8 @@ export async function pageKit(app, id) {
     for (const { it, name } of parts) {
       const seeded = it.values?.seed !== undefined, base = Number(it.values?.seed ?? 1), takes = [];
       for (let n = 0; n < (seeded ? 8 : 1); n++) {
-        const knobs = { ...it.knobs, ...(seeded ? { seed: base + n } : {}) }, q = `?p=${encodeURIComponent(JSON.stringify(knobs))}`;
+        // clean parts at 44.1 kHz (the rate the kit rows advertise); a preview stays the 22.05 kHz watermarked render
+        const clean = !!it.licence || it.price === 0, knobs = { ...it.knobs, ...(seeded ? { seed: base + n } : {}) }, q = `?p=${encodeURIComponent(JSON.stringify(knobs))}${clean ? "&sr=44100" : ""}`;
         const url = it.licence ? `/api/licenses/${it.licence}/render.wav${q}` : `/api/assets/${encodeURIComponent(it.assetId)}/render.wav${q}`;
         const r = await fetch(url); if (!r.ok) throw new Error(`${it.name}: render failed (${r.status})`);
         const file = `${kitSlug}/${name}_${String(n + 1).padStart(2, "0")}.wav`;
@@ -153,6 +154,7 @@ export async function pageKit(app, id) {
       `Kit page: ${location.origin}/#/kit/${k.id}`, ""].join("\n") });
     files.push({ name: `${kitSlug}/LICENCE.txt`, data: [k.licensed ? `Licensed with PayPal order ${k.licence.orderId} on ${new Date(k.licence.at).toUTCString()}.` : "Not licensed yet. These files are previews.", "",
       "Parts, their programs and who made them:", ...manifest.parts.map((p) => `  ${p.name}: ${p.title} (${p.program}) by ${p.author}`), "",
+      k.licensed ? "What the order bought: a licence to import and ship each program, at any knobs and any seed, in what you make (the terms the registry states on every program's 402 and in /llms.txt)." : "",
       `Credit line: Sounds from Oasis by ${[...new Set(manifest.parts.map((p) => p.author))].join(", ")}.`, ""].join("\n") });
     const { zip } = await import("/zip.js");
     const a = document.createElement("a"); a.href = URL.createObjectURL(zip(files)); a.download = `${kitSlug}-game-pack${marked ? "-preview" : ""}.zip`;
