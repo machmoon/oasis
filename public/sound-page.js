@@ -93,7 +93,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
       <div class="a-buy">
         <span class="a-price">${price(a.price)}<small>${a.price > 0 ? "per licence" : "no licence needed"}</small></span>
         ${licence ? `<span class="btn primary" style="pointer-events:none">${icon("seal-check")} Licensed</span><span class="note">This sound plays clean here: your kit's order paid ${esc(a.author)}.</span>`
-          : a.price > 0 ? `<a class="btn primary" href="#/kits?vibe=${encodeURIComponent(a.title + " and what goes with it")}">${icon("sparkle")} Put it in a kit</a><span class="note">A kit is one PayPal order; or an agent licenses it inside a budget you approved once. ${esc(a.author)} is paid from that order.</span>`
+          : a.price > 0 ? `<button class="btn primary" type="button" id="a-license">${icon("seal-check")} License it, ${price(a.price)}</button><a class="btn" href="#/kits?vibe=${encodeURIComponent(a.title + " and what goes with it")}">${icon("sparkle")} Put it in a kit</a><span class="note">One PayPal order, with the knobs you set here. ${esc(a.author)} is paid from it.</span>`
           : `<a class="btn primary" href="/api/assets/${esc(a.id)}/download.wav" id="a-wav">${icon("download-simple")} Download WAV</a><span class="note">44.1 kHz, rendered from the knobs you set here.</span>`}
       </div>
     </header>
@@ -163,6 +163,12 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
   const wave = mountWave($("#sp-ws"), { height: phone ? 128 : 184, spectrogram: phone ? 120 : 168, timeline: $("#sp-tl"), barWidth: phone ? 2 : 3, barGap: 1, barRadius: 2,
     onState: (on) => { setPlaying(on); if (!on && loop && current && wave.media.currentTime === 0) setTimeout(() => loop && wave.play(), 30); } });
   const live = mountLive($("#sp-live"));
+  // License it: a one-part kit with the knobs as they are now, then that kit's PayPal checkout
+  $("#a-license")?.addEventListener("click", async (e) => {
+    const b = e.currentTarget; b.disabled = true; b.innerHTML = `${icon("circle-notch")} Preparing the order`;
+    try { const k = await api("/api/kits/single", { method: "POST", body: { assetId: a.id, knobs: diff() } }); location.hash = `#/kit/${k.id}`; }
+    catch (err) { toast(err.message); b.disabled = false; b.innerHTML = `${icon("seal-check")} License it, ${price(a.price)}`; }
+  });
   // a look is for listening here; it comes off when the page does
   $("#sp-look").addEventListener("change", (e) => { setBusLook(e.target.value); e.target.closest(".s-sel").classList.toggle("set", e.target.value !== "dry"); });
   const offRoute = () => { if (!stage.isConnected) { wave.destroy(); live.destroy(); setBusLook("dry"); removeEventListener("hashchange", offRoute); } };
@@ -190,6 +196,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
     let res;
     try { res = await render(values); } catch (e) {
       if (run !== n || !stage.isConnected) return;
+      if (!stage.isConnected) return;
       stage.classList.remove("busy"); $("#sp-err").hidden = false; $("#sp-err-msg").textContent = e.message;
       if (!current) $("#sp-readout").innerHTML = `<span>nothing rendered yet</span>`;
       return;
@@ -358,6 +365,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
   list().then((all) => {
     const rest = all.filter((x) => x.id !== a.id).sort((x, y) => ((y.kit === kitName) - (x.kit === kitName)) || ((y.author === a.author) - (x.author === a.author)) || x.title.localeCompare(y.title)).slice(0, 5);
     if (!rest.length) return;
+    if (!$("#a-more")) return; // the visitor has already left the page
     $("#a-more").hidden = false; $("#a-more-grid").innerHTML = rest.map(card).join(""); liveCards($("#a-more-grid"));
   });
 

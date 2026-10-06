@@ -80,7 +80,7 @@ export async function pageKit(app, id) {
     app.innerHTML = `<div class="wrap a-page">
       <nav class="a-crumb" aria-label="Breadcrumb"><a href="#/kits">Kits</a><span>/</span><span>${esc(k.title)}</span></nav>
       <header class="kv-head">
-        <div><h1>${esc(k.title)}</h1><p class="kv-vibe">"<b>${esc(k.vibe)}</b>". <span class="num">${k.items.length}</span> sounds from ${k.creators.length} creators, ${k.planner === "keywords" ? `matched by keyword: the Claude planner is offline, so parts are picked by the words in the vibe and their knobs are left at their defaults` : `planned by ${esc(k.planner)}`}.</p></div>
+        <div><h1>${esc(k.title)}</h1><p class="kv-vibe">"<b>${esc(k.vibe)}</b>". ${k.planner === "single" ? `One sound, licensed on its own with the knobs set on its page` : `<span class="num">${k.items.length}</span> sounds from ${k.creators.length} creator${k.creators.length === 1 ? "" : "s"}, ${k.planner === "keywords" ? `matched by keyword: the Claude planner is offline, so parts are picked by the words in the vibe and their knobs are left at their defaults` : `planned by ${esc(k.planner)}`}`}.</p></div>
         <div class="kv-side">
           <span class="kv-state${paid ? " paid" : ""}">${paid ? `${icon("seal-check")} Licensed · PayPal order ${esc(k.licence.orderId)}` : `${icon("waveform")} Watermarked preview until paid`}</span>
           <div class="kv-share"><label class="sr-only" for="kv-url">Link to this kit</label><input id="kv-url" readonly value="${esc(kitUrl)}" spellcheck="false"><button class="btn small" id="kv-copy" type="button">${icon("link-simple")} <span>Copy link</span></button></div>
@@ -88,13 +88,13 @@ export async function pageKit(app, id) {
       </header>
       <div class="kv-body">
         <div>
-          <div class="kv-all"><button class="s-play big" id="kv-all" aria-label="Play the kit" aria-pressed="false">${icon("play")}</button><div class="kv-now" aria-live="polite"><b id="kv-now-t">Play the kit</b><span id="kv-now-s">${k.items.length} parts, one after another</span></div><div class="kv-live" id="kv-live" aria-hidden="true"></div><a class="btn primary kv-pads" href="#/pads/${esc(k.id)}">${icon("squares-four")} Play it on pads</a></div>
+          <div class="kv-all"><button class="s-play big" id="kv-all" aria-label="Play the kit" aria-pressed="false">${icon("play")}</button><div class="kv-now" aria-live="polite"><b id="kv-now-t">Play the kit</b><span id="kv-now-s">${k.items.length === 1 ? "one part" : `${k.items.length} parts, one after another`}</span></div><div class="kv-live" id="kv-live" aria-hidden="true"></div><a class="btn primary kv-pads" href="#/pads/${esc(k.id)}">${icon("squares-four")} Play it on pads</a></div>
           <section class="kp" id="kv-play" hidden aria-label="Play the kit's voices"></section>
           <div class="kv-parts" id="kv-parts">${k.items.map((it, i) => part(it, i, paid)).join("")}</div>
         </div>
         <aside class="kv-bill">
           <div class="receipt">
-            <div class="r-head"><b>${esc(k.title)}</b><span>${k.items.length} sounds, ${Object.keys(creators).length} creators</span></div>
+            <div class="r-head"><b>${esc(k.title)}</b><span>${k.items.length} sound${k.items.length === 1 ? "" : "s"}, ${Object.keys(creators).length} creator${Object.keys(creators).length === 1 ? "" : "s"}</span></div>
             ${Object.entries(creators).sort((a, b) => b[1] - a[1]).map(([who, v]) => `<div class="r-who"><div class="r-name"><a href="#/creator/${encodeURIComponent(who)}">${esc(who)}</a><em class="num">${usd(v)}</em></div>${k.items.filter((i) => i.author === who && i.price > 0).map((i) => `<div class="r-line"><span>${esc(i.name)}</span><span class="num">${usd(i.price)}</span></div>`).join("")}</div>`).join("")}
             ${k.items.some((i) => i.price === 0) ? `<div class="r-who"><div class="r-name">${k.items.some((i) => i.covered) ? "covered and free" : "free"}<em class="num">$0.00</em></div>${k.items.filter((i) => i.price === 0).map((i) => `<div class="r-line"><span>${esc(i.name)}</span><span class="num">${i.covered ? "same program" : "free"}</span></div>`).join("")}</div>` : ""}
             <div class="r-total"><span>${paid ? "Paid in one PayPal order" : "One PayPal order"}</span><b class="num">${usd(k.total)}</b></div>

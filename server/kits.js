@@ -76,7 +76,7 @@ export async function planKit(vibe) {
 /** Only real sounds, knobs resolved against their schemas, 6-10 parts, priced from the catalogue. */
 export function cleanKit(vibe, plan, planner = "keywords") {
   let items = (plan.items || []).map((it) => { const a = catalog.getAsset(it.assetId); return a && a.format === "sound" ? { a, it } : null; }).filter(Boolean).slice(0, 10);
-  if (items.length < 6) { const fill = planByKeywords(vibe, { count: 10 }).items.filter((f) => !items.some((x) => x.a.id === f.assetId)); for (const f of fill) { if (items.length >= 6) break; items.push({ a: catalog.getAsset(f.assetId), it: f }); } }
+  if (items.length < 6 && planner !== "single") { const fill = planByKeywords(vibe, { count: 10 }).items.filter((f) => !items.some((x) => x.a.id === f.assetId)); for (const f of fill) { if (items.length >= 6) break; items.push({ a: catalog.getAsset(f.assetId), it: f }); } }
   // A licence is to the program, so a kit charges each program once: a second part on the same program is covered.
   const seen = new Set();
   const lines = items.map(({ a, it }, i) => {

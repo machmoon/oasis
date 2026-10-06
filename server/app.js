@@ -322,6 +322,14 @@ export async function createApp() {
     if (req.body?.quick) return res.json(kits.view({ id: null, ...kits.cleanKit(vibe, kits.planByKeywords(vibe)), licence: null }));
     res.json(kits.view(await kits.save(await kits.planKit(vibe))));
   }));
+  // One sound, licensed on its own: a one-part kit with the knobs the buyer set, so it goes through the same itemised
+  // PayPal checkout, capture, claim and creator split as any kit.
+  app.post("/api/kits/single", kitLimit, wrap(async (req, res) => {
+    const a = mustSound(String(req.body?.assetId || ""));
+    const knobs = req.body?.knobs && typeof req.body.knobs === "object" ? req.body.knobs : {};
+    const plan = { title: a.title, items: [{ assetId: a.id, knobs, name: a.title, reason: "licensed on its own, with the knobs set on its page" }] };
+    res.json(kits.view(await kits.save(kits.cleanKit(a.title, plan, "single"))));
+  }));
   app.get("/api/kits", wrap(async (req, res) => {
     const all = (await store.list("kits")).sort((a, b) => (!!b.licence - !!a.licence) || b.updatedAt.localeCompare(a.updatedAt)).slice(0, 24);
     // the tile's picture: its first four parts as tuned in the kit (the same card render a part shows on the kit page)
