@@ -239,4 +239,4 @@ export async function addPublished(doc) {
 }
 
 export const newId = (prefix) => `${prefix}-${crypto.randomBytes(4).toString("hex")}`;
-export const stats = () => ({ assets: assets.size, sounds: allAssets().filter((a) => a.format === "sound").length, forks: loadedForks });
+export const stats = () => ({ assets: allAssets().filter((a) => a.format === "sound").length, legacyAssets: assets.size, sounds: allAssets().filter((a) => a.format === "sound").length, forks: loadedForks });

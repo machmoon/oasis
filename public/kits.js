@@ -34,7 +34,7 @@ function wavLevels(bytes) {
 
 const api = async (path, { method = "GET", body, headers = {} } = {}) => { const r = await fetch(path, { method, headers: { ...(body ? { "Content-Type": "application/json" } : {}), ...headers }, body: body ? JSON.stringify(body) : undefined }); const j = await r.json().catch(() => ({})); if (!r.ok) throw Object.assign(new Error(j.error || `Request failed (${r.status})`), { status: r.status }); return j; };
 const toast = (msg) => { const t = $("#toast"); if (!t) return; t.textContent = msg; t.classList.add("on"); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("on"), 2600); };
-const store = { get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
+const store = { get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }, del(k) { try { localStorage.removeItem(k); } catch {} } };
 for (const href of ["/sound.css", "/pay.css"]) if (!document.querySelector(`link[href="${href}"]`)) { const l = document.createElement("link"); l.rel = "stylesheet"; l.href = href; document.head.appendChild(l); }
 // Copying the kit link follows github/clipboard-copy-element (src/clipboard.ts): navigator.clipboard.writeText when
 // the browser allows it, else select the text and execCommand("copy"); the button says "Copied" for a moment.
@@ -313,7 +313,13 @@ export async function pageKit(app, id) {
       const buttons = window.paypal.Buttons({
         style: { layout: "vertical", color: "gold", shape: "rect", label: "pay", height: 45 },
         createOrder: async () => { const o = await api(`/api/kits/${k.id}/checkout`, { method: "POST", body: {} }); store.set(`oasis.kit.${k.id}`, { orderId: o.order_id, claimToken: o.claim_token, approveUrl: o.approve_url, at: Date.now() }); return o.order_id; },
-        onApprove: async (data) => { const pend = store.get(`oasis.kit.${k.id}`); k = await api(`/api/kits/${k.id}/claim`, { method: "POST", body: { order_id: data.orderID, claim_token: pend?.claimToken } }); toast("Paid. Every part is licensed and plays clean."); draw(); },
+        // as PayPal's standard-integration client: a declined funding source restarts the flow so the payer can pick another
+        onApprove: async (data, actions) => {
+          const pend = store.get(`oasis.kit.${k.id}`);
+          try { k = await api(`/api/kits/${k.id}/claim`, { method: "POST", body: { order_id: data.orderID, claim_token: pend?.claimToken } }); toast("Paid. Every part is licensed and plays clean."); draw(); }
+          catch (e) { if (/INSTRUMENT_DECLINED/.test(e.message)) return actions.restart(); throw e; }
+        },
+        onCancel: () => { store.del(`oasis.kit.${k.id}`); toast("Payment cancelled. Nothing was charged."); },
         onError: (err) => toast(String(err?.message || err || "PayPal could not finish the payment")),
       });
       if (!buttons.isEligible()) { box.remove(); return; }

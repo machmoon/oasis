@@ -403,7 +403,14 @@ export async function createApp() {
     if (k.licence) return res.json(kits.view(k, { owner: await kits.owns(k, kitCaller(req)) }));
     let o = await store.get("orders", String(req.body?.order_id || ""));
     if (!commerce.ownsOrder(o, String(req.body?.claim_token || ""))) throw Object.assign(new Error("Unknown order, or wrong claim token"), { status: 404 });
-    if (o.status !== "COMPLETED") { try { o = await commerce.capture(o.id); } catch (e) { console.warn("kit claim capture", e.message); } }
+    if (o.status !== "COMPLETED") {
+      try { o = await commerce.capture(o.id); }
+      catch (e) {
+        console.warn("kit claim capture", e.message);
+        // a declined card or wallet is the payer's to fix: say so, so the Smart Buttons can restart (actions.restart())
+        if (/INSTRUMENT_DECLINED/.test(e.message)) throw Object.assign(new Error("INSTRUMENT_DECLINED: PayPal declined that funding source; choose another"), { status: 402 });
+      }
+    }
     if (o.status !== "COMPLETED") throw Object.assign(new Error(`The PayPal order is ${String(o.status || "not approved").toLowerCase()} yet`), { status: 409 });
     const paid = new Set(o.items.map((i) => i.assetId));
     if (!kits.billItems(k).every((i) => paid.has(i.assetId))) throw Object.assign(new Error("That order does not cover this kit"), { status: 409 });

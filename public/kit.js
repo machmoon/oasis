@@ -179,7 +179,7 @@ export function liveSoundCards(root) {
   });
 }
 
-const SORTS = [["name", "Name"], ["kit", "Kit"], ["price-asc", "Price, low first"], ["price-desc", "Price, high first"], ["length", "Longest"], ["knobs", "Most knobs"]];
+const SORTS = [["name", "Name"], ["kit", "Collection"], ["price-asc", "Price, low first"], ["price-desc", "Price, high first"], ["length", "Longest"], ["knobs", "Most knobs"]];
 const options = (pairs, on) => pairs.map(([v, l]) => `<option value="${esc(v)}"${v === on ? " selected" : ""}>${esc(l)}</option>`).join("");
 
 export async function pageSounds(app) {
@@ -234,7 +234,7 @@ export async function pageSounds(app) {
     const by = { name: (x, y) => x.title.localeCompare(y.title), kit: (x, y) => String(x.kit).localeCompare(String(y.kit)) || x.title.localeCompare(y.title), "price-asc": (x, y) => x.price - y.price || x.title.localeCompare(y.title), "price-desc": (x, y) => y.price - x.price || x.title.localeCompare(y.title), length: (x, y) => y.duration - x.duration, knobs: (x, y) => y.knobCount - x.knobCount }[state.sort];
     out = out.sort(by);
     last = out; paint();
-    $("#k-count").innerHTML = out.length === list.length ? `<b class="num">${list.length}</b> sounds from <b class="num">${creators.length}</b> creators in <b class="num">${kits.length}</b> kits` : `<b class="num">${out.length}</b> of ${list.length} sounds`;
+    $("#k-count").innerHTML = out.length === list.length ? `<b class="num">${list.length}</b> sounds from <b class="num">${creators.length}</b> creators in <b class="num">${kits.length}</b> collections` : `<b class="num">${out.length}</b> of ${list.length} sounds`;
     $("#k-empty").hidden = out.length > 0;
     playKit();
   };
