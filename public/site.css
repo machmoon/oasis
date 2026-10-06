@@ -416,3 +416,4 @@ body > main { flex: 1 0 auto; }
 section.band + section.band { padding-top: 0; }
 .receipt .r-refund { margin-top: 8px; color: var(--accent-text); }
 .receipt .r-get { margin: 12px 0 0; padding: 0 0 0 18px; display: grid; gap: 4px; font-size: var(--fs-sm); color: var(--ink-2); }
+.receipt .r-lic { margin: 10px 0 0; font-size: 12.5px; color: var(--muted); } .receipt .r-lic a { color: var(--ink-2); }

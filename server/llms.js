@@ -13,6 +13,7 @@ export function llmsTxt() {
 > seeded takes (how far takes differ depends on the sound). A human approves one PayPal budget; you (the agent) license every sound you import
 > inside it, and each creator's share is booked.
 
+License terms for every purchase: ${b}/license.txt (commercial use, perpetual after the 14-day refund window, no credit required, no reselling the sounds on their own, no model training).
 A "kit" below always means a scene kit made from a vibe (make_kit); the registry's own groups are "collections".
 Registry: ${sounds.length} sound programs from ${creators.length} creators in ${kits.length} collections (${kits.slice(0, 6).join(", ")}${kits.length > 6 ? ", ..." : ""}). PayPal sandbox.
 

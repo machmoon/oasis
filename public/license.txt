@@ -1,0 +1,41 @@
+Oasis sound license (version 1, 6 October 2026)
+
+Plain-language terms for every sound program licensed on Oasis, alone or in a kit. They follow the answers that
+established sound stores give buyers (Splice Sounds, the Sonniss GDC bundle): royalty-free, perpetual, no credit
+required, no reselling the raw sounds.
+
+What you get
+- A license to use each program you paid for, at any knob setting and any seed, and every take it renders
+  (including the WAVs in a game pack), in things you make.
+
+You may
+- Use the sounds in commercial and non-commercial work: games, apps, websites, videos, films, podcasts, music,
+  ads and live performance, on any platform, worldwide, with no further fees or royalties.
+- Edit, layer, process and mix them.
+- Commit the rendered WAVs to a repository, public or private, when they ship as part of your project.
+- Keep using them forever once the order's 14-day refund window has closed.
+
+You may not
+- Resell, share or give away the sounds or the programs on their own, as a sound library, sample pack, preset
+  pack, asset pack or similar, or upload them to another sound marketplace.
+- Use them to train or fine-tune machine-learning models.
+- Publish your licensed module URL (the ?lic= link) in public code; it is your license key. Ship the WAVs instead,
+  or keep the import on a server you control.
+
+Credit
+- Not required. If you want to credit the creators, the game pack's LICENSE.txt has a suggested line.
+
+Who holds the license
+- The buyer whose PayPal order paid for it (or whose agent's budget did). Someone else using the same kit buys
+  their own copy.
+
+Refunds
+- An order can be refunded in full within 14 days; a full refund ends its licenses, and the module URLs and clean
+  downloads stop working. A refund of parts billed twice keeps the licenses.
+
+Creators
+- Each creator keeps ownership of their programs and grants this license through Oasis. Their share of every
+  order is booked when PayPal completes it and paid out after the refund window.
+
+This is a plain-language license written for a hackathon project in the PayPal sandbox; no real money moves here.
+Questions: open an issue at github.com/machmoon/oasis.

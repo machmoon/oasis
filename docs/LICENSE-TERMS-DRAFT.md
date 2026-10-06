@@ -1,4 +1,9 @@
-# License terms: a draft for Pat to decide (NOT IN EFFECT)
+# License terms: how version 1 was chosen
+
+Adopted 2026-10-06 as `public/license.txt` (served at /license.txt), at Pat's request ("just do it yourself").
+The choices: commercial use yes, perpetual after the refund window, credit not required, no resale of the raw
+sounds, public repos fine as part of a project (but keep the ?lic= URL private), no model training. The
+comparison that led there follows.
 
 Oasis sells "a license to import and ship" each program (the only term the registry states, in every 402). Buyers'
 most repeated worry in tonight's research was unclear terms, and the judges flagged that the game pack's
