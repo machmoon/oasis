@@ -324,7 +324,9 @@ export async function createApp() {
   }));
   app.get("/api/kits", wrap(async (req, res) => {
     const all = (await store.list("kits")).sort((a, b) => (!!b.licence - !!a.licence) || b.updatedAt.localeCompare(a.updatedAt)).slice(0, 24);
-    res.json(all.map((k) => ({ id: k.id, title: k.title, vibe: k.vibe, parts: k.items.length, total: k.total, creators: k.creators.length, licensed: !!k.licence, createdAt: k.createdAt })));
+    // the tile's picture: its first four parts as tuned in the kit (the same card render a part shows on the kit page)
+    const card = (l) => `/api/assets/${encodeURIComponent(l.assetId)}/render.png?w=320${Object.keys(l.knobs || {}).length ? `&p=${encodeURIComponent(JSON.stringify(l.knobs))}` : ""}`;
+    res.json(all.map((k) => ({ id: k.id, title: k.title, vibe: k.vibe, parts: k.items.length, total: k.total, creators: k.creators.length, licensed: !!k.licence, createdAt: k.createdAt, cards: k.items.filter((l) => !l.covered).slice(0, 4).map(card) })));
   }));
   app.get("/api/kits/:id", wrap(async (req, res) => res.set("Cache-Control", "no-cache").json(kits.view(await mustKit(req.params.id)))));
   // Licensing a kit on a funded budget: every paid part, once, in one vaulted order.

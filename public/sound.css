@@ -222,12 +222,23 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
 .kt-status.err i { display: none; }
 .kt-recent { margin-top: 56px; }
 .kt-recent h2 { font-size: 22px; margin-bottom: 14px; }
-.kt-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
-.kt-tile { display: grid; gap: 4px; padding: 16px 18px; text-decoration: none; color: inherit; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--inset-top); transition: transform var(--t) var(--ease-out), border-color var(--t), box-shadow var(--t); }
-.kt-tile:hover { transform: translateY(-2px); border-color: var(--line-strong); box-shadow: var(--inset-top), var(--shadow); }
-.kt-tile b { font-weight: var(--w-semibold); }
-.kt-tile span { font-size: var(--fs-sm); color: var(--muted); }
-.kt-tile .paid { color: var(--ok); font-weight: var(--w-semibold); font-style: normal; }
+.kt-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+/* kit tile: the cult-ui MinimalCard frame the sound cards use, its picture a 2x2 mosaic of the kit's first parts as
+   tuned (the same centroid-coloured cards), so a tile shows what the kit sounds like before it is opened */
+.kt-tile { display: grid; padding: 6px; text-decoration: none; color: inherit; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--inset-top); transition: transform var(--t) var(--ease-out), border-color var(--t), box-shadow var(--t); }
+.kt-tile:hover { transform: translateY(-3px); border-color: var(--line-strong); box-shadow: var(--inset-top), var(--shadow); }
+.kt-mosaic { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; aspect-ratio: 2 / 1; border-radius: calc(var(--r-lg) - 6px); overflow: hidden; background: #0B0C10; }
+.kt-mosaic img { width: 100%; height: 100%; object-fit: cover; display: block; background: #0B0C10; transition: transform var(--t-slow) var(--ease-out); }
+.kt-mosaic[data-n="1"] { grid-template-columns: 1fr; }
+.kt-mosaic[data-n="3"] img:first-child { grid-row: span 2; }
+.kt-tile:hover .kt-mosaic img { transform: scale(1.03); }
+.kt-body { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; padding: 12px 8px 8px; }
+.kt-body b { font-weight: var(--w-semibold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kt-body q { grid-column: 1 / -1; color: var(--ink-2); font-size: var(--fs-sm); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.6em; }
+.kt-paid { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px; border-radius: var(--r-pill); background: var(--ok-soft); color: var(--ok); font: var(--w-semibold) 12px var(--font-sans); font-style: normal; }
+.kt-facts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; color: var(--muted); font-size: var(--fs-xs); }
+.kt-facts span { white-space: nowrap; }
+.kt-facts b { color: var(--ink-2); font-weight: var(--w-semibold); }
 
 /* the kit page: parts on the left, the bill on the right */
 .kv-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px 32px; align-items: end; margin-bottom: 22px; }
@@ -244,7 +255,7 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
 .kv-part.on { border-color: var(--accent); box-shadow: var(--inset-top), 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
 /* while the whole kit plays, the parts waiting their turn step back so the playing one reads first */
 .kv-parts.seq .kv-part:not(.on) { opacity: .62; }
-.kv-part .pic { position: relative; height: 48px; border-radius: var(--r-sm); overflow: hidden; background: var(--sunk); }
+.kv-part .pic { position: relative; height: 48px; border-radius: var(--r-sm); overflow: hidden; background: #0B0C10; }
 .kv-part .pic canvas { display: block; width: 100%; height: 100%; }
 /* the playhead (wavesurfer's part="cursor") shows only on the part that is playing */
 .kv-part .pic ::part(cursor) { opacity: 0; transition: opacity var(--t-fast); }
@@ -258,6 +269,9 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
 .kv-part .amt small { display: block; font: var(--fs-xs) var(--font-sans); color: var(--muted); font-weight: var(--w-medium); }
 .kv-part .amt.clean small { color: var(--ok); }
 .kv-part .kv-acts { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; font-size: var(--fs-sm); }
+.kv-part .kv-meta { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.kv-part .kv-code { display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; background: none; color: var(--ink-2); font: inherit; cursor: pointer; text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px; }
+.kv-part .kv-code:hover, .kv-part .kv-code[aria-expanded="true"] { color: var(--ink); text-decoration-color: var(--accent); }
 .kv-part .kv-acts a { color: var(--ink-2); text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px; display: inline-flex; align-items: center; gap: 4px; }
 .kv-part .kv-acts a:hover { color: var(--ink); text-decoration-color: var(--accent); }
 .kv-part .links { grid-column: 2 / -1; }

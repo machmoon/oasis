@@ -32,7 +32,7 @@ export async function pageKits(app) {
   const params = new URLSearchParams(location.hash.split("?")[1] || "");
   app.innerHTML = `<div class="wrap kt-page">
     <h1>Describe the vibe.</h1>
-    <p class="lede">One line in, a kit out: Claude picks six to ten sound programs from the registry and tunes their knobs to your scene. One PayPal order licenses the kit and pays every creator in it.</p>
+    <p class="lede">One line in, a kit out. Claude picks six to ten sound programs, tunes their knobs to your scene, and one PayPal order pays every creator.</p>
     <form class="kt-form" id="kt-form">
       <div class="row"><input type="text" id="kt-vibe" maxlength="300" placeholder="rainy cyberpunk alley footsteps and UI clicks" value="${esc(params.get("vibe") || "")}" autocomplete="off"><button class="btn primary" type="submit" id="kt-go">${icon("sparkle")} Make a kit</button></div>
       <div class="kt-examples">${EXAMPLES.map((e) => `<button type="button" data-v="${esc(e)}">${esc(e)}</button>`).join("")}</div>
@@ -50,7 +50,15 @@ export async function pageKits(app) {
     catch (err) { st.className = "kt-status err"; st.innerHTML = `<span>${esc(err.message)}</span>`; go.disabled = false; go.innerHTML = `${icon("sparkle")} Make a kit`; }
   });
   api("/api/kits").then((list) => {
-    $("#kt-list").innerHTML = list.length ? list.map((k) => `<a class="kt-tile" href="#/kit/${esc(k.id)}"><b>${esc(k.title)}</b><span>"${esc(k.vibe)}"</span><span>${k.parts} sounds · ${k.creators} creators · ${usd(k.total)} ${k.licensed ? '· <em class="paid">paid</em>' : ""}</span></a>`).join("") : `<p class="muted">No kits yet. Yours will be the first.</p>`;
+    // one tile per vibe: the list arrives licensed first, then newest, so the first kit seen for a vibe is the one to show;
+    // the others are earlier takes on the same line and are counted on it
+    const byVibe = new Map();
+    for (const k of list) { const key = k.vibe.trim().toLowerCase(); const t = byVibe.get(key); t ? t.takes++ : byVibe.set(key, { ...k, takes: 1 }); }
+    const tiles = [...byVibe.values()];
+    $("#kt-list").innerHTML = tiles.length ? tiles.map((k) => `<a class="kt-tile" href="#/kit/${esc(k.id)}">
+      <span class="kt-mosaic" data-n="${(k.cards || []).length}">${(k.cards || []).map((c) => `<img src="${esc(c)}" alt="" loading="lazy" width="320" height="160">`).join("")}</span>
+      <span class="kt-body"><b>${esc(k.title)}</b>${k.licensed ? `<em class="kt-paid">${icon("seal-check")} Paid</em>` : ""}<q>${esc(k.vibe)}</q>
+      <span class="kt-facts">${[[k.parts, "sounds"], [k.creators, "creators"], [usd(k.total), ""], ...(k.takes > 1 ? [[k.takes, "takes"]] : [])].map(([v, l]) => `<span><b class="num">${v}</b>${l ? ` ${l}` : ""}</span>`).join("")}</span></span></a>`).join("") : `<p class="muted">No kits yet. Yours will be the first.</p>`;
   }).catch((e) => { $("#kt-list").innerHTML = `<p class="muted">Recent kits could not be loaded: ${esc(e.message)}</p>`; });
 }
 
@@ -104,13 +112,19 @@ export async function pageKit(app, id) {
     return `<div class="kv-part" data-i="${i}">
       <button class="s-play" data-play="${i}" aria-label="Play ${esc(it.name)}">${icon("play")}</button>
       <div class="pic" data-wave="${i}"></div>
-      <div class="who"><b class="kv-name">${esc(it.name)}</b><span class="kv-meta">${esc(it.title)}, ${esc(KIND_LABEL[it.kind] || it.kind)} by ${esc(it.author)}${it.reason ? `. ${esc(it.reason[0].toUpperCase() + it.reason.slice(1))}.` : ""}</span>${knobs.length ? `<span class="kv-knobs">${knobs.map(([k, v]) => `<span>${esc(k)} ${esc(String(v))}</span>`).join("")}</span>` : ""}
-        <span class="kv-acts"><a href="#/a/${esc(it.assetId)}${it.licence ? `?lic=${esc(it.licence)}` : ""}">${icon("sliders-horizontal")} Open with knobs</a>${it.wav ? `<a href="${esc(it.wav)}">${icon("download-simple")} WAV, 44.1 kHz</a>` : ""}</span></div>
+      <div class="who"><b class="kv-name">${esc(it.name)}</b><span class="kv-meta">${esc(it.title)}, ${esc(KIND_LABEL[it.kind] || it.kind)} by ${esc(it.author)}${it.reason ? `. ${esc(it.reason[0].toUpperCase() + it.reason.slice(1).replace(/[.\s]+$/, ""))}.` : ""}</span>${knobs.length ? `<span class="kv-knobs">${knobs.map(([k, v]) => `<span>${esc(k)} ${esc(String(v))}</span>`).join("")}</span>` : ""}
+        <span class="kv-acts"><a href="#/a/${esc(it.assetId)}${it.licence ? `?lic=${esc(it.licence)}` : ""}">${icon("sliders-horizontal")} Open with knobs</a>${it.wav ? `<a href="${esc(it.wav)}">${icon("download-simple")} WAV, 44.1 kHz</a><button type="button" class="kv-code" aria-expanded="false" aria-controls="kv-code-${i}">${icon("code")} Import line</button>` : ""}</span></div>
       <div class="amt num${paid || it.price === 0 ? " clean" : ""}">${it.covered ? "covered" : price(it.price)}<small>${it.covered ? "same program" : paid || it.price === 0 ? "clean" : "preview"}</small></div>
-      ${it.wav ? `<div class="links"><code>import { play } from "${esc(it.module)}"</code></div>` : ""}
+      ${it.wav ? `<div class="links" id="kv-code-${i}" hidden><code>import { play } from "${esc(it.module)}"</code></div>` : ""}
     </div>`;
   }
   function wire(paid) {
+    // the import line is one click away instead of printed under every part
+    $("#kv-parts").addEventListener("click", (e) => {
+      const b = e.target.closest(".kv-code"); if (!b) return;
+      const box = document.getElementById(b.getAttribute("aria-controls")), open = box.hidden;
+      box.hidden = !open; b.setAttribute("aria-expanded", open);
+    });
     const buffers = new Map();
     const bufFor = async (i) => { if (!buffers.has(i)) buffers.set(i, loadWav(k.items[i].licence ? `/api/licenses/${k.items[i].licence}/render.wav?p=${encodeURIComponent(JSON.stringify(k.items[i].knobs))}` : k.items[i].preview.replace(/^https?:\/\/[^/]+/, ""))); return buffers.get(i); };
     // each part's waveform is a small wavesurfer over the same buffer it plays (public/wave.js lazyWave), dimmed while
