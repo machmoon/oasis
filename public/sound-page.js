@@ -124,8 +124,8 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
 
     ${knobs.seed ? `<section class="sp-walk" id="sp-walk-sec">
       <div>
-        <h2>300 takes</h2>
-        <p class="lede">One program, 300 seeds: each dot is a take. Click one to hear it.</p>
+        <h2>Every seed is a take</h2>
+        <p class="lede">One program, many seeds, no two alike. Each dot is a take; click one to hear it.</p>
         <div class="a-program" id="sp-walk-code"></div>
       </div>
       <div class="sp-walk-stage" id="sp-walk">
@@ -275,8 +275,8 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
     // plays, a Minimap (src/plugins/minimap.ts) with the whole walk, and one Regions region (src/plugins/regions.ts) on
     // the take that is sounding; the dot for that take lights up in the accent and keeps a warm ring once heard.
     const plot = $("#sp-walk-plot"), stageW = $("#sp-walk");
-    let count = 300, walkBuf = null, takes = null, wn = 0, hot = -1, heard = new Set();
-    segment($("#sp-walk-n"), [{ id: "24", label: "24" }, { id: "100", label: "100" }, { id: "300", label: "300" }], "300", (v) => { count = Number(v); loadWalk(); });
+    let count = 24, walkBuf = null, takes = null, wn = 0, hot = -1, heard = new Set();
+    segment($("#sp-walk-n"), [{ id: "24", label: "24" }, { id: "100", label: "100" }, { id: "300", label: "300" }], "24", (v) => { count = Number(v); loadWalk(); });
     const regions = Regions.create();
     const walkPlay = $("#sp-walk-play");
     const walk = mountWave($("#sp-walk-wave"), { height: 64, barWidth: 2, barGap: 1, barRadius: 1, hover: false,
