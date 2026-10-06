@@ -228,7 +228,15 @@ export async function createApp() {
   app.post("/api/assets/:id/fork", wrap(async (req, res) => {
     const { instruction, author, payoutEmail, price } = req.body || {};
     const email = typeof payoutEmail === "string" && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(payoutEmail) ? payoutEmail : null;
-    const fork = await forkAsset({ assetId: req.params.id, instruction, author: String(author || "anonymous").slice(0, 40), payoutEmail: email, price });
+    let fork;
+    try { fork = await forkAsset({ assetId: req.params.id, instruction, author: String(author || "anonymous").slice(0, 40), payoutEmail: email, price }); }
+    catch (e) {
+      // the model's own error is JSON for developers; a visitor gets one sentence (and the planner status learns of it)
+      const credit = /credit balance|billing/i.test(e.message), model = credit || /anthropic|invalid_request_error|overloaded|rate_limit/i.test(e.message) || e.status === 400;
+      if (!model) throw e;
+      Object.assign(kits.plannerHealth, { ok: false, error: e.error?.error?.message || e.message, at: new Date().toISOString() });
+      throw Object.assign(new Error(credit ? "Forking needs Claude, and this server's Claude account is out of credit right now." : "Forking needs Claude, which did not answer just now. Try again in a minute."), { status: 503 });
+    }
     res.json(catalog.summary(fork));
   }));
 
