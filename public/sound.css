@@ -517,3 +517,4 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
 .s-rows .s-group a:hover { text-decoration: underline; text-underline-offset: 3px; }
 .s-rows .s-group span { color: var(--muted); }
 .a-knobs .a-dials[style*="--n"] { grid-template-columns: repeat(var(--n), minmax(0, 1fr)); } /* columns fit the knob count: no knob alone on a row */
+.kt-row { min-height: 68px; } /* one row height whether or not a vibe line shows */
