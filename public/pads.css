@@ -268,3 +268,4 @@ a.cr-chip { display: inline-flex; align-items: center; text-decoration: none; }
   .cr-pad .cr-win { bottom: 38px; }
 }
 .cr-prompt button[hidden] { display: none; }
+.cr-pad.empty .cr-k { visibility: hidden; } /* an empty pad has no key to press */
