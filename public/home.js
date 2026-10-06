@@ -47,7 +47,7 @@ export async function pageHome(app, ctx) {
       <div class="hs-knobs" id="hs-knobs"></div>
     </div>
     <div class="wrap"><div class="hero-copy">
-      <h1><span class="line on" data-beat="vibe">Vibe in.</span><span class="line" data-beat="kit">Kit out.</span><span class="line" data-beat="paid">Creators paid.</span></h1>
+      <h1 class="hero-h1">Sound effects you tune, licensed per kit</h1>
       <p class="lede">Every sound is a program with knobs. Describe a vibe, get a tuned kit, and one PayPal order pays every creator.</p>
       <form class="hero-dig" id="hero-dig" autocomplete="off"><label class="sr-only" for="hero-vibe">Describe a kit</label><input id="hero-vibe" maxlength="200" placeholder="haunted arcade at midnight"><button class="btn primary" type="submit">Play it on pads</button></form>
       <p class="hero-alt">Or <a class="link" href="#/sounds">browse all the sounds</a></p>

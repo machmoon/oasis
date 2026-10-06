@@ -58,8 +58,8 @@ export async function pageKits(app) {
     const tiles = [...byVibe.values()];
     $("#kt-list").innerHTML = tiles.length ? tiles.map((k) => `<a class="kt-tile" href="#/kit/${esc(k.id)}">
       <span class="kt-mosaic" data-n="${(k.cards || []).length}">${(k.cards || []).map((c) => `<img src="${esc(c)}" alt="" loading="lazy" width="320" height="160">`).join("")}</span>
-      <span class="kt-body"><b>${esc(k.title)}</b>${k.licensed ? `<em class="kt-paid">${icon("seal-check")} Paid</em>` : ""}<q>${esc(k.vibe)}</q>
-      <span class="kt-facts">${[[k.parts, "sounds"], [k.creators, "creators"], [usd(k.total), ""], ...(k.takes > 1 ? [[k.takes, "takes"]] : [])].map(([v, l]) => `<span><b class="num">${v}</b>${l ? ` ${l}` : ""}</span>`).join("")}</span></span></a>`).join("") : `<p class="muted">No kits yet. Yours will be the first.</p>`;
+      <span class="kt-body"><b>${esc(k.title)}</b>${k.licensed ? `<em class="kt-paid">${icon("seal-check")} Paid</em>` : ""}${k.vibe.trim().toLowerCase() !== k.title.trim().toLowerCase() ? `<q>${esc(k.vibe)}</q>` : ""}
+      <span class="kt-facts">${[[k.parts, k.parts === 1 ? "sound" : "sounds"], [k.creators, k.creators === 1 ? "creator" : "creators"], [usd(k.total), ""], ...(k.takes > 1 ? [[k.takes, "takes"]] : [])].map(([v, l]) => `<span><b class="num">${v}</b>${l ? ` ${l}` : ""}</span>`).join("")}</span></span></a>`).join("") : `<p class="muted">No kits yet. Yours will be the first.</p>`;
   }).catch((e) => { if (!$("#kt-list")) return; $("#kt-list").innerHTML = `<p class="muted">Recent kits could not be loaded: ${esc(e.message)}</p>`; });
 }
 

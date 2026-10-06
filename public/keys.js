@@ -247,7 +247,7 @@ export function mountKeys(host, { notes, knobName, render, values, title = "Play
     <p class="ks-hint">Click or tap the keys, drag across them, or play <kbd>a</kbd>&#8202;<kbd>w</kbd>&#8202;<kbd>s</kbd>&#8202;<kbd>e</kbd>&#8202;<kbd>d</kbd> … <kbd>k</kbd> on your keyboard; <kbd>z</kbd> <kbd>x</kbd> change octave.</p>`;
   const keys = host.querySelector("oasis-keys"), status = host.querySelector(".ks-status"), row = host.querySelector(".ks-row");
   const span = Math.max(...Object.values(QWERTY));
-  const showRow = () => { row.textContent = `${nameOf(keys.base)}–${nameOf(keys.base + span)}`; };
+  const showRow = () => { row.textContent = `${nameOf(keys.base)} to ${nameOf(keys.base + span)}`; };
   showRow();
   const player = notePlayer({ render, knobName, notes, values, onState: ({ ready, total, watermarked, error }) => {
     status.classList.toggle("err", !!error);
