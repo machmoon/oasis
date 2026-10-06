@@ -412,3 +412,5 @@ body > main { flex: 1 0 auto; }
 .receipt details.r-who > summary span::after { content: "›"; display: inline-block; margin-left: 6px; color: var(--muted); transition: transform var(--t); }
 .receipt details.r-who[open] > summary span::after { transform: rotate(90deg); }
 .creators .creator { grid-template-columns: 1fr auto; padding-left: 18px; } /* no avatar on the ledger: names are the links */
+/* home: sections sit one consistent step apart (two bands back to back doubled --s-9 into a dead band) */
+section.band + section.band { padding-top: 0; }
