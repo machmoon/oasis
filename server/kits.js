@@ -64,6 +64,10 @@ const SYSTEM = `You are the sound supervisor for Oasis, a registry where every s
 
 Return JSON only: {"title":"2-4 words","items":[{"asset_id":"...","name":"...","knobs":{...},"reason":"one line"}]}. Knob values must be inside each knob's range or options; omit knobs you leave at default; always set a seed when the sound has one.`;
 
+/** How the last Claude call went, so /api/config and /api/status report a planner that answers, not a key that is set. */
+export const plannerHealth = { ok: null, error: null, at: null };
+export const plannerReady = () => !!config.anthropicKey && plannerHealth.ok !== false;
+
 /** Claude plans the kit from the vibe and the catalogue; falls back to keywords when no model is configured. */
 export async function planKit(vibe) {
   const v = String(vibe || "").trim().slice(0, 300);
@@ -77,7 +81,11 @@ export async function planKit(vibe) {
       const j = JSON.parse(text.match(/\{[\s\S]*\}/)[0]);
       plan = { title: String(j.title || v).slice(0, 60), items: (j.items || []).map((it) => ({ assetId: it.asset_id, knobs: it.knobs || {}, name: String(it.name || "").slice(0, 40), reason: String(it.reason || "").slice(0, 160) })) };
       planner = config.directorModel;
-    } catch (e) { console.warn("kit planner", e.message); }
+      Object.assign(plannerHealth, { ok: true, error: null, at: new Date().toISOString() });
+    } catch (e) {
+      console.warn("kit planner", e.message);
+      Object.assign(plannerHealth, { ok: false, error: e.error?.error?.message || e.message, at: new Date().toISOString() });
+    }
   }
   if (!plan) plan = planByKeywords(v);
   return cleanKit(v, plan, planner);

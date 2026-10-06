@@ -55,7 +55,7 @@ export async function createApp() {
   };
 
   app.get("/api/config", (req, res) =>
-    res.json({ prerendered: fs.existsSync(new URL("../public/prerender/", import.meta.url).pathname), paypalClientId: config.paypal.clientId || null, paypalReady: paypalConfigured(), agentReady: !!config.anthropicKey, ...catalog.stats() }),
+    res.json({ prerendered: fs.existsSync(new URL("../public/prerender/", import.meta.url).pathname), paypalClientId: config.paypal.clientId || null, paypalReady: paypalConfigured(), agentReady: kits.plannerReady(), ...catalog.stats() }),
   );
 
   app.get("/api/assets", wrap((req, res) => {
@@ -652,7 +652,7 @@ export async function createApp() {
     const orders = await store.list("orders");
     const byStatus = orders.reduce((m, o) => ((m[o.status] = (m[o.status] || 0) + 1), m), {});
     res.set("Cache-Control", "no-cache").json({
-      paypalReady: paypalConfigured(), agentReady: !!config.anthropicKey, paypalEnv: "sandbox",
+      paypalReady: paypalConfigured(), agentReady: kits.plannerReady(), planner: kits.plannerHealth, paypalEnv: "sandbox",
       tests: numbers.tests, factory: { builds: numbers.factoryBuilds, published: numbers.factoryPublished, rejected: numbers.factoryRejected },
       assets: catalog.allAssets().length,
       orders: { total: orders.length, byStatus, recent: recent(orders).map((o) => ({ id: o.id, status: o.status, total: o.total, items: o.items.length, agentName: o.agentName, cap: o.maxTotal, captureId: o.captureId || null, refundId: o.refundId || null, payoutHold: o.payoutHold?.status || null, payoutBatch: o.payoutBatch?.id || null, createdAt: o.createdAt })) },

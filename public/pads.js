@@ -578,6 +578,11 @@ export async function pagePads(app, id) {
     const results = bits.length > 1 ? [...bits].sort((a, b) => rank(a) - rank(b)).map(command) : [command(text)];
     const r = results.every((x) => x === "?") ? "?" : results.filter((x) => x !== "?").join(" · ");
     if (r === "?" && text.split(/\s+/).length >= 2) return dig(text);
+    // a line that mixes commands with a vibe ("rusty sci-fi dungeon, boom bap, bpm 96") digs the vibe, and the new
+    // kit's pads run the commands once they open
+    const sorted = bits.length > 1 ? [...bits].sort((a, b) => rank(a) - rank(b)) : [text];
+    const vibe = sorted.filter((b, i) => results[i] === "?" && b.split(/\s+/).length >= 2);
+    if (vibe.length) { try { sessionStorage.setItem("oasis.pads.then", JSON.stringify(sorted.filter((b, i) => results[i] !== "?"))); } catch {} return dig(vibe.join(", ")); }
     $("#cr-q").value = "";
     $("#cr-q").placeholder = r === "?" ? "A style (boom bap, dilla, house), bpm 96, looser, 4 bars, take out the hats, or a vibe to dig" : `✓ ${r}`; $("#cr-q").blur();
   });
@@ -718,6 +723,8 @@ export async function pagePads(app, id) {
   // a first groove from what the kit is, the way CRATE starts every kit on its style's groove: a kit with a bed and no
   // drum names gets lo-fi, anything else boom bap
   applyStyle(pads.some((p) => p.role === "texture") && !pads.some((p) => /kick|808|drum|snare/.test(p.item.name.toLowerCase())) ? "lofi" : "boombap");
+  // commands left from the line that dug this kit run over that first groove
+  try { const then = JSON.parse(sessionStorage.getItem("oasis.pads.then") || "[]"); sessionStorage.removeItem("oasis.pads.then"); const done = then.map(command).filter((x) => x && x !== "?"); if (done.length) $("#cr-q").placeholder = `✓ ${done.join(" · ")}`; } catch {}
   undo.length = 0;
   paintFxPads(); paintAll(); setPunch(0);
   pads.forEach(load);
