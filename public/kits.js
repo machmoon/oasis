@@ -56,10 +56,14 @@ export async function pageKits(app) {
     const byVibe = new Map();
     for (const k of list) { const key = k.vibe.trim().toLowerCase(); const t = byVibe.get(key); t ? t.takes++ : byVibe.set(key, { ...k, takes: 1 }); }
     const tiles = [...byVibe.values()];
-    $("#kt-list").innerHTML = tiles.length ? tiles.map((k) => `<a class="kt-tile" href="#/kit/${esc(k.id)}">
-      <span class="kt-mosaic" data-n="${(k.cards || []).length}">${(k.cards || []).map((c) => `<img src="${esc(c)}" alt="" loading="lazy" width="320" height="160">`).join("")}</span>
-      <span class="kt-body"><b>${esc(k.title)}</b>${k.licensed ? `<em class="kt-paid">${icon("seal-check")} Paid</em>` : ""}${k.vibe.trim().toLowerCase() !== k.title.trim().toLowerCase() ? `<q>${esc(k.vibe)}</q>` : ""}
-      <span class="kt-facts">${[[k.parts, k.parts === 1 ? "sound" : "sounds"], [k.creators, k.creators === 1 ? "creator" : "creators"], [usd(k.total), ""], ...(k.takes > 1 ? [[k.takes, "takes"]] : [])].map(([v, l]) => `<span><b class="num">${v}</b>${l ? ` ${l}` : ""}</span>`).join("")}</span></span></a>`).join("") : `<p class="muted">No kits yet. Yours will be the first.</p>`;
+    // one row grammar across the site (the sounds list): a mosaic of the kit's parts, its name and vibe, the counts,
+    // the price and whether it is paid; a link to play it on pads at the end
+    $("#kt-list").innerHTML = tiles.length ? `<div class="s-rows kt-rows">${tiles.map((k) => `<div class="kt-row">
+      <a class="kt-mini" href="#/kit/${esc(k.id)}" tabindex="-1" aria-hidden="true">${(k.cards || []).slice(0, 4).map((c) => `<img src="${esc(c)}" alt="" loading="lazy" width="160" height="80">`).join("")}</a>
+      <a class="s-name" href="#/kit/${esc(k.id)}"><b>${esc(k.title)}</b>${k.vibe.trim().toLowerCase() !== k.title.trim().toLowerCase() ? `<span>${esc(k.vibe)}</span>` : ""}</a>
+      <span class="s-c num">${k.parts} sound${k.parts === 1 ? "" : "s"}</span><span class="s-c num">${k.creators} creator${k.creators === 1 ? "" : "s"}</span>
+      <span class="s-c s-price num">${usd(k.total)}${k.licensed ? `<small>paid</small>` : ""}</span>
+      <a class="kt-pads" href="#/pads/${esc(k.id)}" title="Play it on pads" aria-label="Play ${esc(k.title)} on pads">${icon("squares-four")}</a></div>`).join("")}</div>` : `<p class="muted">No kits yet. Yours will be the first.</p>`;
   }).catch((e) => { if (!$("#kt-list")) return; $("#kt-list").innerHTML = `<p class="muted">Recent kits could not be loaded: ${esc(e.message)}</p>`; });
 }
 

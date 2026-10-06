@@ -359,7 +359,7 @@ export async function pageAsset(app, id) {
   app.innerHTML = `<div class="wrap a-page" aria-busy="true"><div class="skel" style="height:14px;width:140px;margin-bottom:18px"></div><div class="skel" style="height:44px;width:min(360px,60%)"></div><div class="skel" style="height:14px;width:min(520px,80%);margin:14px 0 24px"></div><div class="sp-hero"><div class="skel" style="min-height:400px;border-radius:var(--r-lg)"></div><div class="skel" style="min-height:400px;border-radius:var(--r-lg)"></div></div></div>`;
   let a;
   try { a = await detail(id); } catch { app.innerHTML = `<div class="wrap split2"><div><h1>That sound doesn't exist.</h1><p class="lede">It may have been removed, or the link has a typo.</p><p style="margin-top:24px"><a class="btn primary" href="#/sounds">Browse sounds</a></p></div></div>`; return; }
-  if (a.format === "sound") return pageSound(app, a, { catalog: sounds, card: soundCard, liveCards: liveSoundCards });
+  if (a.format === "sound") return pageSound(app, a, { catalog: sounds, card: soundRow, liveCards: liveSoundCards });
   if (a.format !== "blocks") { location.hash = "#/sounds"; return; }
   const knobs = a.knobs || {};
   const values = Object.fromEntries(Object.entries(knobs).map(([k, d]) => [k, d.default]));

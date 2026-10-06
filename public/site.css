@@ -383,3 +383,8 @@ footer a { color: var(--ink-2); margin-left: var(--s-4); }
 /* short pages keep the footer at the bottom of the window instead of floating mid-screen */
 body { min-height: 100dvh; display: flex; flex-direction: column; }
 body > main { flex: 1 0 auto; }
+
+/* the hero shows the product, not a picture of a payment button: the fake Pay pill and its chips are gone (the real
+   checkout is on every kit), and the readout is plain text without an always-on status dot */
+.hero-pay { display: none; }
+.hero-readout i { display: none; }

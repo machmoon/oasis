@@ -205,7 +205,7 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
 .sp-fork textarea { width: 100%; min-height: 84px; padding: 10px 12px; font: 15px/1.5 var(--font-sans); resize: vertical; }
 .sp-fork textarea:focus, .sp-fork .row input:focus { outline: none; border-color: var(--accent); box-shadow: var(--ring); }
 .sp-fork .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-.sp-fork .row input { flex: 1; min-width: 140px; height: 40px; padding: 0 12px; font: 14px var(--font-sans); }
+.sp-fork .row input { flex: 1; min-width: 0; height: 40px; padding: 0 12px; font: 14px var(--font-sans); }
 .sp-fork .note { font-size: var(--fs-sm); color: var(--muted); }
 .sp-fork .lineage { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 @media (max-width: 899px) { .sp-fork { grid-template-columns: 1fr; } }
@@ -226,7 +226,7 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
 .kt-status.err i { display: none; }
 .kt-recent { margin-top: 56px; }
 .kt-recent h2 { font-size: 22px; margin-bottom: 14px; }
-.kt-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.kt-list { display: block; }
 /* kit tile: the cult-ui MinimalCard frame the sound cards use, its picture a 2x2 mosaic of the kit's first parts as
    tuned (the same centroid-coloured cards), so a tile shows what the kit sounds like before it is opened */
 .kt-tile { display: grid; padding: 6px; text-decoration: none; color: inherit; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--inset-top); transition: transform var(--t) var(--ease-out), border-color var(--t), box-shadow var(--t); }
@@ -427,7 +427,7 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
 /* the live spectrum and scope wait as a faint baseline and come up only while something is sounding, instead of an
    empty black bar with a dot that reads as broken (design round 2) */
 :has(> .lv-spec) { transition: opacity var(--t-slow) var(--ease-out); }
-:has(> .lv-spec):not(.on) { opacity: .22; }
+:has(> .lv-spec):not(.on) { opacity: 0; }
 :has(> .lv-spec):not(.on) .lv-tag { visibility: hidden; }
 
 /* ---------- the sounds list: rows like a sound library (Freesound's results list, Splice's sample rows): play,
@@ -485,3 +485,16 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
   .sp-readout { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 16px; }
   .sp-tools { justify-content: flex-start; }
 }
+
+/* kits as rows, the same grammar as the sounds list */
+.kt-rows { display: grid; }
+.kt-row { display: grid; grid-template-columns: 120px minmax(0, 1fr) 84px 92px 84px 36px; align-items: center; gap: 16px; padding: 8px 14px 8px 8px; }
+.kt-row + .kt-row { border-top: 1px solid var(--line); }
+.kt-row:hover { background: color-mix(in srgb, var(--ink) 4%, transparent); }
+.kt-mini { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; width: 120px; height: 52px; border-radius: var(--r-sm); overflow: hidden; background: #0B0C10; }
+.kt-mini img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.kt-row .s-price { display: grid; justify-items: end; line-height: 1.15; }
+.kt-row .s-price small { font-size: 11.5px; font-weight: var(--w-medium); color: var(--muted); }
+.kt-pads { text-decoration: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: var(--r-pill); color: var(--muted); font-size: 17px; }
+.kt-pads:hover { background: var(--sunk); color: var(--ink); }
+@media (max-width: 899px) { .kt-row { grid-template-columns: 96px minmax(0, 1fr) 70px 34px; } .kt-row .s-c:not(.s-price) { display: none; } .kt-mini { width: 96px; height: 44px; } }

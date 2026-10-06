@@ -61,17 +61,7 @@ export async function pageHome(app, ctx) {
     <div class="s-rows" id="kit"></div>
   </section>
 
-  <section class="wrap band">
-    <div class="rebuild">
-      <div><div class="rebuild-stage hs-stage2" id="rb-stage"><div id="rb-ws"></div><button class="s-play big" id="rb-play" aria-label="Play">${icon("play")}</button><span class="readout" id="rb-readout"></span></div></div>
-      <div>
-        <h2>Turn a knob</h2>
-        <p class="lede">Each knob re-runs the program: heavier is a lower, longer thump.</p>
-        <div class="rebuild-knobs" id="rb-knobs"></div>
-        <div class="rebuild-import" id="rb-import"></div>
-      </div>
-    </div>
-  </section>
+
 
   <section class="wrap band" id="pay">
     <div class="order">
@@ -111,7 +101,6 @@ export async function pageHome(app, ctx) {
 
   drawKitRow($("#kit"), { catalog });
   drawSales().then((n) => { if (n) $("#sales-sec").hidden = false; });
-  mountRebuild({ api, esc, icon, reduced });
   // the bill shows a real paid kit at once (the latest licensed one, with its PayPal order), so the band is never an
   // empty frame waiting on the hero; a bill the hero builds later replaces it
   let heroBilled = false;

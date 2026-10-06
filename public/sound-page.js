@@ -125,7 +125,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
     ${knobs.seed ? `<section class="sp-walk" id="sp-walk-sec">
       <div>
         <h2>300 takes</h2>
-        <p class="lede">The same program with your knobs, rendered once per seed and laid along a timeline. Each dot is one take: left to right is time, up is brighter, bigger is louder. Press play and each take lights up as it sounds; click a dot to hear it. A file played 300 times would be one dot.</p>
+        <p class="lede">One program, 300 seeds: each dot is a take. Click one to hear it.</p>
         <div class="a-program" id="sp-walk-code"></div>
       </div>
       <div class="sp-walk-stage" id="sp-walk">
@@ -139,7 +139,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
     <section class="sp-fork" id="sp-fork">
       <div>
         <h2>Fork it</h2>
-        <p class="lede">Describe a new direction and Claude rewrites this program into a new sound that keeps what makes it good. The fork is yours to sell; ${esc(a.author)} keeps a share of every sale, down the lineage.</p>
+        <p class="lede">Claude rewrites the program in a new direction; the original creator keeps a share of every sale.</p>
         ${a.parent ? `<div class="lineage"><span class="chip">forked from <a href="#/a/${esc(a.parent.id)}">${esc(a.parent.title)}</a></span></div>` : ""}
         ${a.children?.length ? `<div class="lineage">${a.children.map((c) => `<a class="chip" href="#/a/${esc(c.id)}">${esc(c.title)} <b>${price(c.price)}</b></a>`).join("")}</div>` : ""}
       </div>
@@ -151,11 +151,11 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
           <div class="fk-f"><label class="fk-l" for="fork-email">PayPal email <span>optional</span></label><input id="fork-email" type="email" maxlength="80" autocomplete="email"></div>
           <div class="fk-f fk-price"><label class="fk-l" for="fork-price">Price, $</label><input id="fork-price" type="number" min="0" max="50" step="0.5" placeholder="0"></div>
         </div>
-        <div class="row"><button class="btn primary" type="submit" id="fork-go">${icon("sparkle")} Fork with AI</button><span class="note" id="fork-note">About a minute. The sandbox and the harness check the result before it is listed.</span></div>
+        <div class="row"><button class="btn primary" type="submit" id="fork-go">${icon("sparkle")} Fork with AI</button><span class="note" id="fork-note"></span></div>
       </form>
     </section>
 
-    <section class="a-more" id="a-more" hidden><h2>More from ${esc(kitName || "the registry")}</h2><div class="s-grid" id="a-more-grid"></div></section>
+    <section class="a-more" id="a-more" hidden><h2>More from ${esc(kitName || "the registry")}</h2><div class="s-rows" id="a-more-grid"></div></section>
   </div>`;
 
   // ----- rendering -----
