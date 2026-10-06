@@ -98,7 +98,7 @@ const sum = (rows) => rows.reduce((s, r) => s + r.cents, 0);
 
 /** A creator as their page shows them: sounds, what the ledger paid them, the orders behind it, forks and royalties. */
 export async function creator(name) {
-  const sounds = catalog.allAssets().filter((a) => a.author === name && a.format === "sound").sort((a, b) => a.title.localeCompare(b.title));
+  const sounds = catalog.allAssets().filter((a) => a.author === name && a.format === "sound").sort((a, b) => String(a.worldKit || "~").localeCompare(String(b.worldKit || "~")) || a.title.localeCompare(b.title)); // grouped by kit, the way an artist page groups by album
   const rows = (await store.list("ledger")).filter((r) => r.author === name && r.role !== "platform");
   if (!sounds.length && !rows.length) throw fail(`No creator called ${name}`, 404);
   const ids = new Set(sounds.map((a) => a.id));
