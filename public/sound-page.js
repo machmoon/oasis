@@ -171,7 +171,14 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
   // License it: a one-part kit with the knobs as they are now, then that kit's PayPal checkout
   $("#a-license")?.addEventListener("click", async (e) => {
     const b = e.currentTarget; b.disabled = true; b.innerHTML = `${icon("circle-notch")} Preparing the order`;
-    try { const k = await api("/api/kits/single", { method: "POST", body: { assetId: a.id, knobs: diff() } }); location.hash = `#/kit/${k.id}`; }
+    // one click to PayPal: the one-part kit, its checkout, then PayPal's approval page; coming back lands on the kit
+    // page, which claims the licence with the token saved here (the kit page's own return path)
+    try {
+      const k = await api("/api/kits/single", { method: "POST", body: { assetId: a.id, knobs: diff() } });
+      const o = await api(`/api/kits/${k.id}/checkout`, { method: "POST", body: {} });
+      try { localStorage.setItem(`oasis.kit.${k.id}`, JSON.stringify({ orderId: o.order_id, claimToken: o.claim_token })); } catch {}
+      location.href = o.approve_url;
+    }
     catch (err) { toast(err.message); b.disabled = false; b.innerHTML = `${icon("seal-check")} License it, ${price(a.price)}`; }
   });
   // a look is for listening here; it comes off when the page does

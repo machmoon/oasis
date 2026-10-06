@@ -328,7 +328,10 @@ export async function createApp() {
     const a = mustSound(String(req.body?.assetId || ""));
     const knobs = req.body?.knobs && typeof req.body.knobs === "object" ? req.body.knobs : {};
     const plan = { title: a.title, items: [{ assetId: a.id, knobs, name: a.title, reason: "licensed on its own, with the knobs set on its page" }] };
-    res.json(kits.view(await kits.save(kits.cleanKit(a.title, plan, "single"))));
+    const fresh = kits.cleanKit(a.title, plan, "single");
+    // the same sound with the same knobs, not yet paid for, is the same order: a second click reuses it
+    const same = (await store.list("kits")).find((k) => k.planner === "single" && !k.licence && k.items[0]?.assetId === a.id && JSON.stringify(k.items[0].knobs) === JSON.stringify(fresh.items[0].knobs));
+    res.json(kits.view(same || await kits.save(fresh)));
   }));
   app.get("/api/kits", wrap(async (req, res) => {
     const all = (await store.list("kits")).filter((k) => k.planner !== "single" && k.items.length >= 4).sort((a, b) => (!!b.licence - !!a.licence) || b.updatedAt.localeCompare(a.updatedAt)).slice(0, 24);
