@@ -53,19 +53,47 @@ export function spectrogramPng(a, width = 640, height = 160) {
   return c.png();
 }
 
-/** The catalogue card: waveform over spectrogram, square, the way the kit grid shows one sound. */
-export function cardPng(a, size = 640) {
-  const c = canvas(size, size, BG), top = Math.round(size * 0.46), mid = Math.round(top / 2);
-  c.rect(0, mid, size, 1, FAINT);
-  const cols = a.wave.length;
-  for (let x = 0; x < size; x++) {
-    const [lo, hi] = a.wave[Math.min(cols - 1, Math.floor(x / size * cols))];
-    c.vline(x, Math.round(mid - hi * (mid - 10)), Math.max(Math.round(mid - lo * (mid - 10)), Math.round(mid - hi * (mid - 10)) + 1), INK);
+// The card's waveform takes its colour from each column's spectral centroid, the way Freesound draws every waveform it
+// serves (MTG/freesound utils/audioprocessing/processing.py `WaveformImage.draw_peaks`: a colour lookup indexed by the
+// normalised centroid, on a dark ground with the zero line at alpha 25). The ramp is Roseus, low to high (the stops the
+// sound page's spectrogram uses, public/wave.js ROSEUS_STOPS), minus its near-black ends so the quietest colour still
+// reads on the dark ground.
+const CARD_BG = [11, 12, 16, 255], CARD_ZERO = [255, 255, 255, 25];
+const CARD_RAMP = [[125, 31, 159], [196, 42, 130], [240, 92, 83], [247, 180, 101], [254, 251, 249]];
+const rampAt = (t) => {
+  const f = Math.max(0, Math.min(1, t)) * (CARD_RAMP.length - 1), i = Math.min(CARD_RAMP.length - 2, Math.floor(f)), u = f - i;
+  return [0, 1, 2].map((k) => Math.round(CARD_RAMP[i][k] + (CARD_RAMP[i + 1][k] - CARD_RAMP[i][k]) * u));
+};
+/** Per-column brightness 0..1: the centroid of the spectrogram row under that column, over its bins. */
+function columnCentroids(a, width, loud) {
+  const frames = a.spec.length, bins = a.spec[0]?.length || 1, out = new Float32Array(width);
+  for (let x = 0; x < width; x++) {
+    const row = a.spec[Math.min(frames - 1, Math.floor(x / width * frames))] || [];
+    let s = 0, w = 0;
+    for (let b = 0; b < bins; b++) { const m = Math.pow(10, ((row[b] || 0) / 255 * 72 - 72) / 20); s += m * b; w += m; }
+    out[x] = w > 0 ? s / w / (bins - 1) : 0;
   }
-  const frames = a.spec.length, bins = a.spec[0]?.length || 1, h = size - top;
-  for (let x = 0; x < size; x++) {
-    const row = a.spec[Math.min(frames - 1, Math.floor(x / size * frames))];
-    for (let y = 0; y < h; y++) c.put(x, top + y, heat(row[Math.min(bins - 1, Math.floor((1 - (y + 0.5) / h) * bins))]));
+  // stretch to the sound's own range, so a dark rumble and a bright click both use the ramp
+  let lo = 1, hi = 0; out.forEach((v, x) => { if (!loud[x]) return; if (v < lo) lo = v; if (v > hi) hi = v; });
+  if (lo > hi) { lo = 0; hi = 1; }
+  const span = Math.max(0.08, hi - lo);
+  return out.map((v) => (v - lo) / span);
+}
+
+/** The catalogue card: a wide waveform coloured by spectral centroid on a dark ground (2:1 by default). */
+export function cardPng(a, width = 640, height = Math.round(width / 2)) {
+  const c = canvas(width, height, CARD_BG), mid = Math.floor(height / 2), amp = height / 2 - Math.round(height * 0.08);
+  c.rect(0, mid, width, 1, CARD_ZERO);
+  const cols = a.wave.length, col = (x) => a.wave[Math.min(cols - 1, Math.floor(x / width * cols))];
+  let peak = 0; for (const [lo, hi] of a.wave) peak = Math.max(peak, -lo, hi);
+  const gain = peak > 0 ? Math.min(4, 0.96 / peak) : 1; // quiet sounds still fill the card
+  // a column under 4% of full scale is a tail or the noise floor: drawn dim, and left out of the colour range
+  const loud = Array.from({ length: width }, (_, x) => (col(x)[1] - col(x)[0]) * gain > 0.08);
+  const tone = columnCentroids(a, width, loud);
+  for (let x = 0; x < width; x++) {
+    const [lo, hi] = col(x);
+    const y0 = Math.round(mid - hi * gain * amp), y1 = Math.round(mid - lo * gain * amp);
+    c.vline(x, y0, Math.max(y1, y0 + 1), loud[x] ? [...rampAt(tone[x]), 255] : [125, 31, 159, 150]);
   }
   return c.png();
 }

@@ -7,7 +7,6 @@ import { LOOKS, applyLook } from "/looks.js";
 import { pageSound, KIND_LABEL, makeRenderer } from "/sound-page.js";
 import { mountKitPlayer } from "/keys.js";
 import { unlock, loadWav, play } from "/audio.js";
-import { lazyWave } from "/wave.js";
 
 // styles live in kit.css and sound.css; loaded once, from here, so index.html stays as it is
 for (const href of ["/kit.css", "/sound.css"]) if (!document.querySelector(`link[href="${href}"]`)) {
@@ -128,75 +127,86 @@ function liveCards(root) {
 }
 
 // ---------- the sounds browser ----------
-// Cards show each sound's default take as a small wavesurfer waveform (public/wave.js lazyWave, built when the card
-// scrolls into view, from the same render.wav the play button plays) with a play control that drives its cursor;
-// hovering plays nothing (sound needs a gesture). Filters: kind, kit, price, creator, the way the 3D kit's are.
-const soundThumb = (id, q = {}) => { const u = new URLSearchParams({ w: 400, ...q }); return `/api/assets/${encodeURIComponent(id)}/render.png?${u}`; };
+// A card is Freesound's sound tile (MTG/freesound templates/sounds/display_sound.html: the player's waveform picture,
+// then the name, then who made it): the picture is the server's card render, a wide waveform coloured by spectral
+// centroid (server/sound.js cardPng), so 265 cards cost 265 small cached PNGs, not 265 decoded WAVs. Play fetches the
+// one render.wav it needs and sweeps a playhead over the picture for the take's length. Hovering plays nothing (sound
+// needs a gesture). One toolbar filters: search, kind, kit, creator, price, sort.
+const soundThumb = (id, q = {}) => { const u = new URLSearchParams({ w: 480, ...q }); return `/api/assets/${encodeURIComponent(id)}/render.png?${u}`; };
 export function soundCard(a) {
   return `<div class="s-card" data-id="${esc(a.id)}">
-    <span class="s-sheet"><a href="#/a/${esc(a.id)}" class="s-link" aria-label="${esc(a.title)}: waveform"><span class="s-wave" data-wave-id="${esc(a.id)}" data-dim="${a.price > 0 ? 1 : 0}"></span></a><button class="s-play" data-play="${esc(a.id)}" aria-label="Play ${esc(a.title)}">${icon("play")}</button></span>
-    <a class="s-meta" href="#/a/${esc(a.id)}"><b>${esc(a.title)}</b><em class="num">${price(a.price)}</em><span class="by">${esc(a.author)}${a.kit ? `, ${esc(a.kit)}` : ""}</span><span class="facts">${esc(KIND_LABEL[a.kind] || a.kind)} · ${a.duration} s · ${a.knobCount} knobs</span></a></div>`;
+    <span class="s-sheet"><a href="#/a/${esc(a.id)}" class="s-link" tabindex="-1" aria-hidden="true"><img src="${soundThumb(a.id)}" alt="" loading="lazy" width="480" height="240"></a><i class="s-cursor" aria-hidden="true"></i><button class="s-play" data-play="${esc(a.id)}" aria-label="Play ${esc(a.title)}">${icon("play")}</button></span>
+    <a class="s-meta" href="#/a/${esc(a.id)}"><b>${esc(a.title)}</b><em class="num">${price(a.price)}</em><span class="by">${esc(a.author)}${a.kit ? ` <i>in</i> ${esc(a.kit)}` : ""}</span><span class="facts">${esc(KIND_LABEL[a.kind] || a.kind)}<i>${a.duration} s</i><i>${a.knobCount} knobs</i></span></a></div>`;
 }
-const soundSkeleton = (n = 10) => Array.from({ length: n }, () => `<div class="s-skel" aria-hidden="true"><div class="skel"></div><div class="skel t"></div><div class="skel t"></div></div>`).join("");
+const soundSkeleton = (n = 12) => Array.from({ length: n }, () => `<div class="s-skel" aria-hidden="true"><div class="skel"></div><div class="skel t"></div><div class="skel t"></div></div>`).join("");
 export function liveSoundCards(root) {
-  $$(".s-wave:not([data-lazy])", root).forEach((el) => {
-    el.dataset.lazy = "1";
-    el.addEventListener("wave", () => el.closest(".s-sheet").classList.add("in"), { once: true });
-    el.lazy = lazyWave(el, async () => ({ buffer: await loadWav(`/api/assets/${encodeURIComponent(el.dataset.waveId)}/render.wav`), dim: false }), { height: Math.max(80, el.clientHeight || 120), barWidth: 2, barGap: 1, barRadius: 1 });
-    setTimeout(() => el.closest(".s-sheet")?.classList.add("in"), 8000);
+  $$(".s-sheet img:not([data-wired])", root).forEach((img) => {
+    img.dataset.wired = "1";
+    const on = () => img.closest(".s-sheet")?.classList.add("in");
+    img.complete && img.naturalWidth ? on() : img.addEventListener("load", on, { once: true });
+    img.addEventListener("error", on, { once: true });
   });
   if (root.dataset.wired) return; root.dataset.wired = "1";
   let playing = null;
+  const stop = () => { if (!playing) return; playing.p.stop(); const { b } = playing; playing = null; b.classList.remove("on"); b.innerHTML = icon("play"); b.closest(".s-card")?.classList.remove("playing"); };
   root.addEventListener("click", async (e) => {
     const b = e.target.closest("[data-play]"); if (!b) return;
     e.preventDefault();
     await unlock();
-    if (playing?.b === b) { playing.p.stop(); playing = null; b.classList.remove("on"); b.innerHTML = icon("play"); return; }
-    playing?.p.stop(); playing?.b.classList.remove("on"); if (playing) playing.b.innerHTML = icon("play");
+    if (playing?.b === b) return stop();
+    stop();
     b.classList.add("on"); b.innerHTML = icon("stop");
     try {
       const buf = await loadWav(`/api/assets/${encodeURIComponent(b.dataset.play)}/render.wav`);
-      const w = b.closest(".s-card")?.querySelector(".s-wave")?.lazy?.wave;
-      const p = w ? { stop: () => w.stop(), done: w.play().then(() => new Promise((r) => { const off = w.ws.on("pause", () => { off(); r(); }); })) } : play(buf); playing = { b, p };
-      p.done.then(() => { if (playing?.p === p) { playing = null; b.classList.remove("on"); b.innerHTML = icon("play"); } });
+      if (!b.classList.contains("on")) return; // stopped while it loaded
+      const card = b.closest(".s-card"), p = play(buf); playing = { b, p };
+      card.style.setProperty("--dur", `${buf.duration}s`);
+      card.classList.remove("playing"); void card.offsetWidth; card.classList.add("playing");
+      p.done.then(() => { if (playing?.p === p) stop(); });
     } catch (err) { toast(err.message); b.classList.remove("on"); b.innerHTML = icon("play"); }
   });
 }
+
+const SORTS = [["name", "Name"], ["kit", "Kit"], ["price-asc", "Price, low first"], ["price-desc", "Price, high first"], ["length", "Longest"], ["knobs", "Most knobs"]];
+const options = (pairs, on) => pairs.map(([v, l]) => `<option value="${esc(v)}"${v === on ? " selected" : ""}>${esc(l)}</option>`).join("");
+
 export async function pageSounds(app) {
   const params = new URLSearchParams(location.hash.split("?")[1] || "");
-  app.innerHTML = `<div class="wrap kit-page">
-    <header class="k-head">
-      <div><h1>The sounds.</h1><p class="lede">Every sound is a program with knobs. Press play for the default take; open one to turn its knobs, hear 300 takes, or fork it.</p></div>
-      <dl class="k-facts" id="k-facts"></dl>
-    </header>
-    <div class="k-bar">
-      <div class="k-chips" id="k-kinds" role="group" aria-label="Kind"></div>
-      <div class="k-chips" id="k-price" role="group" aria-label="Price"></div>
-      <div class="k-sort" role="group" aria-label="Sort"><span>Sort</span><div class="k-chips" id="k-sort">${[["name", "Name"], ["kit", "Kit"], ["price-asc", "Price ↑"], ["price-desc", "Price ↓"], ["length", "Length"], ["knobs", "Knobs"]].map(([v, l], i) => `<button class="k-chip${i === 0 ? " on" : ""}" data-f="sort" data-v="${v}" aria-pressed="${i === 0}">${l}</button>`).join("")}</div></div>
+  app.innerHTML = `<div class="wrap kit-page s-page">
+    <header class="s-intro"><h1>The sounds.</h1><p class="lede">Every sound is a program with knobs. Press play for the default take; open one to turn its knobs, hear 300 takes, or fork it.</p></header>
+    <div class="s-tools" role="search">
+      <label class="s-search">${icon("magnifying-glass")}<input type="search" id="k-q" placeholder="Search sounds" aria-label="Search sounds" autocomplete="off"></label>
+      <div class="s-kinds" id="k-kinds" aria-label="Kind"></div>
+      <div class="s-sels">
+        <label class="s-sel"><span>Kit</span><select id="k-kit"></select></label>
+        <label class="s-sel"><span>By</span><select id="k-author"></select></label>
+        <label class="s-sel"><span>Price</span><select id="k-price">${options([["all", "Any"], ["free", "Free"], ["paid", "Paid"]], "all")}</select></label>
+        <label class="s-sel"><span>Sort</span><select id="k-sort">${options(SORTS, "name")}</select></label>
+      </div>
     </div>
-    <div class="k-row" id="k-kits"></div>
-    <div class="k-row" id="k-creators"></div>
+    <p class="s-count" id="k-count" aria-live="polite"></p>
     <section class="kp" id="k-play" hidden aria-label="Play the kit"></section>
     <div class="s-grid" id="k-grid">${soundSkeleton()}</div>
-    <div class="k-empty" id="k-empty" hidden><h3>No sounds match.</h3><p>Clear a filter, or ask for a kit and let Claude find the closest.</p></div>
+    <div class="k-empty" id="k-empty" hidden><h3>No sounds match.</h3><p>Clear a filter, or <a class="link" href="#/kits">describe a kit</a> and let Claude find the closest.</p><button class="btn small" type="button" id="k-clear">Clear filters</button></div>
   </div>`;
   let list;
   try { list = await sounds(); } catch (e) { $("#k-grid").innerHTML = ""; $("#k-empty").hidden = false; $("#k-empty").innerHTML = `<h3>The registry could not be loaded.</h3><p>${esc(e.message)}</p><button class="btn small" type="button" onclick="location.reload()">${icon("arrow-clockwise")} Try again</button>`; return; }
   const creators = [...new Set(list.map((a) => a.author))].sort();
   const kits = [...new Set(list.map((a) => a.kit).filter(Boolean))].sort();
-  $("#k-facts").innerHTML = [[list.length, "sounds"], [kits.length, "kits"], [creators.length, "creators"]].map(([v, k]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("");
-  const state = { kind: "all", price: "all", author: "all", kit: params.get("kit") || "all", sort: "name" };
-  const counts = (key, vals) => vals.map((v) => [v, list.filter((a) => a[key] === v).length]);
-  $("#k-kinds").innerHTML = [["all", "All", list.length], ...counts("kind", [...new Set(list.map((a) => a.kind))].sort()).map(([k, n]) => [k, KIND_LABEL[k] || k, n])].map(([v, l, n]) => `<button class="k-chip${v === "all" ? " on" : ""}" data-f="kind" data-v="${esc(v)}">${esc(l)} <small>${n}</small></button>`).join("");
-  $("#k-price").innerHTML = [["all", "Any price"], ["free", "Free"], ["paid", "Paid"]].map(([v, l]) => `<button class="k-chip${v === "all" ? " on" : ""}" data-f="price" data-v="${v}">${l}</button>`).join("");
-  $("#k-kits").innerHTML = kits.length ? `<span>Kit</span><div class="k-chips">${[["all", "every kit"], ...kits.map((c) => [c, c])].map(([v, l]) => `<button class="k-chip${v === state.kit ? " on" : ""}" data-f="kit" data-v="${esc(v)}">${esc(l)}${v !== "all" ? ` <small>${list.filter((a) => a.kit === v).length}</small>` : ""}</button>`).join("")}</div>` : "";
-  $("#k-creators").innerHTML = `<span>By</span><div class="k-chips">${[["all", "everyone"], ...creators.map((c) => [c, c])].map(([v, l]) => `<button class="k-chip${v === "all" ? " on" : ""}" data-f="author" data-v="${esc(v)}">${esc(l)}</button>`).join("")}</div>`;
+  const state = { q: "", kind: "all", price: "all", author: "all", kit: kits.includes(params.get("kit")) ? params.get("kit") : "all", sort: "name" };
+  $("#k-q").placeholder = `Search ${list.length} sounds`;
+  const kinds = [...new Set(list.map((a) => a.kind))].sort();
+  $("#k-kit").innerHTML = options([["all", "All"], ...kits.map((k) => [k, k])], state.kit);
+  $("#k-author").innerHTML = options([["all", "Everyone"], ...creators.map((c) => [c, c])], "all");
   const grid = $("#k-grid");
   const draw = () => {
-    let out = list.filter((a) => (state.kind === "all" || a.kind === state.kind) && (state.price === "all" || (state.price === "free") === (a.price === 0)) && (state.author === "all" || a.author === state.author) && (state.kit === "all" || a.kit === state.kit));
+    const q = state.q.trim().toLowerCase();
+    let out = list.filter((a) => (state.kind === "all" || a.kind === state.kind) && (state.price === "all" || (state.price === "free") === (a.price === 0)) && (state.author === "all" || a.author === state.author) && (state.kit === "all" || a.kit === state.kit)
+      && (!q || `${a.title} ${a.kit || ""} ${a.author} ${a.description || ""}`.toLowerCase().includes(q)));
     const by = { name: (x, y) => x.title.localeCompare(y.title), kit: (x, y) => String(x.kit).localeCompare(String(y.kit)) || x.title.localeCompare(y.title), "price-asc": (x, y) => x.price - y.price || x.title.localeCompare(y.title), "price-desc": (x, y) => y.price - x.price || x.title.localeCompare(y.title), length: (x, y) => y.duration - x.duration, knobs: (x, y) => y.knobCount - x.knobCount }[state.sort];
     out = out.sort(by);
     grid.innerHTML = out.map(soundCard).join("");
+    $("#k-count").innerHTML = out.length === list.length ? `<b class="num">${list.length}</b> sounds from <b class="num">${creators.length}</b> creators in <b class="num">${kits.length}</b> kits` : `<b class="num">${out.length}</b> of ${list.length} sounds`;
     $("#k-empty").hidden = out.length > 0;
     liveSoundCards(grid);
     playKit();
@@ -215,12 +225,17 @@ export async function pageSounds(app) {
     if (kit !== shownKit || !$("#k-play")) return;
     kp = mountKitPlayer($("#k-play"), voices, { renderFor: (v) => makeRenderer(v, { analysis: false }), blurb: "Pick a voice and play it. Every note is rendered from the program, ahead of your key press." });
   };
-  app.addEventListener("click", (e) => {
-    const b = e.target.closest(".k-chip[data-f]"); if (!b) return;
-    state[b.dataset.f] = b.dataset.v;
-    $$(`.k-chip[data-f="${b.dataset.f}"]`, app).forEach((x) => { x.classList.toggle("on", x === b); if (x.hasAttribute("aria-pressed")) x.setAttribute("aria-pressed", x === b); });
+  segment($("#k-kinds"), [{ id: "all", label: "All" }, ...kinds.map((k) => ({ id: k, label: KIND_LABEL[k] || k }))], "all", (v) => { state.kind = v; draw(); });
+  let qT = 0;
+  $("#k-q").addEventListener("input", (e) => { clearTimeout(qT); qT = setTimeout(() => { state.q = e.target.value; draw(); }, 120); });
+  [["k-kit", "kit"], ["k-author", "author"], ["k-price", "price"], ["k-sort", "sort"]].forEach(([id, key]) => $(`#${id}`).addEventListener("change", (e) => { state[key] = e.target.value; e.target.closest(".s-sel").classList.toggle("set", key !== "sort" && e.target.value !== "all"); draw(); }));
+  $("#k-clear").addEventListener("click", () => {
+    Object.assign(state, { q: "", kind: "all", price: "all", author: "all", kit: "all" });
+    $("#k-q").value = ""; ["k-kit", "k-author", "k-price"].forEach((id) => { $(`#${id}`).value = "all"; $(`#${id}`).closest(".s-sel").classList.remove("set"); });
+    $("#k-kinds").querySelector('[data-v="all"]').click();
     draw();
   });
+  if (state.kit !== "all") $("#k-kit").closest(".s-sel").classList.add("set");
   draw();
 }
 

@@ -8,27 +8,84 @@
    listen" pill over the silent hero is the muted-autoplay unmute pill every video player puts in the corner. */
 
 /* ---------- the browser ---------- */
-.s-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(236px, 1fr)); gap: 14px; }
+.s-intro { max-width: 760px; margin-bottom: var(--s-6); }
+.s-intro .lede { margin-top: 12px; }
+
+/* one toolbar, pinned under the top bar while the grid scrolls: search (cult-ui halo-search's pill field with the glyph
+   inset on the left), the kind as a segmented control (halo-segmented, kit.css .seg), the rest as labelled selects */
+.s-tools { position: sticky; top: 64px; z-index: calc(var(--z-sticky) - 1); display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; margin: 0 calc(var(--gutter) * -1); padding: 12px var(--gutter); background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(14px) saturate(140%); -webkit-backdrop-filter: blur(14px) saturate(140%); border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent); }
+.s-search { position: relative; flex: 1 1 200px; max-width: 300px; display: flex; align-items: center; }
+.s-search i { position: absolute; left: 14px; color: var(--muted); font-size: 15px; pointer-events: none; }
+.s-search input { width: 100%; height: 38px; padding: 0 14px 0 38px; border-radius: var(--r-pill); border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: var(--w-medium) 14px var(--font-sans); box-shadow: var(--inset-top); transition: border-color var(--t), box-shadow var(--t); }
+.s-search input::placeholder { color: var(--muted); }
+.s-search input:focus { outline: none; border-color: var(--accent); box-shadow: var(--inset-top), 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent); }
+.s-kinds { flex: none; }
+.s-sels { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+.s-sel { position: relative; display: inline-flex; align-items: center; height: 38px; padding: 0 30px 0 12px; border-radius: var(--r-pill); border: 1px solid var(--line); background: var(--surface); box-shadow: var(--inset-top); font-size: 13.5px; color: var(--muted); cursor: pointer; transition: border-color var(--t); }
+.s-sel::after { content: ""; position: absolute; right: 13px; top: 50%; width: 6px; height: 6px; border: solid currentColor; border-width: 0 1.5px 1.5px 0; transform: translateY(-70%) rotate(45deg); pointer-events: none; }
+.s-sel:hover { border-color: var(--line-strong); }
+.s-sel:focus-within { border-color: var(--accent); }
+.s-sel span { margin-right: 6px; }
+.s-sel select { appearance: none; -webkit-appearance: none; field-sizing: content; border: 0; padding: 0; margin: 0; background: transparent; color: var(--ink); font: var(--w-semibold) 13.5px var(--font-sans); cursor: pointer; max-width: 150px; text-overflow: ellipsis; }
+.s-sel select:focus { outline: none; }
+.s-sel.set { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
+.s-sel.set span { color: var(--accent-text); }
+.s-count { margin: 18px 0 14px; color: var(--muted); font-size: var(--fs-sm); }
+.s-count b { color: var(--ink); font-weight: var(--w-semibold); }
+@media (max-width: 767px) {
+  .s-tools { position: static; margin: 0; padding: 0 0 4px; background: none; backdrop-filter: none; -webkit-backdrop-filter: none; border: 0; }
+  .s-search { max-width: none; flex-basis: 100%; }
+  .s-kinds { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+  .s-sels { margin-left: 0; }
+}
+
+/* the card: Freesound's tile (a wide waveform picture, then name, then maker), on a cult-ui MinimalCard frame */
+.s-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
 .s-card { position: relative; display: grid; padding: 6px; text-decoration: none; color: inherit; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--inset-top); transition: transform var(--t) var(--ease-out), box-shadow var(--t) var(--ease-out), border-color var(--t); }
 .s-card:hover, .s-card:focus-within { transform: translateY(-3px); border-color: var(--line-strong); box-shadow: var(--inset-top), var(--shadow); }
-.s-sheet { position: relative; display: block; aspect-ratio: 5 / 3; border-radius: calc(var(--r-lg) - 6px); overflow: hidden; background: var(--sheet); box-shadow: 0 0 0 1px color-mix(in srgb, var(--ink) 7%, transparent) inset; }
+/* the picture carries its own near-black light in both themes, like the spectrogram on the sound page */
+.s-sheet { position: relative; display: block; aspect-ratio: 2 / 1; border-radius: calc(var(--r-lg) - 6px); overflow: hidden; background: #0B0C10; box-shadow: 0 0 0 1px rgb(255 255 255 / .05) inset; }
 .s-sheet .s-link { position: absolute; inset: 0; display: block; }
-.s-sheet img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity var(--t-slow) var(--ease-out); }
-.s-sheet::before { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgb(255 255 255 / .55), transparent); background-size: 200% 100%; animation: k-shimmer 1.4s linear infinite; }
+.s-sheet img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity var(--t-slow) var(--ease-out), transform var(--t-slow) var(--ease-out); }
+.s-sheet::before { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgb(255 255 255 / .06), transparent); background-size: 200% 100%; animation: k-shimmer 1.4s linear infinite; }
 .s-sheet.in::before { display: none; }
-.s-meta, .s-meta:hover { text-decoration: none; color: inherit; }
 .s-sheet.in img { opacity: 1; }
-.s-sheet .s-play { position: absolute; left: 10px; bottom: 10px; }
-.s-meta { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 12px 8px 8px; }
-.s-meta b { font-weight: var(--w-semibold); color: var(--ink); }
+.s-card:hover .s-sheet img { transform: scale(1.025); }
+.s-sheet .s-play { position: absolute; left: 10px; bottom: 10px; z-index: 2; background: rgb(255 255 255 / .94); color: #0B0C10; }
+.s-sheet .s-play.on { background: var(--accent); color: var(--accent-ink); }
+/* the playhead: one line swept over the picture for the take's length, the played part lifted */
+.s-cursor { position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: 0; }
+.s-cursor::before { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgb(255 255 255 / .1), rgb(255 255 255 / .1)) no-repeat; background-size: 0 100%; }
+.s-cursor::after { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 2px; background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+.s-card.playing .s-cursor { opacity: 1; }
+.s-card.playing .s-cursor::after { animation: s-sweep var(--dur, 1s) linear forwards; }
+.s-card.playing .s-cursor::before { animation: s-fill var(--dur, 1s) linear forwards; }
+@keyframes s-sweep { from { transform: translateX(0); } to { transform: translateX(calc(100cqw - 2px)); } }
+@keyframes s-fill { to { background-size: 100% 100%; } }
+.s-sheet { container-type: inline-size; }
+.s-meta, .s-meta:hover { text-decoration: none; color: inherit; }
+.s-meta { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 10px; padding: 12px 8px 8px; }
+.s-meta b { font-weight: var(--w-semibold); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .s-meta em { grid-row: 1; grid-column: 2; font: var(--w-semibold) 15px var(--font-sans); font-style: normal; font-variant-numeric: tabular-nums; }
-.s-meta .by { grid-column: 1; color: var(--muted); font-size: var(--fs-sm); }
-.s-meta .facts { grid-column: 1 / -1; margin-top: 6px; font: var(--fs-xs) var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.s-meta .by { grid-column: 1 / -1; color: var(--ink-2); font-size: var(--fs-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.s-meta .by i { font-style: normal; color: var(--muted); }
+.s-meta .facts { grid-column: 1 / -1; display: flex; gap: 10px; margin-top: 6px; font: var(--fs-xs) var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.s-meta .facts i { font-style: normal; }
 /* a card-shaped skeleton while the catalogue loads */
 .s-skel { padding: 6px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); }
-.s-skel .skel { aspect-ratio: 5 / 3; border-radius: calc(var(--r-lg) - 6px); }
+.s-skel .skel { aspect-ratio: 2 / 1; border-radius: calc(var(--r-lg) - 6px); }
 .s-skel .skel.t { aspect-ratio: auto; height: 14px; width: 60%; margin: 14px 8px 0; }
 .s-skel .skel.t + .skel.t { width: 36%; margin-top: 8px; margin-bottom: 8px; }
+.k-empty .btn { margin-top: 14px; }
+@media (max-width: 599px) {
+  .s-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .s-card { padding: 4px; }
+  .s-meta { padding: 10px 6px 6px; }
+  .s-meta b { font-size: 14.5px; }
+  .s-meta em { font-size: 13.5px; }
+  .s-meta .facts i:last-child { display: none; }
+  .s-sheet .s-play { width: 32px; height: 32px; left: 8px; bottom: 8px; font-size: 13px; }
+}
 .k-sort { gap: 6px; }
 
 /* the round play control: ink at rest, the accent while it plays; the icon flips to a stop square */
@@ -293,7 +350,7 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
 
 @keyframes blink { 50% { opacity: .35; } }
 @keyframes k-shimmer { to { background-position: -200% 0; } }
-@media (prefers-reduced-motion: reduce) { .s-card, .s-sheet img, .s-play, .kt-tile, .hs-unlock, .kv-part { transition: none; } .kt-status i, .sp-stage.busy::after, .s-sheet::before { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .s-card.playing .s-cursor::after, .s-card.playing .s-cursor::before { animation: none; } .s-card, .s-sheet img, .s-play, .kt-tile, .hs-unlock, .kv-part { transition: none; } .kt-status i, .sp-stage.busy::after, .s-sheet::before { animation: none; } }
 
 /* ---------- wavesurfer on cards and kit parts (public/wave.js lazyWave) ---------- */
 .s-sheet .s-wave { position: absolute; inset: 16px 12px 56px; display: block; }
