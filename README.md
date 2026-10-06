@@ -86,7 +86,7 @@ kit's room and the creator's voice, the sandbox proves it renders, Claude review
 the numbers, `factory/harness-sound.mjs` measures it across its knob space (length, peak, RMS, silence, clipping,
 every knob's audible effect, seed distinctness by waveform correlation, render ms) and sends failures back, and an
 independent grader (`factory/grader-sound.mjs`) listens through waveform+spectrogram cards and decides. Survivors
-are published to `sounds/` under one of five creators (sandbox PayPal payees); every build is a line in
+are published to `sounds/` under one of five seed creators (their payout addresses are placeholders, so Payouts holds their shares); every build is a line in
 `factory/stats.jsonl`, and the grader's lessons go into `factory/lessons-sound.md`, which every later build reads.
 
 Two kits were not built by the factory: Instrument (`sounds/inst-*`, 12 playable synth voices by kickdrum) and

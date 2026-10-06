@@ -78,7 +78,7 @@ shaped after x402 v2 (the payment proof is a mandate token, not a signed x402 pa
 - "Clay until paid" works for sound too: a soft tick on every preview that lifts the moment the order lands says
   "this was paid for" faster than any receipt.
 - For agentic commerce the right primitive is not "the agent has a card": the human approves a budget once in PayPal,
-  the server enforces it, and every creator is paid from the same order.
+  the server enforces it, and every creator's share is booked from the same order.
 
 ## What's next
 
