@@ -72,6 +72,12 @@ usage_pattern: UNSCHEDULED_PREPAID }`, with `PayPal-Request-Id: oasis-agent-<ref
 
 ## 3. Approval
 
+On a kit page the payer approves through PayPal's own Smart Buttons (the JS SDK, loaded with the sandbox client
+id; `createOrder` returns the server's Orders v2 id from `POST /api/kits/:id/checkout`, `onApprove` calls `/claim`,
+which captures), following PayPal's standard integration client. If the SDK does not load, the page falls back to
+redirecting to the order's `approve` link and claiming on return. The Smart Buttons render in the sandbox; no order
+has been approved through them yet.
+
 **Checkout.** The kit page (`public/kits.js`), the pads page (`public/pads.js`) and "License it" on a sound's page
 (`public/sound-page.js`, which first makes a one-part kit through `POST /api/kits/single`) all call
 `POST /api/kits/:id/checkout`, save `{ orderId, claimToken }` in `localStorage`, and send the browser to
