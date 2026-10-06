@@ -488,13 +488,15 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
 
 /* kits as rows, the same grammar as the sounds list */
 .kt-rows { display: grid; }
-.kt-row { display: grid; grid-template-columns: 120px minmax(0, 1fr) 84px 92px 84px 36px; align-items: center; gap: 16px; padding: 8px 14px 8px 8px; }
+.kt-row { display: grid; grid-template-columns: 120px minmax(0, 1fr) 84px 92px 84px 72px; align-items: center; gap: 16px; padding: 8px 14px 8px 8px; }
 .kt-row + .kt-row { border-top: 1px solid var(--line); }
 .kt-row:hover { background: color-mix(in srgb, var(--ink) 4%, transparent); }
 .kt-mini { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; width: 120px; height: 52px; border-radius: var(--r-sm); overflow: hidden; background: var(--thumb-bg); }
 .kt-mini img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .kt-row .s-price { display: grid; justify-items: end; line-height: 1.15; }
 .kt-row .s-price small { font-size: 11.5px; font-weight: var(--w-medium); color: var(--muted); }
-.kt-pads { text-decoration: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: var(--r-pill); color: var(--muted); font-size: 17px; }
+.kt-pads { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 10px; border-radius: var(--r-pill); color: var(--ink-2); font-size: 15px; }
+.kt-pads span { font-size: 13px; font-weight: var(--w-semibold); }
 .kt-pads:hover { background: var(--sunk); color: var(--ink); }
 @media (max-width: 899px) { .kt-row { grid-template-columns: 96px minmax(0, 1fr) 70px 34px; } .kt-row .s-c:not(.s-price) { display: none; } .kt-mini { width: 96px; height: 44px; } }
+@media (max-width: 899px) { .kt-pads span { display: none; } .kt-pads { padding: 0; width: 34px; } }

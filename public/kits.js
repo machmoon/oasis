@@ -80,12 +80,16 @@ export async function pageKits(app) {
     // the price and whether it is paid; a link to play it on pads at the end
     $("#kt-list").innerHTML = tiles.length ? `<div class="s-rows kt-rows">${tiles.map((k) => `<div class="kt-row">
       <a class="kt-mini" href="#/kit/${esc(k.id)}" tabindex="-1" aria-hidden="true">${(k.cards || []).slice(0, 4).map((c) => `<img src="${esc(themed(c))}" alt="" loading="lazy" width="160" height="80">`).join("")}</a>
-      <a class="s-name" href="#/kit/${esc(k.id)}"><b>${esc(k.title)}</b>${k.vibe.trim().toLowerCase() !== k.title.trim().toLowerCase() ? `<span>${esc(k.vibe)}</span>` : ""}</a>
+      <a class="s-name" href="#/kit/${esc(k.id)}"><b>${esc(k.title)}</b>${adds(k.title, k.vibe) ? `<span>${esc(k.vibe)}</span>` : ""}</a>
       <span class="s-c num">${k.parts} sound${k.parts === 1 ? "" : "s"}</span><span class="s-c num">${k.creators} creator${k.creators === 1 ? "" : "s"}</span>
-      <span class="s-c s-price num">${usd(k.total)}${k.licensed ? `<small>paid</small>` : ""}</span>
-      <a class="kt-pads" href="#/pads/${esc(k.id)}" title="Play it on pads" aria-label="Play ${esc(k.title)} on pads">${icon("squares-four")}</a></div>`).join("")}</div>` : `<p class="muted">No kits yet. Yours will be the first.</p>`;
+      <span class="s-c s-price num">${usd(k.total)}${k.licensed ? `<small>licensed</small>` : ""}</span>
+      <a class="kt-pads" href="#/pads/${esc(k.id)}" aria-label="Play ${esc(k.title)} on pads">${icon("squares-four")}<span>Pads</span></a></div>`).join("")}</div>` : `<p class="muted">No kits yet. Yours will be the first.</p>`;
   }).catch((e) => { if (!$("#kt-list")) return; $("#kt-list").innerHTML = `<p class="muted">Recent kits could not be loaded: ${esc(e.message)}</p>`; });
 }
+
+// the vibe under a kit's name only when it says something the name does not (two or more new words), the way a
+// Linear row shows a description only when there is one
+const adds = (title, vibe) => { const t = new Set(String(title).toLowerCase().split(/[^a-z0-9]+/)); return String(vibe).toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 2 && !t.has(w) && !["the", "and", "with", "for", "kit"].includes(w)).length >= 2; };
 
 export async function pageKit(app, id) {
   // the page's shape while the kit loads: a title, a list of parts, a bill
