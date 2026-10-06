@@ -87,7 +87,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
     <header class="a-head">
       <div>
         <h1>${esc(a.title)}</h1>
-        <p class="a-sub">by <a class="a-by" href="#/creator/${encodeURIComponent(a.author)}">${esc(a.author)}</a>${kitName ? ` for the ${esc(kitName)} kit` : ""}. ${esc(KIND_LABEL[a.kind] || a.kind)}, ${Object.keys(knobs).filter((n) => n !== "seed").length} knobs${knobs.seed ? " and a seed" : ""}.<span hidden id="a-dur"></span></p>
+        <p class="a-sub">by <a class="a-by" href="#/creator/${encodeURIComponent(a.author)}">${esc(a.author)}</a>${kitName ? ` in the ${esc(kitName)} collection` : ""}. ${esc(KIND_LABEL[a.kind] || a.kind)}, ${Object.keys(knobs).filter((n) => n !== "seed").length} knobs${knobs.seed ? " and a seed" : ""}.<span hidden id="a-dur"></span></p>
         <p class="a-desc">${esc(a.description)}</p>
       </div>
       <div class="a-buy">

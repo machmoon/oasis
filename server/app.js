@@ -63,7 +63,8 @@ export async function createApp() {
 
   app.get("/api/assets", wrap((req, res) => {
     const list = catalog.search({ query: req.query.q || "", kind: req.query.kind || undefined, freeOnly: req.query.free === "1", limit: 500 });
-    res.json(list.map((a) => catalog.summary(a)));
+    // the registry sells sounds; the earlier build's 3D and 2D assets stay reachable with ?all=1 but are not listed
+    res.json(list.filter((a) => req.query.all === "1" || a.format === "sound").map((a) => catalog.summary(a)));
   }));
 
   app.get("/api/assets/:id", wrap((req, res) => {
@@ -709,7 +710,7 @@ export async function createApp() {
     res.set("Cache-Control", "no-cache").json({
       paypalReady: paypalConfigured(), agentReady: kits.plannerReady(), planner: kits.plannerHealth, paypalEnv: "sandbox",
       tests: numbers.tests, factory: factoryTally(),
-      assets: catalog.allAssets().length,
+      assets: catalog.allAssets().filter((a) => a.format === "sound").length,
       orders: { total: orders.length, byStatus, recent: recent(orders).map((o) => ({ id: o.id, status: o.status, total: o.total, items: o.items.length, agentName: o.agentName, cap: o.maxTotal, captureId: o.captureId || null, refundId: o.refundId || null, payoutHold: o.payoutHold?.status || null, payoutBatch: o.payoutBatch?.id || null, createdAt: o.createdAt })) },
       webhooks: recent(await store.list("webhooks"), 15),
       payouts: recent(await store.list("payouts"), 15),

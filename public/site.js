@@ -219,7 +219,7 @@ async function pageLedger() {
   payCss();
   app.innerHTML = `<div class="wrap pk" style="padding-block:48px 96px">
     <div class="head"><h1>Ledger</h1><p>Every captured PayPal order and each creator's share of it, held for the 14-day refund window, then paid out to the creator's PayPal email once one is set.</p></div>
-    <dl class="pk-bal two" id="stats"><div><dt>Held for creators</dt><dd class="num" id="st-held">–</dd><dd class="pk-stat-sub">from <b class="num" id="st-orders">–</b> PayPal orders by <b class="num" id="st-creators">–</b> creators<span hidden id="st-paid"></span></dd></div><div><dt>Paid out</dt><dd class="num" id="st-out">–</dd><dd class="pk-stat-sub">with PayPal Payouts</dd></div></dl>
+    <dl class="pk-bal two" id="stats"><div><dt>Held for creators</dt><dd class="num" id="st-held">–</dd><dd class="pk-stat-sub">from <b class="num" id="st-orders">–</b> PayPal orders for <b class="num" id="st-creators">–</b> creators<span id="st-pending"></span><span hidden id="st-paid"></span></dd></div><div><dt>Paid out</dt><dd class="num" id="st-out">–</dd><dd class="pk-stat-sub">with PayPal Payouts</dd></div></dl>
     <div class="ledger">
       <div><div class="pk-col-h">Orders <span class="pk-live"><i aria-hidden="true"></i>live</span></div><div class="sales" id="sales"><div class="pk-stack" style="padding:12px 16px"><div class="pk-sk row"></div><div class="pk-sk row"></div><div class="pk-sk row"></div></div></div></div>
       <div><div class="pk-col-h" id="cr-h">Creators <span>earned so far</span></div><div class="creators" id="creators"><div class="pk-stack"><div class="pk-sk row"></div><div class="pk-sk row"></div></div></div></div>
@@ -230,6 +230,9 @@ async function pageLedger() {
     const who = new Set(sales.flatMap((s) => s.creators.map((c) => c.author)));
     const set = (id, v) => { const el = $(id); if (!el) return; el.textContent = v; if (bump.length) { el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump"); } };
     set("#st-paid", usd(paid)); set("#st-orders", String(sales.length)); set("#st-creators", String(who.size));
+    // money the ledger holds but owes back: the creators' 90% of lines an early order billed twice, until refunded
+    const owed = sales.reduce((t, s) => t + (s.refunded?.length ? 0 : (s.repeated || 0) * 0.9), 0);
+    if ($("#st-pending")) $("#st-pending").textContent = owed ? `; ${usd(owed)} of it goes back to a buyer once the pending refund runs` : "";
     if (!$("#cr-h")) return; // the visitor has left the ledger
     $("#cr-h").hidden = !who.size;
     // what has actually left as Payouts and what is still held in the refund window, from the ledger itself

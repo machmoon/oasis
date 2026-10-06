@@ -202,7 +202,7 @@ export async function pageKit(app, id) {
     files.push({ name: `${kitSlug}/LICENSE.txt`, data: [own ? `Licensed with PayPal order ${k.licence.orderId} on ${new Date(k.licence.at).toUTCString()}.` : "Not licensed yet. These files are previews.", "",
       "Parts, their programs and who made them:", ...manifest.parts.map((p) => `  ${p.name}: ${p.title} (${p.program}) by ${p.author}`), "",
       own ? "What the order bought, in the registry's words: a \"license to import and ship\" each program (the description on every program's HTTP 402). Oasis has not published fuller terms yet (commercial use, credit, redistribution); until it does, that one line is the whole license." : "",
-      own ? "Refunds: an order can be refunded for 14 days; a refund revokes its licenses.\n" : "",
+      own ? "Refunds: an order can be refunded in full for 14 days, which revokes its licenses; refunding lines billed twice keeps them.\n" : "",
       `Suggested credit line: Sounds from Oasis by ${[...new Set(manifest.parts.map((p) => p.author))].join(", ")}.`, ""].join("\n") });
     const { zip } = await import("/zip.js");
     const a = document.createElement("a"); a.href = URL.createObjectURL(zip(files)); a.download = `${kitSlug}-game-pack${marked ? "-preview" : ""}.zip`;

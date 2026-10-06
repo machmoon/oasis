@@ -190,7 +190,7 @@ export async function pageSounds(app) {
       <label class="s-search">${icon("magnifying-glass")}<input type="search" id="k-q" placeholder="Search sounds" aria-label="Search sounds" autocomplete="off"></label>
       <div class="s-kinds" id="k-kinds" aria-label="Kind"></div>
       <div class="s-sels">
-        <label class="s-sel"><span>Kit</span><select id="k-kit"></select></label>
+        <label class="s-sel"><span>Collection</span><select id="k-kit"></select></label>
         <label class="s-sel"><span>Creator</span><select id="k-author"></select></label>
         <label class="s-sel"><span>Price</span><select id="k-price">${options([["all", "Any"], ["lt2", "Under $2"], ["2to3", "$2 to $3"], ["gte4", "$4 and up"]], "all")}</select></label>
         <label class="s-sel"><span>Sort</span><select id="k-sort">${options(SORTS, "name")}</select></label>
