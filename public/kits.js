@@ -12,6 +12,26 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const usd = (n) => `$${Number(n || 0).toFixed(2)}`;
 const price = (n) => (Number(n) === 0 ? "Free" : usd(n));
 const icon = (name) => `<i class="ph-bold ph-${name}" aria-hidden="true"></i>`;
+// Peak and RMS of a WAV in dBFS, read from its PCM (16-bit integer or 32-bit float), so a game pack can say how loud
+// each take is without normalising it; a missing or odd file gives nulls rather than a guess.
+function wavLevels(bytes) {
+  try {
+    const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength); let fmt = 1, bits = 16, ch = 1, p = 12;
+    while (p + 8 <= v.byteLength) {
+      const id = String.fromCharCode(...bytes.subarray(p, p + 4)), size = v.getUint32(p + 4, true);
+      if (id === "fmt ") { fmt = v.getUint16(p + 8, true); ch = v.getUint16(p + 10, true); bits = v.getUint16(p + 22, true); }
+      if (id === "data") {
+        const n = Math.floor(size / (bits / 8)); let peak = 0, sum = 0;
+        for (let i = 0; i < n; i++) { const o = p + 8 + i * (bits / 8); if (o + bits / 8 > v.byteLength) break; const s = fmt === 3 ? v.getFloat32(o, true) : v.getInt16(o, true) / 32768; const a = Math.abs(s); if (a > peak) peak = a; sum += s * s; }
+        const db = (x) => (x > 0 ? +(20 * Math.log10(x)).toFixed(1) : null);
+        return { peak_dbfs: db(peak), rms_dbfs: db(Math.sqrt(sum / Math.max(1, n))), channels: ch };
+      }
+      p += 8 + size + (size & 1);
+    }
+  } catch {}
+  return { peak_dbfs: null, rms_dbfs: null };
+}
+
 const api = async (path, { method = "GET", body, headers = {} } = {}) => { const r = await fetch(path, { method, headers: { ...(body ? { "Content-Type": "application/json" } : {}), ...headers }, body: body ? JSON.stringify(body) : undefined }); const j = await r.json().catch(() => ({})); if (!r.ok) throw Object.assign(new Error(j.error || `Request failed (${r.status})`), { status: r.status }); return j; };
 const toast = (msg) => { const t = $("#toast"); if (!t) return; t.textContent = msg; t.classList.add("on"); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("on"), 2600); };
 const store = { get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
@@ -155,8 +175,9 @@ export async function pageKit(app, id) {
         const url = it.licence ? `/api/licenses/${it.licence}/render.wav${q}` : `/api/assets/${encodeURIComponent(it.assetId)}/render.wav${q}`;
         const r = await fetch(url); if (!r.ok) throw new Error(`${it.name}: render failed (${r.status})`);
         const file = `${kitSlug}/${name}_${String(n + 1).padStart(2, "0")}.wav`;
-        files.push({ name: file, data: new Uint8Array(await r.arrayBuffer()) });
-        takes.push({ file, seed: seeded ? base + n : null, watermarked: r.headers.get("X-Oasis-Watermarked") === "1" });
+        const data = new Uint8Array(await r.arrayBuffer());
+        files.push({ name: file, data });
+        takes.push({ file, seed: seeded ? base + n : null, watermarked: r.headers.get("X-Oasis-Watermarked") === "1", ...wavLevels(data) });
         label.textContent = `Rendering ${++done} of ${total}`;
       }
       manifest.parts.push({ name: it.name, program: it.assetId, title: it.title, author: it.author, kind: it.kind, knobs: it.knobs, takes, live: it.module || `${location.origin}/cdn/${it.assetId}.mjs` });
@@ -169,11 +190,15 @@ export async function pageKit(app, id) {
       ...manifest.parts.map((p, n) => `  import { play as play${n + 1} } from "${p.live}";   // ${p.name}`), "",
       "Each import is its own binding (play1, play2, ...); call one with an AudioContext to hear a fresh take.", "",
       marked ? "These are previews: paid parts carry a soft tick every 0.6 s until the kit is licensed on its page." : "These are clean renders.", "",
+      "In an engine: Unity 2023.2 or later, put a part's takes in an Audio Random Container; Godot 4, add them to an",
+      "AudioStreamRandomizer. Either plays a different take each time.", "",
+      "Loudness: takes are not normalised. Each take's peak and RMS (dBFS) are in oasis-kit.json, so you can even them out.", "",
       `Kit page: ${location.origin}/#/kit/${k.id}`, ""].join("\n") });
     files.push({ name: `${kitSlug}/LICENSE.txt`, data: [own ? `Licensed with PayPal order ${k.licence.orderId} on ${new Date(k.licence.at).toUTCString()}.` : "Not licensed yet. These files are previews.", "",
       "Parts, their programs and who made them:", ...manifest.parts.map((p) => `  ${p.name}: ${p.title} (${p.program}) by ${p.author}`), "",
-      own ? "What the order bought: a license to import and ship each program, at any knobs and any seed, in what you make (the terms the registry states on every program's 402 and in /llms.txt)." : "",
-      `Credit line: Sounds from Oasis by ${[...new Set(manifest.parts.map((p) => p.author))].join(", ")}.`, ""].join("\n") });
+      own ? "What the order bought, in the registry's words: a \"license to import and ship\" each program (the description on every program's HTTP 402). Oasis has not published fuller terms yet (commercial use, credit, redistribution); check the kit page for them before you ship." : "",
+      own ? "Refunds: an order can be refunded for 14 days; a refund revokes its licenses.\n" : "",
+      `Suggested credit line: Sounds from Oasis by ${[...new Set(manifest.parts.map((p) => p.author))].join(", ")}.`, ""].join("\n") });
     const { zip } = await import("/zip.js");
     const a = document.createElement("a"); a.href = URL.createObjectURL(zip(files)); a.download = `${kitSlug}-game-pack${marked ? "-preview" : ""}.zip`;
     document.body.appendChild(a); a.click(); a.remove();
