@@ -41,7 +41,7 @@ shaped after x402 v2 (the payment proof is a mandate token, not a signed x402 pa
   Sound* (a body, a contact layer, air). `Math.random` throws in the sandbox; only the host's two modules resolve.
 - **Server renders** (`server/sound.js`, `server/png.js`): WAV, waveform, spectrogram, a catalogue card, measured
   numbers, a per-seed walk (300 takes in about 3.5 to 6.5 s on the worker pool of a 10-core laptop), and the preview watermark.
-- **The factory** (`factory/factory-sound.mjs`): Claude plans twelve kits (358 briefs), writes each program inside
+- **The factory** (`factory/factory-sound.mjs`): Claude plans twelve kits (358 briefs; 314 reached the grader, which scored 548 attempts and sent back 306), writes each program inside
   the kit's room and a creator's voice, reviews its own renders as pictures, a harness measures the program across
   its knobs and seeds (length, peak, RMS, silence, clipping, every knob's audible effect, waveform correlation
   between seeds, render ms), and an independent grader listens through the pictures. Lessons feed back into the prompt.

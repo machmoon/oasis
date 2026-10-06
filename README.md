@@ -81,7 +81,7 @@ payout email on file, masked. No accounts: a name is taken by publishing, and ca
 
 `factory/factory-sound.mjs` plans kits (one Claude call per kit: Rainy City Street, Wooden Tavern, Sci-fi Console,
 Forest at Night, Kitchen, Retro Arcade, Office, Car Interior, Medieval Market, Drum Machine, Ocean Harbour, Horror
-House; 26-31 parts each, 358 briefs) and builds each part: Claude writes the program from the brief inside the
+House; 26-31 parts each, 358 briefs, 314 of which reached the grader: 548 graded attempts, 306 sent back) and builds each part: Claude writes the program from the brief inside the
 kit's room and the creator's voice, the sandbox proves it renders, Claude reviews its own renders as pictures with
 the numbers, `factory/harness-sound.mjs` measures it across its knob space (length, peak, RMS, silence, clipping,
 every knob's audible effect, seed distinctness by waveform correlation, render ms) and sends failures back, and an
