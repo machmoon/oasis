@@ -13,7 +13,8 @@ export function llmsTxt() {
 > seeded takes (how far takes differ depends on the sound). A human approves one PayPal budget; you (the agent) license every sound you import
 > inside it, and each creator's share is booked.
 
-Registry: ${sounds.length} sound programs from ${creators.length} creators in ${kits.length} kits (${kits.slice(0, 6).join(", ")}${kits.length > 6 ? ", ..." : ""}). PayPal sandbox.
+A "kit" below always means a scene kit made from a vibe (make_kit); the registry's own groups are "collections".
+Registry: ${sounds.length} sound programs from ${creators.length} creators in ${kits.length} collections (${kits.slice(0, 6).join(", ")}${kits.length > 6 ? ", ..." : ""}). PayPal sandbox.
 
 ## The flow
 
@@ -30,7 +31,7 @@ Registry: ${sounds.length} sound programs from ${creators.length} creators in ${
 ## MCP (Streamable HTTP)
 
 POST ${b}/mcp      Claude Code: claude mcp add --transport http oasis ${b}/mcp
-search_assets {query, kind?, max_price?}    sounds with price, creator, kit, length, knob names
+search_assets {query, kind?, max_price?}    sounds with price, creator, collection, length, knob names
 get_asset {asset_id}                        knob schema, how to import
 preview_asset {asset_id, knobs}             the rendered WAV, a waveform+spectrogram PNG, measured numbers
 buy_assets {items:[{asset_id,knobs}], mandate, agent_name}   one PayPal order, module URLs back

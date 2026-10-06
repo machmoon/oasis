@@ -17,7 +17,7 @@ export const previewUrl = (id, values, a) => {
 
 // ---------- sounds: the registry's front door ----------
 const soundLine = (a) => ({
-  asset_id: a.id, title: a.title, kind: a.kind, kit: a.worldKit || null, author: a.author, price_usd: a.price, seconds: a.duration, description: a.description,
+  asset_id: a.id, title: a.title, kind: a.kind, collection: a.worldKit || null, author: a.author, price_usd: a.price, seconds: a.duration, description: a.description,
   knobs: Object.keys(a.params.knobs || {}), preview_wav: `${config.baseUrl}/api/assets/${a.id}/render.wav`, card_png: `${config.baseUrl}/api/assets/${a.id}/render.png`,
 });
 /** Sound search: title, tags, kind and kit; falls back to the whole registry when nothing matches. */
