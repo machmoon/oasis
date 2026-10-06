@@ -168,7 +168,9 @@ export function licenceOf(kit, order, via = "mandate") {
 export function tidyTitle(t) {
   const w = String(t || "").split(/\s+/).filter(Boolean);
   while (w.length > 1 && STOP.has(w[w.length - 1].toLowerCase().replace(/[,:;.]+$/, ""))) w.pop();
-  return w.join(" ").replace(/[,:;.]+$/, "") || "Untitled Kit";
+  // headline case (Chicago): short articles, conjunctions and prepositions stay lower case unless they lead
+  const SMALL = new Set(["a", "an", "the", "and", "or", "but", "of", "in", "on", "at", "to", "for", "with", "by", "from"]);
+  return w.map((x, i) => (i > 0 && SMALL.has(x.toLowerCase()) ? x.toLowerCase() : x)).join(" ").replace(/[,:;.]+$/, "") || "Untitled Kit";
 }
 
 /** Whether a caller may see a licensed kit's tokens: the claim token its PayPal order handed the buyer's browser, or
