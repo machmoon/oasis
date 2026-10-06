@@ -39,7 +39,7 @@ export async function pageAgents(app) {
     </section>
     <div class="ag-grid">
       <section class="ag-sec"><h2>Spending</h2><p>You approve a cap and an expiry in PayPal. Oasis holds the token and charges your saved PayPal wallet per order; an order over the cap, past the expiry or after you revoke is refused before PayPal is called. Every order lands in the <a class="link" href="#/ledger">ledger</a>.</p><p style="margin-top:14px"><a class="btn primary" href="#/budget">${icon("wallet")} Set a budget</a></p>
-        <form class="ag-revoke" id="ag-revoke" autocomplete="off"><label for="ag-tok">Revoke a budget</label><div class="row"><input id="ag-tok" placeholder="mdt_…" spellcheck="false"><button class="btn small" type="submit">Revoke</button></div><p class="ag-muted" id="ag-rv-msg">The token was shown once when you approved it. Revoking stops it at once.</p></form></section>
+        <p class="ag-muted" style="margin-top:14px">To stop a budget, open it (the link PayPal returned you to) and revoke it there; the token stops working at once.</p></section>
       <section class="ag-sec ag-402"><h2>Without a license</h2><p>An import of a paid program answers HTTP 402 with a <code>PAYMENT-REQUIRED</code> header shaped after x402. Ask this server for one:</p><p style="margin-top:12px"><button class="btn small" id="ag-402-go" type="button">${icon("terminal-window")} GET /cdn/footstep.mjs</button></p><pre id="ag-402" hidden></pre></section>
     </div>
     <p class="ag-muted">The protocol for machines: <a class="link" href="/llms.txt">llms.txt</a>.</p>
@@ -48,15 +48,6 @@ export async function pageAgents(app) {
   const pick = (t) => { tabEls.forEach((x) => { const on = x === t; x.setAttribute("aria-selected", on); x.tabIndex = on ? 0 : -1; document.getElementById(x.getAttribute("aria-controls")).hidden = !on; }); t.focus(); };
   tabEls.forEach((t, i) => { t.addEventListener("click", () => pick(t)); t.addEventListener("keydown", (e) => { const d = { ArrowRight: 1, ArrowLeft: -1 }[e.key]; if (d) { e.preventDefault(); pick(tabEls[(i + d + tabEls.length) % tabEls.length]); } }); });
   app.querySelectorAll(".ag-copy").forEach((b) => b.addEventListener("click", async () => { try { await navigator.clipboard.writeText(b.dataset.copy); b.innerHTML = `${icon("check")} Copied`; setTimeout(() => (b.innerHTML = `${icon("copy")} Copy`), 1800); } catch {} }));
-  $("#ag-revoke").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const token = $("#ag-tok").value.trim(), msg = $("#ag-rv-msg"); if (!token) return;
-    try {
-      const r = await fetch("/api/mandates/revoke", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token }) });
-      const j = await r.json(); if (!r.ok) throw new Error(j.error || r.status);
-      msg.textContent = `Revoked. ${j.description ? `"${j.description}" ` : ""}can no longer spend.`; $("#ag-tok").value = "";
-    } catch (err) { msg.textContent = err.message; }
-  });
   fetch("/api/stats/mcp").then((r) => r.json()).then((s) => {
     if (!$("#ag-stats")) return;
     const clients = Object.keys(s.clients || {});

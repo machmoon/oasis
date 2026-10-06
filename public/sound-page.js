@@ -49,7 +49,7 @@ export function control(k, d) {
 export function controls(entries) {
   const dial = entries.filter(([k, d]) => k !== "seed" && (d.type === "range" || d.type === "choice"));
   const rest = entries.filter(([k, d]) => !dial.some(([j]) => j === k));
-  return `${dial.length ? `<div class="a-dials">${dial.map(([k, d]) => control(k, d)).join("")}</div>` : ""}${rest.map(([k, d]) => control(k, d)).join("")}`;
+  return `${dial.length ? `<div class="a-dials" style="--n:${dial.length <= 5 ? dial.length : dial.length % 4 === 0 || dial.length % 4 === 3 ? 4 : 3}">${dial.map(([k, d]) => control(k, d)).join("")}</div>` : ""}${rest.map(([k, d]) => control(k, d)).join("")}`;
 }
 
 /** The renderer a page uses: Worker when the source is in hand, server otherwise. Resolves { buffer, analysis, ms, watermarked }.

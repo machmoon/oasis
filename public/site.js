@@ -145,7 +145,6 @@ async function pageBudget(id) {
       <div class="pk-field"><label id="hrs-l">Expires after</label><div class="pk-seg wide" id="hours" role="group" aria-labelledby="hrs-l"><button type="button" data-v="24">24 hours</button><button type="button" data-v="72">3 days</button><button type="button" data-v="168">7 days</button></div></div>
       <div class="pk-err" id="berr" role="alert"></div>
       <button class="pk-pp" id="bgo" type="submit">Approve with <em>Pay<b>Pal</b></em></button>
-      <p class="fine">PayPal sandbox. No real money moves.</p>
     </form></div>`;
   const amount = segment($("#amts"), { value: 25 }), hours = segment($("#hours"), { value: 24 });
   $("#bform").addEventListener("submit", async (e) => {
