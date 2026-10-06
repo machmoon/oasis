@@ -474,3 +474,5 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
 }
 .kv-packbtn { white-space: normal; height: auto; min-height: 46px; padding-block: 10px; line-height: 1.25; text-align: left; justify-content: flex-start; }
 .kv-bill > * { min-width: 0; }
+
+@media (max-width: 599px) { .hs-stage2 .readout { top: 10px; bottom: auto; right: 10px; left: auto; max-width: calc(100% - 20px); height: auto; padding: 5px 10px; white-space: normal; font-size: 11px; } }

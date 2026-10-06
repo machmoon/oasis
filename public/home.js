@@ -256,7 +256,7 @@ async function mountRebuild({ api, esc, icon, reduced }) {
     if (run !== n || !stage.isConnected) return;
     current = { buffer, an };
     await wave.show(buffer, { dim: buffer.oasisWatermarked });
-    out.innerHTML = `<b>${an.seconds.toFixed(2)}</b> s, peak <b>${an.peak}</b>, centroid <b>${an.centroid}</b> Hz, <b>${Math.round(performance.now() - t0)}</b> ms`;
+    out.innerHTML = `<span><b>${an.seconds.toFixed(2)}</b> s, peak <b>${an.peak}</b>, centroid <b>${an.centroid}</b> Hz, <b>${Math.round(performance.now() - t0)}</b> ms</span>`;
     const d = diff();
     imp.innerHTML = `<span class="k">import</span> { play } <span class="k">from</span> <span class="s">"${esc(location.origin)}/cdn/${id}.mjs?lic=…"</span>;\nplay(ctx, ${Object.keys(d).length ? esc(JSON.stringify(d)) : "{}"});`;
     if (playIt && unlocked()) wave.play();
