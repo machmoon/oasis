@@ -528,3 +528,9 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
 @media (max-width: 599px) { .kt-row .s-name b { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; } .kt-row .kt-pads { display: none; } .kt-row { grid-template-columns: 84px minmax(0, 1fr) auto; } }
 #sp-fork[hidden] { display: none; }
 @media (max-width: 599px) { .kt-form .row { flex-direction: column; align-items: stretch; } .kt-form .row input { flex: none; height: 48px; } .kt-form .row .btn { justify-content: center; } }
+/* phones: the kind tabs scroll with an edge fade (GitHub's mobile repo tabs); the four selects sit two by two */
+@media (max-width: 599px) {
+  .s-kinds { -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); padding-right: 24px; }
+  .s-sels { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; }
+  .s-sels .s-sel { justify-content: space-between; }
+}
