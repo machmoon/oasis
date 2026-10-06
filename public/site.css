@@ -80,7 +80,7 @@ p { text-wrap: pretty; }
 .hero-copy { position: relative; z-index: 2; max-width: 620px; padding: clamp(40px, 7vh, 88px) 0 var(--s-9); pointer-events: none; }
 .hero-copy a, .hero-copy button { pointer-events: auto; }
 .hero h1 { font: var(--w-black) var(--fs-display) / var(--lh-display) var(--font-sans); letter-spacing: var(--ls-display); color: var(--hero-ink); display: grid; }
-.hero h1 .line { display: block; color: color-mix(in srgb, var(--hero-ink) 44%, transparent); transition: color .6s var(--ease-out), transform .6s var(--ease-out); }
+.hero h1 .line { display: block; color: color-mix(in srgb, var(--hero-ink) 58%, transparent); transition: color .6s var(--ease-out), transform .6s var(--ease-out); }
 .hero h1 .line.on { color: var(--hero-ink); }
 .hero h1 .line.done { color: color-mix(in srgb, var(--hero-ink) 72%, transparent); }
 .hero .lede { color: var(--hero-ink-2); margin-top: var(--s-5); max-width: 36ch; }
@@ -350,3 +350,13 @@ footer a { color: var(--ink-2); margin-left: var(--s-4); }
 .scrub .head::after { content: ""; position: absolute; top: -3px; left: -4px; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
 .progress { height: 6px; border-radius: 3px; background: var(--sunk); overflow: hidden; }
 .progress i { display: block; height: 100%; background: var(--accent); transition: width var(--t-slow) var(--ease-out); }
+
+/* the hero's one action: a vibe in, pads out */
+.hero-dig { display: flex; gap: 8px; margin-top: var(--s-6); max-width: 520px; padding: 6px; border-radius: var(--r-pill); background: var(--surface); border: 1px solid var(--line); box-shadow: var(--inset-top), var(--shadow-sm); }
+.hero-dig input { flex: 1; min-width: 0; border: 0; background: none; padding: 0 14px; font: var(--w-medium) 16px var(--font-sans); color: var(--ink); }
+.hero-dig input::placeholder { color: var(--muted); }
+.hero-dig input:focus { outline: none; }
+.hero-dig:focus-within { border-color: var(--accent); box-shadow: var(--inset-top), 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent); }
+.hero-dig .btn { flex: none; }
+.hero-alt { margin-top: 14px; font-size: var(--fs-sm); color: var(--muted); }
+@media (max-width: 599px) { .hero-dig { flex-direction: column; border-radius: var(--r-lg); } .hero-dig input { height: 44px; } }
