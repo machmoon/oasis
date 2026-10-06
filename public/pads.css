@@ -101,6 +101,10 @@ a.cr-chip { display: inline-flex; align-items: center; text-decoration: none; }
 .cr-prompt input::placeholder { color: var(--cr-g2); }
 .cr-prompt input:focus { outline: none; }
 .cr-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.cr-prompt button.on { background: var(--cr-orange); border-color: var(--cr-orange); color: #000; }
+.cr-perf { color: var(--cr-orange); }
+.cr-perf.on { animation: cr-perf 900ms linear; }
+@keyframes cr-perf { 0% { color: #fff; } 100% { color: var(--cr-orange); } }
 
 /* ---------- the hinge: a black gap between the screens ---------- */
 .cr-hinge { height: 12px; background: #000; border-top: 1px solid #111; }

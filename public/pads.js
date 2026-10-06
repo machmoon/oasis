@@ -242,6 +242,34 @@ export async function pagePads(app, id) {
   };
   const setBars = (n) => { rows = rows.map((r) => Array.from({ length: n * STEPS }, (_, s) => r[s % r.length])); seq.bars = n; paintAll(); };
 
+  // PERFORM: CRATE's offline phrase performer (Sources/AI/Performer.swift): in every 8-bar phrase, bar 8 gets the next
+  // fill of a rotation and bar 4 gets ghost notes; the fills keep CRATE's names, the hits are written for Oasis
+  const ROTATION = ["snare_roll", "hat_stutter", "kick_double", "crash_next", "dropout", "halftime"];
+  const FILL_NAME = { snare_roll: "Roll", hat_stutter: "Stutter", kick_double: "Kick x2", crash_next: "Crash", dropout: "Dropout", halftime: "Half time", ghost_notes: "Ghosts" };
+  const perf = { on: false, turn: 0, crash: false, last: "" };
+  const laneOf = (role) => pads.findIndex((p) => p.role === role);
+  /** The 16 steps of one bar as they will play: the pattern, then the bar's fill on top. */
+  function barRows(bar) {
+    const out = rows.map((r) => r.slice((bar % seq.bars) * STEPS, (bar % seq.bars) * STEPS + STEPS).map((h) => (h ? { ...h } : null)));
+    if (!perf.on) return { out, fill: null };
+    const inPhrase = (bar % 8) + 1;
+    let fill = inPhrase === 8 ? ROTATION[perf.turn % ROTATION.length] : inPhrase === 4 ? "ghost_notes" : null;
+    if (inPhrase === 8) perf.turn++;
+    const k = laneOf("kick"), sn = laneOf("snare") >= 0 ? laneOf("snare") : laneOf("clap"), hh = laneOf("hat"), cy = laneOf("cymbal") >= 0 ? laneOf("cymbal") : laneOf("openhat");
+    const put = (i, s, v, r = 1) => { if (i >= 0) out[i][s] = { v, late: 0, r }; };
+    const clear = (i, from) => { if (i >= 0) for (let s = from; s < STEPS; s++) out[i][s] = null; };
+    if (perf.crash) { put(cy, 0, 118); perf.crash = false; }
+    if (fill === "snare_roll") { clear(sn, 12); [58, 70, 86, 104].forEach((v, n) => put(sn, 12 + n, v)); }
+    else if (fill === "hat_stutter") { clear(hh, 12); [[2, 80], [3, 76], [4, 84], [4, 90]].forEach(([r, v], n) => put(hh, 12 + n, v, r)); }
+    else if (fill === "kick_double") { put(k, 14, 100); put(k, 15, 112); }
+    else if (fill === "crash_next") { perf.crash = true; put(sn, 15, 96); }
+    else if (fill === "dropout") out.forEach((r, i) => { if (pads[i].role !== "texture") for (let s = 8; s < STEPS; s++) r[s] = null; });
+    else if (fill === "halftime") { if (sn >= 0) { out[sn] = out[sn].map(() => null); put(sn, 8, 118); } if (hh >= 0) out[hh] = out[hh].map((h, s) => (s % 4 === 0 ? h || { v: 80, late: 0, r: 1 } : null)); }
+    else if (fill === "ghost_notes") [7, 10, 15].forEach((s) => { if (sn >= 0 && !out[sn][s]) put(sn, s, 40); });
+    if (fill && fill !== "ghost_notes") perf.last = FILL_NAME[fill];
+    return { out, fill };
+  }
+  let playing = null; // the bar being played, with its fill
   const schedule = () => {
     while (seq.nextTime < ac.currentTime + 0.1) {
       const d = stepDur(), t0 = seq.nextTime;
@@ -255,8 +283,9 @@ export async function pagePads(app, id) {
       const repeating = fxId === "repeat" && punch >= 0.08;
       let src = s, ratMul = 1;
       if (repeating) { const span = punch >= 0.5 ? 1 : 2; if (repeatAnchor === null) repeatAnchor = s - (s % span); src = repeatAnchor + (((s - repeatAnchor) % span) + span) % span; ratMul = punch >= 0.85 ? 2 : 1; }
+      if (s % STEPS === 0 || !playing) { playing = barRows(Math.floor(seq.abs / STEPS)); if (playing.fill) queue.push({ kind: "fill", fill: playing.fill, time: t0 }); }
       pads.forEach((p, i) => {
-        const h = rows[i][src]; if (!h) return;
+        const h = repeating ? rows[i][src] : playing.out[i][s % STEPS]; if (!h) return;
         const r = (h.r || 1) * ratMul;
         for (let k = 0; k < r; k++) trigger(p, t0 + swingLate + h.late * d + (k * d) / r, Math.round(h.v * Math.pow(0.85, k)));
       });
@@ -268,7 +297,7 @@ export async function pagePads(app, id) {
   const timer = new Worker(URL.createObjectURL(new Blob([`let t=null;onmessage=(e)=>{if(e.data==="start"){clearInterval(t);t=setInterval(()=>postMessage("tick"),25);}else{clearInterval(t);t=null;}};`], { type: "text/javascript" })));
   timer.onmessage = () => seq.playing && schedule();
   const play = async ({ countIn = false } = {}) => { await unlock(); seq.playing = true; seq.abs = 0; seq.countIn = countIn ? 16 : 0; seq.nextTime = ac.currentTime + 0.06; seq.startedAt = seq.nextTime + (countIn ? 16 * stepDur() : 0); timer.postMessage("start"); paintTransport(); };
-  const stop = () => { seq.playing = false; seq.recording = false; seq.countIn = 0; timer.postMessage("stop"); queue.length = 0; paintTransport(); paintSeqHead(-1); };
+  const stop = () => { playing = null; perf.turn = 0; perf.crash = false; seq.playing = false; seq.recording = false; seq.countIn = 0; timer.postMessage("stop"); queue.length = 0; paintTransport(); paintSeqHead(-1); };
   /** Where a live hit lands while recording: the nearest 16th, less 25 ms of touch latency (AudioSequencer.swift:570-588). */
   const recStep = () => { const len = seq.bars * STEPS, rel = ac.currentTime - 0.025 - seq.startedAt; return ((Math.round(rel / stepDur()) % len) + len) % len; };
 
@@ -293,7 +322,7 @@ export async function pagePads(app, id) {
           <div class="cr-main" id="cr-main"></div>
           <div class="cr-punch" id="cr-punch" hidden><i id="cr-cells"></i><b class="num" id="cr-punch-v"></b><span id="cr-punch-t"></span></div>
           <div class="cr-timing" id="cr-timing"></div>
-          <form class="cr-prompt" id="cr-prompt" autocomplete="off"><span aria-hidden="true">›</span><input id="cr-q" placeholder="Describe a beat or a kit: rusty sci-fi dungeon, boom bap, bpm 96, looser" aria-label="Describe a beat"><button type="button" data-c="undo" title="Undo (Cmd-Z)">↶ UNDO</button><button type="button" data-c="redo" title="Redo (Shift-Cmd-Z)">↷ REDO</button></form>
+          <form class="cr-prompt" id="cr-prompt" autocomplete="off"><span aria-hidden="true">›</span><input id="cr-q" placeholder="Describe a beat or a kit: rusty sci-fi dungeon, boom bap, bpm 96, looser" aria-label="Describe a beat"><button type="button" data-c="undo" title="Undo (Cmd-Z)">↶ UNDO</button><button type="button" data-c="redo" title="Redo (Shift-Cmd-Z)">↷ REDO</button><button type="button" data-c="perform" id="cr-perform" aria-pressed="false" title="Fills at the end of every phrase">✦ PERFORM</button></form>
           <div class="cr-chips" id="cr-chips">${STYLE_ORDER.map((k) => `<button type="button" data-style="${k}">${STYLES[k].name}</button>`).join("")}</div>
         </section>
         <div class="cr-hinge" aria-hidden="true"></div>
@@ -421,7 +450,7 @@ export async function pagePads(app, id) {
   }
   function paintTiming() {
     const loaded = pads.filter((p) => p.takes.length), ms = loaded.length ? Math.round(loaded.reduce((s, p) => s + p.ms, 0) / loaded.length) : 0;
-    $("#cr-timing").innerHTML = `<span>Rendered in ${ms} ms a pad, ${loaded.reduce((s, p) => s + p.takes.length, 0)} takes from ${pads.length} programs</span><span class="cr-mode">${fxMode ? "FX pads" : lidMode === "edit" ? "Edit" : "Pattern"}, hinge on ${FX.find((f) => f[0] === fxId)[1].toLowerCase()}</span>`;
+    $("#cr-timing").innerHTML = `<span>Rendered in ${ms} ms a pad, ${loaded.reduce((s, p) => s + p.takes.length, 0)} takes from ${pads.length} programs</span>${perf.on ? `<span class="cr-perf">Perform on</span>` : ""}<span class="cr-mode">${fxMode ? "FX pads" : lidMode === "edit" ? "Edit" : "Pattern"}, hinge on ${FX.find((f) => f[0] === fxId)[1].toLowerCase()}</span>`;
   }
   function paintAll() { paintLid(); paintTransport(); pads.forEach(paintPad); }
   const select = (i) => { if (i >= pads.length) return; const was = selected; selected = i; paintPad(pads[was]); paintPad(pads[i]); paintLid(); };
@@ -533,7 +562,11 @@ export async function pagePads(app, id) {
     $("#cr-q").value = "";
     $("#cr-q").placeholder = r === "?" ? "A style (boom bap, dilla, house), bpm 96, looser, 4 bars, take out the hats, or a vibe to dig" : `✓ ${r}`; $("#cr-q").blur();
   });
-  $("#cr-prompt").addEventListener("click", (e) => { const b = e.target.closest("[data-c]"); if (!b) return; b.dataset.c === "undo" ? doUndo() : doRedo(); });
+  $("#cr-prompt").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-c]"); if (!b) return;
+    if (b.dataset.c === "perform") { perf.on = !perf.on; perf.turn = 0; b.classList.toggle("on", perf.on); b.setAttribute("aria-pressed", perf.on); paintTiming(); if (perf.on && !seq.playing) play(); return; }
+    b.dataset.c === "undo" ? doUndo() : doRedo();
+  });
 
   // ---------- input: transport and the hinge fader ----------
   $("#cr-play").addEventListener("click", () => { if (!seq.playing) play(); });
@@ -585,6 +618,8 @@ export async function pagePads(app, id) {
         paintSeqHead(q.s);
         $("#cr-pos").textContent = `${q.bar + 1}.${Math.floor((q.s % STEPS) / 4) + 1}`;
         $$("#cr-segs i", app).forEach((g) => { const b = Number(g.dataset.b); g.className = b === q.bar ? "now" : b < q.bar ? "past" : ""; });
+      } else if (q.kind === "fill") {
+        const t = $("#cr-timing .cr-perf"); if (t) { t.textContent = `▸ ${FILL_NAME[q.fill]}`; t.classList.remove("on"); void t.offsetWidth; t.classList.add("on"); }
       } else if (q.kind === "count") {
         $("#cr-pos").textContent = `−${4 - Math.floor(q.n / 4)}`;
       } else {
