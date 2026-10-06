@@ -49,7 +49,7 @@ export async function pageHome(app, ctx) {
     <div class="wrap"><div class="hero-copy">
       <h1 class="hero-h1">Sound effects you tune, licensed per kit</h1>
       <p class="lede">Every sound is a program with knobs. Describe a vibe, get a tuned kit, and one PayPal order pays every creator.</p>
-      <form class="hero-dig" id="hero-dig" autocomplete="off"><label class="sr-only" for="hero-vibe">Describe a kit</label><input id="hero-vibe" maxlength="200" placeholder="haunted arcade at midnight"><button class="btn primary" type="submit">Play it on pads</button></form>
+      <form class="hero-dig" id="hero-dig" autocomplete="off"><label class="sr-only" for="hero-vibe">Describe a kit</label><input id="hero-vibe" maxlength="200" placeholder="haunted arcade at midnight"><button class="btn primary" type="submit">Make a kit</button></form>
       <p class="hero-alt">Or <a class="link" href="#/sounds">browse all the sounds</a></p>
     </div></div>
     <div class="hero-readout" id="readout" aria-live="polite"><i class="live"></i><span>rendering a footstep</span></div>
@@ -75,7 +75,7 @@ export async function pageHome(app, ctx) {
     const input = $("#hero-vibe"), b = e.currentTarget.querySelector("button"), vibe = input.value.trim() || input.placeholder;
     b.disabled = true; b.textContent = "Digging…";
     try { const r = await fetch("/api/kits", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ vibe }) }); const k = await r.json(); if (!r.ok) throw new Error(k.error || r.status); location.hash = `#/pads/${k.id}`; }
-    catch (err) { b.disabled = false; b.textContent = "Play it on pads"; ctx.toast?.(err.message); }
+    catch (err) { b.disabled = false; b.textContent = "Make a kit"; ctx.toast?.(err.message); }
   });
   const cmd = `claude mcp add --transport http oasis ${location.origin}/mcp`;
   $("#cmd-text").textContent = cmd;

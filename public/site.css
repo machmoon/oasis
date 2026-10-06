@@ -388,3 +388,6 @@ body > main { flex: 1 0 auto; }
    checkout is on every kit), and the readout is plain text without an always-on status dot */
 .hero-pay { display: none; }
 .hero-readout i { display: none; }
+
+/* the hero's live caption repeats the knob strip above it: kept for screen readers (aria-live), not drawn */
+.hero-readout { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
