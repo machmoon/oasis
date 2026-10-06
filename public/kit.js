@@ -209,7 +209,7 @@ export async function pageSounds(app) {
   const state = { q: "", kind: "all", price: "all", author: "all", kit: kits.includes(params.get("kit")) ? params.get("kit") : "all", sort: "name" };
   $("#k-q").placeholder = `Search ${list.length} sounds`;
   const kinds = [...new Set(list.map((a) => a.kind))].sort();
-  $("#k-kit").innerHTML = options([["all", "All"], ...kits.map((k) => [k, k])], state.kit);
+  $("#k-kit").innerHTML = options([["all", "Any"], ...kits.map((k) => [k, k])], state.kit);
   $("#k-author").innerHTML = options([["all", "Any"], ...creators.map((c) => [c, c])], "all");
   const grid = $("#k-grid");
   // a page of cards at a time: 265 cards at once is a wall nobody scrolls (the design critic measured 18,000 px)

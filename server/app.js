@@ -107,7 +107,7 @@ export async function createApp() {
     const takes = await Promise.all(seeds.map((seed) => catalog.soundAsync(a, seedKnob ? { ...base, seed } : base)));
     const sr = takes[0].sr, total = new Float32Array(Math.min(sr * 30, Math.round((n * gap + 1) * sr)));
     const { mix } = await import("../public/sound-dsp.js");
-    const stats = takes.map((t, i) => { mix(total, t.samples, i * gap, 0.8, sr); const an = sound.analyse(t.samples, sr, { cols: 8, bins: 16 }); return { seed: seeds[i], at: Math.round(i * gap * 1000) / 1000, peak: an.peak, rms: an.rms, centroid: an.centroid, seconds: an.seconds }; });
+    const stats = takes.map((t, i) => { mix(total, t.samples, i * gap, 0.8, sr); const an = sound.analyse(t.samples, sr, { cols: 8 }); /* the readout's 64 bins: chart and readout agree on brightness */ return { seed: seeds[i], at: Math.round(i * gap * 1000) / 1000, peak: an.peak, rms: an.rms, centroid: an.centroid, seconds: an.seconds }; });
     if (req.query.json === "1") return res.json({ id: a.id, knobs: base, sr, seconds: total.length / sr, takes: stats });
     const clean = a.price <= 0 || (req.body?.lic && (await commerce.license(String(req.body.lic)).catch(() => null))?.assetId === a.id);
     for (let i = 0; i < total.length; i++) total[i] = Math.max(-1, Math.min(1, total[i]));

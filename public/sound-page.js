@@ -125,7 +125,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
     ${knobs.seed ? `<section class="sp-walk" id="sp-walk-sec">
       <div>
         <h2>Every seed is a take</h2>
-        <p class="lede">One program, many seeds. Each dot is a take; click one to hear it.</p>
+        <p class="lede">Click a dot to hear that take.</p>
         <div class="a-program" id="sp-walk-code"></div>
       </div>
       <div class="sp-walk-stage" id="sp-walk">
@@ -347,7 +347,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
         regions.clearRegions(); region = null;
         await walk.show(buf, { morph: false, dim: r.headers.get("X-Oasis-Watermarked") === "1" });
         if (!$("#sp-walk-stat")) return;
-        $("#sp-walk-stat").textContent = `${tk.length} takes · ${buf.duration.toFixed(1)} s · ${Math.round(performance.now() - t0)} ms`;
+        $("#sp-walk-stat").textContent = `${tk.length} takes · ${buf.duration.toFixed(1)} s`;
         walkPlay.disabled = false;
         drawPlot();
       } catch (e) {

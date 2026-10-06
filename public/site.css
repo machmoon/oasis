@@ -414,3 +414,4 @@ body > main { flex: 1 0 auto; }
 .creators .creator { grid-template-columns: 1fr auto; padding-left: 18px; } /* no avatar on the ledger: names are the links */
 /* home: sections sit one consistent step apart (two bands back to back doubled --s-9 into a dead band) */
 section.band + section.band { padding-top: 0; }
+.receipt .r-refund { margin-top: 8px; color: var(--accent-text); }
