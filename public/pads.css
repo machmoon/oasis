@@ -261,3 +261,9 @@ a.cr-chip { display: inline-flex; align-items: center; text-decoration: none; }
 
 /* one control voice on the device, as on a hardware MPC: every key and chip is upper case, tracked, the same size */
 .cr-tempo button, .cr-chip, .cr-chips button, .cr-prompt button { text-transform: uppercase; letter-spacing: .06em; font-size: 11.5px !important; }
+/* phones: a pad's name wraps to two lines instead of "Hearth N…" (the role hint gives way) */
+@media (max-width: 599px) {
+  .cr-pad .cr-name { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-size: 11.5px; line-height: 1.15; bottom: 7px; }
+  .cr-pad .cr-hint { display: none; }
+  .cr-pad .cr-win { bottom: 38px; }
+}
