@@ -356,7 +356,7 @@ export function mountLive(container) {
     } });
   const an = analyser(), sr = audio().sampleRate;
   const freq = new Float32Array(an.frequencyBinCount), time = new Float32Array(1024);
-  let raf = 0, quiet = 0, alive = true, visible = true;
+  let raf = 0, quiet = 30, alive = true, visible = true; // starts at rest: nothing is sounding yet
   const bands = () => Math.max(24, Math.floor((specEl.clientWidth || 600) / 5));
   const frame = () => {
     if (!alive) return;
