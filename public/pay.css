@@ -106,7 +106,7 @@
 .pk-stats { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; margin: 0 0 28px; }
 /* one figure leads (what creators were paid); the counts read as its sentence, not as two more equal cards */
 .pk-stat.lead { padding: 0; border: 0; background: none; box-shadow: none; display: flex; align-items: baseline; gap: 12px; }
-.pk-stat.lead b { font-size: clamp(40px, 5vw, 60px); letter-spacing: -.035em; }
+.pk-stat.lead b { font-size: clamp(30px, 3vw, 38px); letter-spacing: -.03em; }
 .pk-stat.lead span { font-size: var(--fs-md, 18px); color: var(--ink-2); }
 .pk-stat-sub { margin: 0; font-size: var(--fs-md, 18px); color: var(--muted); }
 .pk-stat-sub b { color: var(--ink); font-weight: 600; }
@@ -120,7 +120,7 @@
 .pk-col-h span { font-weight: 500; color: var(--muted); font-size: 13px; }
 .pk-col-h[hidden] { display: none; }
 .pk-live { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
-.pk-live i { width: 8px; height: 8px; border-radius: 50%; background: var(--pk-ok); box-shadow: 0 0 0 3px var(--pk-ok-soft); }
+.pk-live { display: none; }
 
 @media (max-width: 899px) {
   .pk-stats { gap: 2px 14px; }

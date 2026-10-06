@@ -20,7 +20,7 @@ const TOOLS = [
 export async function pageAgents(app) {
   const cmd = `claude mcp add --transport http oasis ${location.origin}/mcp`;
   app.innerHTML = `<div class="wrap ag-page">
-    <header class="ag-head"><h1>Agents buy sounds the same way</h1><p class="lede">Connect over MCP, give it a budget in PayPal once, and it licenses kits inside that cap.</p></header>
+    <header class="ag-head"><h1>For agents</h1><p class="lede">An MCP server: agents search, preview and license sounds inside a budget you approve in PayPal.</p></header>
     <div class="ag-flow">
       <section class="ag-step"><h2>Connect</h2><p>One line in Claude Code. Seven tools appear.</p><div class="ag-cmd"><code id="ag-cmd">${esc(cmd)}</code><button type="button" class="btn small" id="ag-copy">${icon("copy")} Copy</button></div></section>
       <section class="ag-step"><h2>Give it a budget</h2><p>You approve a cap and an expiry in PayPal. Oasis holds the token, enforces the cap and charges your saved PayPal wallet per order.</p><a class="btn primary" href="#/budget">${icon("wallet")} Set a budget</a></section>

@@ -55,8 +55,8 @@ export async function pagePublish(app) {
   const who = store.get("oasis.creator") || {};
   app.innerHTML = `<div class="wrap pb-page">
     <header class="pb-head">
-      <h1>Publish a sound</h1>
-      <p class="lede">Paste a program written to <a class="link" href="/contract.txt" target="_blank" rel="noopener">the contract</a>. The server renders it in a sandbox and runs the factory's harness on every knob; if it passes, it is listed under your name.</p>
+      <h1>Publish</h1>
+      <p class="lede">A program written to <a class="link" href="/contract.txt" target="_blank" rel="noopener">the contract</a>, checked on every knob, then listed under your name.</p>
     </header>
     <div class="pb-grid">
       <section class="pb-src">
@@ -69,7 +69,7 @@ export function build(p, ctx) { … return { samples }; }"></textarea>
       </section>
       <aside class="pb-results" id="pb-results">
         <div class="sp-stage pb-stage" id="pb-stage" hidden>
-          <div class="sp-ws pb-ws" id="pb-ws"><span class="sp-axis">waveform</span><span class="sp-axis spec">spectrogram</span></div>
+          <div class="sp-ws pb-ws" id="pb-ws"></div>
           <div class="sp-ctl"><button class="s-play big" id="pb-play" aria-label="Play the defaults">${icon("play")}</button><span class="pb-playing" id="pb-playing">defaults</span></div>
         </div>
         <div class="sp-readout pb-readout" id="pb-readout" hidden></div>

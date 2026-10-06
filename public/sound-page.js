@@ -93,7 +93,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
       <div class="a-buy">
         <span class="a-price">${price(a.price)}<small>${a.price > 0 ? "per licence" : "no licence needed"}</small></span>
         ${licence ? `<span class="btn primary" style="pointer-events:none">${icon("seal-check")} Licensed</span><span class="note">This sound plays clean here: your kit's order paid ${esc(a.author)}.</span>`
-          : a.price > 0 ? `<button class="btn primary" type="button" id="a-license">${icon("seal-check")} License it, ${price(a.price)}</button><a class="btn" href="#/kits?vibe=${encodeURIComponent(a.title + " and what goes with it")}">${icon("sparkle")} Put it in a kit</a><span class="note">One PayPal order, with the knobs you set here. ${esc(a.author)} is paid from it.</span>`
+          : a.price > 0 ? `<button class="btn primary" type="button" id="a-license">${icon("seal-check")} License it, ${price(a.price)}</button><a class="btn" href="#/kits?vibe=${encodeURIComponent(a.title + " and what goes with it")}">${icon("sparkle")} Put it in a kit</a>`
           : `<a class="btn primary" href="/api/assets/${esc(a.id)}/download.wav" id="a-wav">${icon("download-simple")} Download WAV</a><span class="note">44.1 kHz, rendered from the knobs you set here.</span>`}
       </div>
     </header>
@@ -101,7 +101,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
     <section class="sp-hero">
       <div class="sp-stage-wrap">
         <div class="sp-stage busy" id="sp-stage">
-          <div class="sp-ws" id="sp-ws"><span class="sp-axis">waveform</span><span class="sp-axis spec">spectrogram</span></div>
+          <div class="sp-ws" id="sp-ws"></div>
           <div class="sp-tl" id="sp-tl" aria-hidden="true"></div>
           <div class="sp-bar"><div class="sp-ctl"><button class="s-play big" id="sp-play" aria-label="Play">${icon("play")}</button><button class="btn small" id="sp-loop" aria-pressed="false">${icon("repeat")} Loop</button></div><div class="sp-live" id="sp-live" aria-hidden="true"></div></div>
           <span class="sp-wm" id="sp-wm" hidden></span>
@@ -118,13 +118,13 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
         <div class="a-group"><span>The sound</span>${controls(others)}</div>
         ${knobs.seed ? `<div class="a-group"><span>Take</span>${control("seed", knobs.seed)}</div>` : ""}
         <div class="a-group"><span>The program</span><div class="a-program" id="a-program"></div></div>
-        <div class="a-group"><span>Renders</span><ol class="a-log" id="a-log"><li class="empty">Change a knob. The sound is rendered again, not resampled.</li></ol></div>
+        <div class="a-group"><span>Renders</span><ol class="a-log" id="a-log"><li class="empty">No renders yet</li></ol></div>
       </aside>
     </section>
 
     ${knobs.seed ? `<section class="sp-walk" id="sp-walk-sec">
       <div>
-        <h2>300 takes, no two alike</h2>
+        <h2>300 takes</h2>
         <p class="lede">The same program with your knobs, rendered once per seed and laid along a timeline. Each dot is one take: left to right is time, up is brighter, bigger is louder. Press play and each take lights up as it sounds; click a dot to hear it. A file played 300 times would be one dot.</p>
         <div class="a-program" id="sp-walk-code"></div>
       </div>
@@ -138,7 +138,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
 
     <section class="sp-fork" id="sp-fork">
       <div>
-        <h2>Fork it with AI</h2>
+        <h2>Fork it</h2>
         <p class="lede">Describe a new direction and Claude rewrites this program into a new sound that keeps what makes it good. The fork is yours to sell; ${esc(a.author)} keeps a share of every sale, down the lineage.</p>
         ${a.parent ? `<div class="lineage"><span class="chip">forked from <a href="#/a/${esc(a.parent.id)}">${esc(a.parent.title)}</a></span></div>` : ""}
         ${a.children?.length ? `<div class="lineage">${a.children.map((c) => `<a class="chip" href="#/a/${esc(c.id)}">${esc(c.title)} <b>${price(c.price)}</b></a>`).join("")}</div>` : ""}

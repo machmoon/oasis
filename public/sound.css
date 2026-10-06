@@ -56,7 +56,7 @@
 /* the playhead: one line swept over the picture for the take's length, the played part lifted */
 .s-cursor { position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: 0; }
 .s-cursor::before { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgb(255 255 255 / .1), rgb(255 255 255 / .1)) no-repeat; background-size: 0 100%; }
-.s-cursor::after { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 2px; background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+.s-cursor::after { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 2px; background: var(--accent); }
 .s-card.playing .s-cursor { opacity: 1; }
 .s-card.playing .s-cursor::after { animation: s-sweep var(--dur, 1s) linear forwards; }
 .s-card.playing .s-cursor::before { animation: s-fill var(--dur, 1s) linear forwards; }
@@ -115,7 +115,6 @@
 .sp-ws .sp-axis.spec { top: calc(30px + 184px + 8px); left: auto; right: 10px; color: rgb(255 255 255 / .62); }
 @media (max-width: 599px) { .sp-ws { background: linear-gradient(#0B0C10 0 calc(30px + 128px), #010101 0); } .sp-ws .sp-axis.spec { top: calc(30px + 128px + 8px); } }
 /* wavesurfer's shadow parts: the playback cursor, the hover line and its time + level label */
-.sp-ws ::part(cursor) { box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 70%, transparent); }
 .sp-ws ::part(hover-label), .rebuild-stage ::part(hover-label) { font-family: var(--font-mono); border-radius: 6px; font-variant-numeric: tabular-nums; }
 .sp-tl { height: 22px; padding: 2px 0 0; background: var(--surface); border-top: 1px solid var(--line); overflow: hidden; }
 .sp-tl ::part(timeline-notch) { border-left-color: var(--line-strong) !important; }
@@ -128,7 +127,7 @@
 .lv-tag { position: absolute; right: 8px; top: 6px; z-index: 2; display: inline-flex; align-items: center; gap: 6px; font: var(--fs-xs) var(--font-mono); color: rgb(255 255 255 / .45); pointer-events: none; }
 .lv-tag::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: rgb(255 255 255 / .25); transition: background var(--t), box-shadow var(--t); }
 .on > .lv-tag { color: rgb(255 255 255 / .8); }
-.on > .lv-tag::before { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+.on > .lv-tag::before { background: var(--accent); }
 .sp-stage .sp-wm { position: absolute; right: 14px; top: 14px; z-index: 2; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border-radius: var(--r-pill); background: color-mix(in srgb, var(--surface) 86%, transparent); border: 1px solid var(--line); color: var(--ink-2); font: var(--w-semibold) var(--fs-xs) var(--font-sans); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
 .sp-stage .sp-wm.clean { color: var(--ok); }
 .sp-stage .sp-wm i { font-size: 13px; }

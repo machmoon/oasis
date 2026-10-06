@@ -173,7 +173,7 @@ const options = (pairs, on) => pairs.map(([v, l]) => `<option value="${esc(v)}"$
 export async function pageSounds(app) {
   const params = new URLSearchParams(location.hash.split("?")[1] || "");
   app.innerHTML = `<div class="wrap kit-page s-page">
-    <header class="s-intro"><h1>The sounds</h1><p class="lede">Every sound is a program with knobs. Press play for the default take; open one to turn its knobs, hear 300 takes, or fork it.</p></header>
+    <header class="s-intro"><h1>Sounds</h1></header>
     <div class="s-tools" role="search">
       <label class="s-search">${icon("magnifying-glass")}<input type="search" id="k-q" placeholder="Search sounds" aria-label="Search sounds" autocomplete="off"></label>
       <div class="s-kinds" id="k-kinds" aria-label="Kind"></div>

@@ -43,7 +43,7 @@ export async function pageHome(app, ctx) {
   app.innerHTML = `
   <section class="hero" id="hero" aria-label="Oasis rendering and licensing a sound kit, live">
     <div class="hero-stage hero-sound" id="hero-stage">
-      <div class="hs-pic" id="hs-ws"><span class="sp-axis">waveform</span><span class="sp-axis spec" id="hs-spec-axis">spectrogram</span><button class="hs-unlock" id="hs-listen" type="button" aria-label="Unmute: play every render">${icon("speaker-slash")} Muted. Tap to listen</button></div>
+      <div class="hs-pic" id="hs-ws"><span class="sp-axis spec" id="hs-spec-axis" hidden></span><button class="hs-unlock" id="hs-listen" type="button" aria-label="Unmute: play every render">${icon("speaker-slash")} Muted. Tap to listen</button></div>
       <div class="hs-knobs" id="hs-knobs"></div>
     </div>
     <div class="wrap"><div class="hero-copy">
@@ -60,8 +60,8 @@ export async function pageHome(app, ctx) {
     <div class="rebuild">
       <div><div class="rebuild-stage hs-stage2" id="rb-stage"><div id="rb-ws"></div><button class="s-play big" id="rb-play" aria-label="Play">${icon("play")}</button><span class="readout" id="rb-readout"></span></div></div>
       <div>
-        <h2>Rendered, not resampled</h2>
-        <p class="lede">Turn a knob and the sound is built again: heavier is a lower, longer thump with more stones shifting, not the same file played louder.</p>
+        <h2>Turn a knob</h2>
+        <p class="lede">Each knob re-runs the program: heavier is a lower, longer thump.</p>
         <div class="rebuild-knobs" id="rb-knobs"></div>
         <div class="rebuild-import" id="rb-import"></div>
       </div>
@@ -71,8 +71,8 @@ export async function pageHome(app, ctx) {
   <section class="wrap band" id="pay">
     <div class="order">
       <div>
-        <h2>One order, every creator</h2>
-        <p class="lede">A kit is a bill. Approve it once in PayPal and each creator's share is booked from the same order; previews lose their watermark the moment it lands.</p>
+        <h2>The bill</h2>
+        <p class="lede">Approve once in PayPal; each creator's share is booked from that order.</p>
         <a class="btn" href="#/budget">Give an agent a budget</a>
       </div>
       <div class="receipt" id="receipt"><div class="skel" style="height:280px"></div></div>
@@ -80,19 +80,19 @@ export async function pageHome(app, ctx) {
   </section>
 
   <section class="wrap band" id="sales-sec" hidden>
-    <div class="head"><h2>Paid so far</h2></div>
+    <div class="head"><h2>Recent orders</h2></div>
     <div class="ledger"><div class="sales" id="sales"></div><div class="creators" id="creators"></div></div>
   </section>
 
   <section class="wrap band agents-band">
-    <h2>Agents run the same loop</h2>
-    <p class="lede">Connect Claude Code over MCP. It searches, previews, makes the kit and licenses it inside a budget you approved once.</p>
+    <h2>For agents</h2>
+    <p class="lede">One line in Claude Code; it licenses inside a budget you approve. <a class="link" href="#/agents">How it works</a></p>
     <div class="cmd"><span id="cmd-text"></span><button type="button" id="cmd-copy">Copy</button></div>
     <div class="tools" aria-label="MCP tools">${["search_assets", "preview_asset", "make_kit", "buy_assets", "get_budget"].map((t) => `<code>${t}</code>`).join("")}</div>
   </section>
 
   <section class="wrap band">
-    <div class="kit-head"><h2>From creators' programs</h2><a class="link" href="#/sounds">All sounds</a></div>
+    <div class="kit-head"><h2>New sounds</h2><a class="link" href="#/sounds">All sounds</a></div>
     <div class="s-grid" id="kit"></div>
   </section>`;
 

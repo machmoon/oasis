@@ -22,11 +22,16 @@ code, .mono { font-family: var(--font-mono); font-size: .92em; }
 @media (max-width: 767px) { :root { --gutter: 16px; } }
 .muted { color: var(--muted); }
 h1, h2, h3 { margin: 0; color: var(--ink); text-wrap: balance; }
-h1 { font: var(--w-black) var(--fs-4xl) / var(--lh-tight) var(--font-sans); letter-spacing: var(--ls-tight); }
-h2 { font: var(--w-bold) var(--fs-3xl) / var(--lh-tight) var(--font-sans); letter-spacing: var(--ls-tight); }
+/* app pages open with a working title, not a poster (Primer PageHeader, primer/react
+   packages/react/src/PageHeader/PageHeader.module.css: a ~2rem semibold title with its actions on the row); the
+   home hero keeps the display size (.hero h1), a product's own name (a sound, a kit) sits between */
+h1 { font: var(--w-bold) clamp(28px, 2.6vw, 34px) / 1.15 var(--font-sans); letter-spacing: -.02em; }
+.a-head h1, .kv-head h1 { font-size: clamp(32px, 3.4vw, 44px); letter-spacing: var(--ls-tight); }
+h2 { font: var(--w-bold) clamp(22px, 2vw, 28px) / 1.2 var(--font-sans); letter-spacing: -.015em; }
 h3 { font: var(--w-semibold) var(--fs-lg) / var(--lh-snug) var(--font-sans); letter-spacing: var(--ls-snug); }
 p { text-wrap: pretty; }
-.lede { font: var(--w-regular) var(--fs-lg) / 1.4 var(--font-sans); letter-spacing: -.01em; color: var(--ink-2); max-width: 46ch; margin: var(--s-4) 0 0; }
+.lede { font: var(--w-regular) 17px / 1.5 var(--font-sans); color: var(--muted); max-width: 62ch; margin: 8px 0 0; }
+.hero .lede { font-size: var(--fs-lg); color: var(--ink-2); max-width: 46ch; margin-top: var(--s-4); }
 
 /* top bar: one line, 64px */
 .top { position: sticky; top: 0; z-index: var(--z-sticky); background: color-mix(in srgb, var(--bg) 86%, transparent); backdrop-filter: blur(14px) saturate(140%); -webkit-backdrop-filter: blur(14px) saturate(140%); border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent); }
@@ -160,17 +165,17 @@ section.band { padding-block: var(--s-9); }
 @media (max-width: 899px) { .order { grid-template-columns: 1fr; gap: var(--s-6); } }
 
 /* agents: one line, one command */
-.agents-band { text-align: center; }
-.agents-band .lede { margin: var(--s-4) auto 0; }
+.agents-band { text-align: left; }
+.agents-band .lede { margin: 8px 0 0; }
 .cmd { display: inline-flex; align-items: center; gap: var(--s-3); margin-top: var(--s-6); max-width: 100%; height: 52px; padding: 0 8px 0 18px; border-radius: var(--r-pill); background: #0B0C10; color: #EDEEF2; border: 1px solid rgb(255 255 255 / .08); font: var(--w-medium) var(--fs-sm) / 1 var(--font-mono); box-shadow: var(--shadow); }
 .cmd span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cmd button { height: 36px; padding: 0 14px; border-radius: var(--r-pill); border: 0; background: color-mix(in srgb, var(--bg) 16%, transparent); color: inherit; font: var(--w-semibold) var(--fs-sm) / 1 var(--font-sans); cursor: pointer; transition: background var(--t); }
 .cmd button:hover { background: color-mix(in srgb, var(--bg) 28%, transparent); }
-.tools { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: var(--s-4); }
+.tools { display: flex; flex-wrap: wrap; gap: 8px; margin-top: var(--s-4); }
 /* the MCP tool names are names, not buttons: code, no pill, no pointer */
 .tools { display: flex; flex-wrap: wrap; gap: 6px 14px; }
 .tools code { font: var(--fs-xs) var(--font-mono); color: var(--muted); }
-.tools code::before { content: "→ "; color: var(--accent-text); }
+
 @media (max-width: 599px) { .cmd { height: auto; padding: 10px 8px 10px 14px; } .cmd span { white-space: normal; text-align: left; } }
 
 /* the kit: a row you flick through, every tile a mounted model sheet */
@@ -184,7 +189,7 @@ section.band { padding-block: var(--s-9); }
 .ledger { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: var(--s-5); }
 @media (max-width: 899px) { .ledger { grid-template-columns: 1fr; } }
 .ledger.solo { grid-template-columns: 1fr; }
-.sales { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: var(--s-2) 0; box-shadow: var(--inset-top), var(--shadow); }
+.sales { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: var(--s-2) 0; box-shadow: var(--inset-top); padding: 0; }
 .sale { display: grid; gap: 4px; padding: var(--s-4) var(--s-5); }
 .sale + .sale { border-top: 1px solid var(--line); }
 .sale-top { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }

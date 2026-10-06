@@ -87,7 +87,7 @@ async function drawSales({ limit = 6, empty = null, after = null } = {}) {
     $("#sales").innerHTML = sales.length ? sales.slice(0, limit).map((s, i) => saleRow(s, i === 0 && bump.length)).join("")
       : empty || `<div class="empty"><h3>No agent has bought anything yet.</h3><p>Give an agent a budget and ask it to build a scene. Its purchase shows up here the moment PayPal completes it.</p><a class="btn" href="#/budget">Give your agent a budget</a></div>`;
     const totals = creatorTotals(sales);
-    $("#creators").innerHTML = totals.length ? totals.map(([a, v]) => `<div class="creator"><img src="${face(a) ? thumb(face(a), 120) : ""}" alt=""><div><b><a href="#/creator/${encodeURIComponent(a)}">${esc(a)}</a></b><div class="muted" style="font-size:13px">sandbox creator account</div></div><div class="earn${bump.includes(a) ? " bump" : ""}">${usd(v)}</div></div>`).join("")
+    $("#creators").innerHTML = totals.length ? totals.map(([a, v]) => `<div class="creator"><img src="${face(a) ? thumb(face(a), 120) : ""}" alt=""><div><b><a href="#/creator/${encodeURIComponent(a)}">${esc(a)}</a></b></div><div class="earn${bump.includes(a) ? " bump" : ""}">${usd(v)}</div></div>`).join("")
       : "";
     $("#creators").hidden = !totals.length;
     $("#sales").closest(".ledger")?.classList.toggle("solo", !totals.length);
@@ -215,7 +215,7 @@ async function pageBudgetView(id) {
 async function pageLedger() {
   payCss();
   app.innerHTML = `<div class="wrap pk" style="padding-block:48px 96px">
-    <div class="head"><h1>The ledger</h1><p>Every order that paid a creator, with the PayPal order behind it. Shares go out with PayPal Payouts once the 14-day refund window closes.</p></div>
+    <div class="head"><h1>Ledger</h1><p>Every order that paid a creator, with its PayPal order.</p></div>
     <div class="pk-stats" id="stats"><div class="pk-stat lead"><b class="num" id="st-paid">$0.00</b><span id="st-paid-w">earned by creators</span></div><p class="pk-stat-sub">from <b class="num" id="st-orders">0</b> PayPal orders to <b class="num" id="st-creators">0</b> creators</p></div>
     <div class="ledger">
       <div><div class="pk-col-h">Orders <span class="pk-live"><i aria-hidden="true"></i>live</span></div><div class="sales" id="sales"><div class="pk-stack" style="padding:12px 16px"><div class="pk-sk row"></div><div class="pk-sk row"></div><div class="pk-sk row"></div></div></div></div>
