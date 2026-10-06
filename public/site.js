@@ -64,16 +64,20 @@ async function drawKit(el, { limit = 12 } = {}) {
 // ---------- sales and creators (shared by home and ledger) ----------
 // A row reads the way a payments list does (Stripe Dashboard's payments table, Gumroad's sales): the amount and its
 // status lead, then what was bought, then who was paid, then the reference. No made-up avatar.
+// One order as a row of a Stripe Dashboard payments table: date, what was bought, amount, status, the PayPal order;
+// the split and the capture open underneath (a disclosure, as Stripe opens a payment's detail)
 function saleRow(s, fresh = false) {
   const names = s.items.map((i) => i.title);
   const list = names.length > 3 ? `${names.slice(0, 3).join(", ")} and ${names.length - 3} more` : names.join(", ");
-  const held = s.payoutAfter && new Date(s.payoutAfter) > new Date();
-  const when = s.at ? new Date(s.at).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "";
-  return `<div class="sale${fresh ? " new" : ""}">
-    <div class="sale-top"><b class="amt num">${usd(s.total)}</b>${s.payout === "SENT" ? `<span class="sale-st">Paid out</span>` : ""}${s.funded ? `<span class="sale-st agent">Agent, on a budget</span>` : ""}<span class="sale-when">${esc(when)}</span></div>
-    <div class="what">${s.kit ? `<a href="#/kit/${esc(s.kit.id)}">${esc(s.kit.title)}</a> <span class="sale-n">· ${s.kit.parts || names.length} sound${(s.kit.parts || names.length) === 1 ? "" : "s"}</span>` : esc(list)}</div>
-    <div class="split">Creators receive ${s.creators.map((c) => `${esc(c.author)} <b class="num">${usd(c.usd)}</b>`).join(", ")}${held ? `<span class="sale-held">, held until ${new Date(s.payoutAfter).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>` : ""}</div>
-    <div class="ids">PayPal order ${esc(s.orderId)}${s.captureId ? `, capture ${esc(s.captureId)}` : ""}${s.payout === "SENT" ? ", Payouts batch sent" : ""}</div></div>`;
+  const held = s.payoutAfter && new Date(s.payoutAfter) > new Date(), day = (d) => new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  const status = s.payout === "SENT" ? "Paid out" : held ? `Held until ${day(s.payoutAfter)}` : s.payout === "WAITING_FOR_EMAIL" ? "Waiting for payout emails" : "Held";
+  return `<details class="sale-row${fresh ? " new" : ""}"><summary>
+    <span class="sr-date">${s.at ? esc(day(s.at)) : ""}</span>
+    <span class="sr-what">${s.kit ? `<a href="#/kit/${esc(s.kit.id)}">${esc(s.kit.title)}</a> <small>${s.kit.parts || names.length} sounds</small>` : esc(list)}${s.funded ? ` <small class="sale-st agent">agent, on a budget</small>` : ""}</span>
+    <b class="sr-amt num">${usd(s.total)}</b>
+    <span class="sr-st${s.payout === "SENT" ? " ok" : ""}">${esc(status)}</span>
+    <code class="sr-id">${esc(s.orderId)}</code></summary>
+    <div class="sr-more"><div>${s.creators.map((c) => `<span><a href="#/creator/${encodeURIComponent(c.author)}">${esc(c.author)}</a> receives <b class="num">${usd(c.usd)}</b></span>`).join("")}</div><div class="ids">PayPal order ${esc(s.orderId)}${s.captureId ? ` · capture ${esc(s.captureId)}` : ""}</div></div></details>`;
 }
 function creatorTotals(sales) {
   const t = {};
