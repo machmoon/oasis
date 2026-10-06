@@ -175,8 +175,10 @@ export async function buyAssets({ items, mandate, agent_name }) {
 }
 
 // ---------- kits: a vibe becomes up to ten tuned sound programs, licensed in one order ----------
-export async function makeKit({ vibe, mandate, agent_name }) {
+export async function makeKit({ vibe, mandate, agent_name, dry_run }) {
   const kits = await import("./kits.js");
+  // dry_run plans and prices the kit without saving it (nothing lands in the public list, nothing is bought)
+  if (dry_run) return kitStatus({ id: null, ...(await kits.planKit(String(vibe || "").slice(0, 300))), licence: null });
   let k = await kits.save(await kits.planKit(String(vibe || "").slice(0, 300)));
   if (mandate) {
     const items = kits.billItems(k);

@@ -76,7 +76,7 @@ function saleRow(s, fresh = false) {
     <span class="sr-what">${s.kit ? `<a href="#/kit/${esc(s.kit.id)}">${esc(s.kit.title)}</a> <small>${s.kit.parts || names.length} sounds</small>` : esc(list)}${s.funded ? ` <small class="sale-st agent">agent, on a budget</small>` : ""}</span>
     <b class="sr-amt num">${usd(s.total)}</b>
     <span class="sr-st${s.payout === "SENT" ? " ok" : ""}">${esc(status)}</span>
-    <code class="sr-id">${esc(s.orderId)}</code></summary>
+    <code class="sr-id">${esc(s.orderId)}</code>${s.repeated ? `<span class="sr-flag">Billed a repeated program more than once (before kits charged each program once)</span>` : ""}</summary>
     <div class="sr-more"><div>${s.creators.map((c) => `<span><a href="#/creator/${encodeURIComponent(c.author)}">${esc(c.author)}</a> receives <b class="num">${usd(c.usd)}</b></span>`).join("")}</div><div class="ids">PayPal order ${esc(s.orderId)}${s.captureId ? ` · capture ${esc(s.captureId)}` : ""}</div></div></details>`;
 }
 function creatorTotals(sales) {

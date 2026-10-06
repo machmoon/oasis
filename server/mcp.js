@@ -46,7 +46,7 @@ function getServer() {
   }, async ({ items, mandate, agent_name }) => text(await tools.buyAssets({ items, mandate, agent_name })));
   server.registerTool("make_kit", {
     description: "Describe the vibe you're going for and get a kit: Claude (or a keyword planner when the model is offline; the response says which in planned_by) picks up to ten sound programs from the registry and tunes their knobs to the vibe (materials, weight, wetness, seeds), priced as one order. With a mandate the whole kit is licensed at once and every creator is paid; without one you get watermarked previews and a link where a person can pay with PayPal.",
-    inputSchema: { vibe: z.string().describe("e.g. 'rainy cyberpunk alley footsteps and UI clicks', 'cosy wooden tavern', 'lo-fi drum kit with a dusty kick'"), mandate: z.string().optional().describe("The human's funded budget token (mdt_...) to license the kit"), agent_name: z.string().optional() },
+    inputSchema: { vibe: z.string().describe("e.g. 'rainy cyberpunk alley footsteps and UI clicks', 'cosy wooden tavern', 'lo-fi drum kit with a dusty kick'"), mandate: z.string().optional().describe("The human's funded budget token (mdt_...) to license the kit"), agent_name: z.string().optional(), dry_run: z.boolean().optional().describe("Plan and price the kit without saving or buying it") },
   }, async (args) => text(await tools.makeKit(args)));
   server.registerTool("get_kit", {
     description: "A kit's parts, knobs, bill, whether it is licensed, and each part's module and WAV once it is.",

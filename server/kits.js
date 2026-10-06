@@ -94,6 +94,10 @@ export function planByKeywords(vibe, { count = 8 } = {}) {
   let final = own.length >= 4 ? own : [...own, ...near].slice(0, Math.max(4, own.length));
   if (final.length < 4) final = [...final, ...picked.filter((e) => !final.includes(e))].slice(0, 4);
   const unmatched = words.filter((w) => !all.some((a) => has(hays.get(a.id), w))); // the vibe's words the registry has nothing for
+  // when a noun of the scene went unmatched ("train", "airport"), a part whose only hits are mood words ("night",
+  // "busy", "rainy") is filler for a scene we cannot supply: a short honest kit plus the warning beats eight fillers
+  const MOOD = new Set(["night", "midnight", "busy", "rainy", "rain", "dark", "quiet", "old", "abandoned", "cosy", "cozy", "big", "small", "heavy", "light", "wet", "dry", "distant", "haunted", "creepy", "spooky", "empty", "late", "early"]);
+  if (unmatched.length) { const solid = final.filter((e) => e[2].some((h) => words.includes(h) && !MOOD.has(h))); if (solid.length >= 2) final = solid; }
   picked.length = 0; picked.push(...final);
   const titleWords = vibe.split(/\s+/).filter(Boolean);
   while (titleWords.length && STOP.has(titleWords[0].toLowerCase())) titleWords.shift();
