@@ -127,3 +127,7 @@
   .pk-panel { padding: 20px; }
 }
 @media (prefers-reduced-motion: reduce) { .pk *, .pk-note, .pk-sk { animation: none !important; transition: none !important; } }
+/* the chosen option reads at a glance in both themes: an ink thumb with the page colour on it, the way the other
+   segmented controls on the site mark a choice (kit.css .seg) */
+.pk-seg .thumb { background: var(--ink); border-color: var(--ink); box-shadow: none; }
+.pk-seg button.on, .pk-seg button[aria-pressed="true"] { color: var(--bg); }
