@@ -75,7 +75,7 @@ function saleRow(s, fresh = false) {
     <span class="sr-date">${s.at ? esc(day(s.at)) : ""}</span>
     <span class="sr-what">${s.kit ? `<a href="#/kit/${esc(s.kit.id)}">${esc(s.kit.title)}</a> <small>${s.kit.parts || names.length} sounds</small>` : esc(list)}${s.funded ? ` <small class="sale-st agent">agent, on a budget</small>` : ""}</span>
     <b class="sr-amt num">${usd(s.total)}</b>
-    <span class="sr-st${s.payout === "SENT" ? " ok" : ""}" ${s.repeated ? `title="This early order billed a repeated program more than once, before kits charged each program once"` : ""}>${esc(status)}${s.repeated ? " · repeat parts billed" : ""}</span>
+    <span class="sr-st${s.payout === "SENT" ? " ok" : ""}" ${s.repeated ? `title="This early order billed a repeated program more than once, before kits charged each program once"` : ""}>${esc(status)}</span>${s.repeated ? `<span class="sr-st warn">repeat parts billed</span>` : ""}
     <code class="sr-id">${esc(s.orderId)}</code></summary>
     <div class="sr-more"><div>${s.creators.map((c) => `<span><a href="#/creator/${encodeURIComponent(c.author)}">${esc(c.author)}</a> receives <b class="num">${usd(c.usd)}</b></span>`).join("")}</div><div class="ids">PayPal order ${esc(s.orderId)}${s.captureId ? ` · capture ${esc(s.captureId)}` : ""}</div></div></details>`;
 }
@@ -219,7 +219,7 @@ async function pageLedger() {
   payCss();
   app.innerHTML = `<div class="wrap pk" style="padding-block:48px 96px">
     <div class="head"><h1>Ledger</h1><p>Every captured PayPal order and each creator's share of it, held for the 14-day refund window, then paid out to the creator's PayPal email once one is set.</p></div>
-    <dl class="pk-bal two" id="stats"><div><dt>Held for creators</dt><dd class="num" id="st-held">–</dd><dd class="pk-stat-sub">earned <b class="num" id="st-paid">–</b> from <b class="num" id="st-orders">–</b> PayPal orders by <b class="num" id="st-creators">–</b> creators; each share is released when its order's 14-day refund window closes</dd></div><div><dt>Paid out</dt><dd class="num" id="st-out">–</dd><dd class="pk-stat-sub">with PayPal Payouts</dd></div></dl>
+    <dl class="pk-bal two" id="stats"><div><dt>Held for creators</dt><dd class="num" id="st-held">–</dd><dd class="pk-stat-sub">from <b class="num" id="st-orders">–</b> PayPal orders by <b class="num" id="st-creators">–</b> creators<span hidden id="st-paid"></span></dd></div><div><dt>Paid out</dt><dd class="num" id="st-out">–</dd><dd class="pk-stat-sub">with PayPal Payouts</dd></div></dl>
     <div class="ledger">
       <div><div class="pk-col-h">Orders <span class="pk-live"><i aria-hidden="true"></i>live</span></div><div class="sales" id="sales"><div class="pk-stack" style="padding:12px 16px"><div class="pk-sk row"></div><div class="pk-sk row"></div><div class="pk-sk row"></div></div></div></div>
       <div><div class="pk-col-h" id="cr-h">Creators <span>earned so far</span></div><div class="creators" id="creators"><div class="pk-stack"><div class="pk-sk row"></div><div class="pk-sk row"></div></div></div></div>

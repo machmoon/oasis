@@ -43,7 +43,7 @@
 .ag-table .num { text-align: right; font-variant-numeric: tabular-nums; width: 70px; }
 .ag-grid { margin-top: 0; }
 .ag-grid .ag-sec p { color: var(--ink-2); max-width: 60ch; }
-@media (max-width: 599px) { .ag-table th:last-child, .ag-table td:last-child { display: none; } }
+@media (max-width: 599px) { .ag-table thead { display: none; } .ag-table tr { display: block; padding: 10px 14px; border-top: 1px solid var(--line); } .ag-table tr:first-child { border-top: 0; } .ag-table td { display: block; padding: 0; border: 0; } .ag-table td + td { margin-top: 4px; } }
 .ag-cmd[hidden] { display: none; }
 .ag-revoke { margin-top: 22px; display: grid; gap: 8px; max-width: 460px; }
 .ag-revoke label { font-weight: var(--w-semibold); font-size: 14px; }

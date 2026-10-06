@@ -54,7 +54,7 @@ export async function pageKits(app) {
     <h1>Kits</h1>
     <p class="lede">Describe a scene. Get up to ten sounds tuned to it, priced as one PayPal order.</p>
     <form class="kt-form" id="kt-form">
-      <label class="kt-l" for="kt-vibe">Describe a scene</label>
+      <label class="kt-l" for="kt-vibe">Your scene</label>
       <div class="row"><input type="text" id="kt-vibe" list="kt-sugg" maxlength="300" placeholder="a haunted lighthouse in a storm" value="${esc(params.get("vibe") || "")}" autocomplete="off"><button class="btn primary" type="submit" id="kt-go">${icon("squares-four")} Make a kit</button></div>
       <datalist id="kt-sugg">${EXAMPLES.map((e) => `<option value="${esc(e)}"></option>`).join("")}</datalist>
     </form>
@@ -119,7 +119,7 @@ export async function pageKit(app, id) {
     app.innerHTML = `<div class="wrap a-page">
       <nav class="a-crumb" aria-label="Breadcrumb"><a href="#/kits">Kits</a><span>/</span><span>${esc(k.title)}</span></nav>
       <header class="kv-head">
-        <div><h1>${esc(k.title)}</h1><p class="kv-vibe">${k.planner === "single" ? `One sound, licensed on its own with the knobs set on its page.` : `${k.vibe.trim().toLowerCase() !== k.title.trim().toLowerCase() ? `${esc(k.vibe.charAt(0).toUpperCase() + k.vibe.slice(1))}. ` : ""}<span class="num">${k.items.length}</span> sounds from ${k.creators.length} creator${k.creators.length === 1 ? "" : "s"}, <span title="${k.planner === "keywords" ? "The Claude planner was offline" : esc(k.planner)}">${k.planner === "keywords" ? "matched by keyword" : "picked by Claude"}</span>.`}</p>${paid && k.items.some((it, i) => it.price > 0 && k.items.slice(0, i).some((x) => x.assetId === it.assetId && x.price > 0)) ? `<p class="kv-miss">${icon("info")} This was the first kit order, placed before kits charged each program once: the parts marked "billed again" were charged a second time.</p>` : ""}${k.unmatched?.length ? `<p class="kv-miss">${icon("info")} Nothing in the registry for ${k.unmatched.map((w) => `“${esc(w)}”`).join(", ")} yet; these parts match the rest of the vibe.</p>` : ""}</div>
+        <div><h1>${esc(k.title)}</h1><p class="kv-vibe">${k.planner === "single" ? `One sound, licensed on its own with the knobs set on its page.` : `${k.vibe.trim().toLowerCase() !== k.title.trim().toLowerCase() ? `${esc(k.vibe.charAt(0).toUpperCase() + k.vibe.slice(1))}. ` : ""}<span title="${k.planner === "keywords" ? "The Claude planner was offline" : esc(k.planner)}">${k.planner === "keywords" ? "Matched by keyword" : "Picked by Claude"}</span>.`}</p>${paid && k.items.some((it, i) => it.price > 0 && k.items.slice(0, i).some((x) => x.assetId === it.assetId && x.price > 0)) ? `<p class="kv-miss">${icon("info")} This was the first kit order, placed before kits charged each program once: the parts marked "billed again" were charged a second time.</p>` : ""}${k.unmatched?.length ? `<p class="kv-miss">${icon("info")} Nothing in the registry for ${k.unmatched.map((w) => `“${esc(w)}”`).join(", ")} yet; these parts match the rest of the vibe.</p>` : ""}</div>
         <div class="kv-side">
           ${paid ? (k.owner ? "" : `<span class="kv-state">${icon("waveform")} Licensed by its buyer; previews here</span>`) : `<span class="kv-state">${icon("waveform")} Watermarked preview until paid</span>`}
           <div class="kv-share"><input id="kv-url" type="hidden" value="${esc(kitUrl)}"><button class="btn small" id="kv-copy" type="button">${icon("link-simple")} <span>Copy link</span></button></div>
