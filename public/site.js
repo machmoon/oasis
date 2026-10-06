@@ -1,7 +1,7 @@
 // Oasis: a registry of sounds as code. A human approves one PayPal budget; agents license every sound they import
 // and each creator is paid. Pages: home, sounds, sound, kits, kit, budget, ledger. The 3D kit and the film studio
 // stay reachable (#/kit, #/studio) but are off the nav.
-import { pageStudio, leaveStudio } from "/studio.js";
+import { leaveStudio } from "/studio.js"; // the studio page is retired; leaveStudio still tidies anything it left behind
 import { pageKit as page3dKit, pageAsset, pageSounds } from "/kit.js";
 import { pageKits, pageKit } from "/kits.js";
 import { themed, avatar } from "/wave.js";
@@ -295,8 +295,7 @@ async function route() {
     else if (seg[0] === "a" && seg[1]) await pageAsset(app, seg[1]);
     else if (seg[0] === "publish") await (await mod("/publish.js")).pagePublish(app);
     else if (seg[0] === "creator" && seg[1]) await (await mod("/publish.js")).pageCreator(app, decodeURIComponent(seg[1]));
-    else if (seg[0] === "studio") await pageStudio(app, null);
-    else if (seg[0] === "film" && seg[1]) await pageStudio(app, seg[1]);
+    else if (seg[0] === "studio" || seg[0] === "film") { location.replace("#/kits"); return; } // the earlier build's film studio is retired (it saved a film on every visit)
     else notFound("That page doesn't exist.");
   } catch (e) {
     if (e === STALE || my !== routeSeq) return; // the visitor has moved on; the newer route owns the page
