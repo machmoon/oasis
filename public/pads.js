@@ -297,7 +297,7 @@ export async function pagePads(app, id) {
   const timer = new Worker(URL.createObjectURL(new Blob([`let t=null;onmessage=(e)=>{if(e.data==="start"){clearInterval(t);t=setInterval(()=>postMessage("tick"),25);}else{clearInterval(t);t=null;}};`], { type: "text/javascript" })));
   timer.onmessage = () => seq.playing && schedule();
   const play = async ({ countIn = false } = {}) => { await unlock(); seq.playing = true; seq.abs = 0; seq.countIn = countIn ? 16 : 0; seq.nextTime = ac.currentTime + 0.06; seq.startedAt = seq.nextTime + (countIn ? 16 * stepDur() : 0); timer.postMessage("start"); paintTransport(); };
-  const stop = () => { playing = null; perf.turn = 0; perf.crash = false; seq.playing = false; seq.recording = false; seq.countIn = 0; timer.postMessage("stop"); queue.length = 0; paintTransport(); paintSeqHead(-1); };
+  const stop = () => { jam = []; paintJam(); playing = null; perf.turn = 0; perf.crash = false; seq.playing = false; seq.recording = false; seq.countIn = 0; timer.postMessage("stop"); queue.length = 0; paintTransport(); paintSeqHead(-1); };
   /** Where a live hit lands while recording: the nearest 16th, less 25 ms of touch latency (AudioSequencer.swift:570-588). */
   const recStep = () => { const len = seq.bars * STEPS, rel = ac.currentTime - 0.025 - seq.startedAt; return ((Math.round(rel / stepDur()) % len) + len) % len; };
 
@@ -322,7 +322,7 @@ export async function pagePads(app, id) {
           <div class="cr-main" id="cr-main"></div>
           <div class="cr-punch" id="cr-punch" hidden><i id="cr-cells"></i><b class="num" id="cr-punch-v"></b><span id="cr-punch-t"></span></div>
           <div class="cr-timing" id="cr-timing"></div>
-          <form class="cr-prompt" id="cr-prompt" autocomplete="off"><span aria-hidden="true">›</span><input id="cr-q" placeholder="Describe a beat or a kit: rusty sci-fi dungeon, boom bap, bpm 96, looser" aria-label="Describe a beat"><button type="button" data-c="undo" title="Undo (Cmd-Z)">↶ UNDO</button><button type="button" data-c="redo" title="Redo (Shift-Cmd-Z)">↷ REDO</button><button type="button" data-c="perform" id="cr-perform" aria-pressed="false" title="Fills at the end of every phrase">✦ PERFORM</button></form>
+          <form class="cr-prompt" id="cr-prompt" autocomplete="off"><span aria-hidden="true">›</span><input id="cr-q" placeholder="Describe a beat or a kit: rusty sci-fi dungeon, boom bap, bpm 96, looser" aria-label="Describe a beat"><button type="button" data-c="undo" title="Undo (Cmd-Z)">↶ UNDO</button><button type="button" data-c="redo" title="Redo (Shift-Cmd-Z)">↷ REDO</button><button type="button" data-c="keep" id="cr-keep" disabled title="Keep what you just played over the loop">KEEP JAM</button><button type="button" data-c="perform" id="cr-perform" aria-pressed="false" title="Fills at the end of every phrase">✦ PERFORM</button></form>
           <div class="cr-chips" id="cr-chips">${STYLE_ORDER.map((k) => `<button type="button" data-style="${k}">${STYLES[k].name}</button>`).join("")}</div>
         </section>
         <div class="cr-hinge" aria-hidden="true"></div>
@@ -458,11 +458,19 @@ export async function pagePads(app, id) {
 
   // ---------- input: pads ----------
   const velOf = (e, el) => { const r = el.getBoundingClientRect(); return Math.round(127 - 57 * Math.max(0, Math.min(1, (e.clientY - r.top) / r.height))); };
+  // KEEP JAM: pads played over the loop with REC off are remembered, quantised as a recorded hit would be, newest
+  // loop only; KEEP writes them in (AudioSequencer.swift:602-641 noteJam / captureJam)
+  let jam = [];
+  const paintJam = () => { const b = $("#cr-keep"); if (!b) return; b.disabled = !jam.length; b.textContent = jam.length ? `KEEP JAM · ${jam.length}` : "KEEP JAM"; };
   const hit = async (i, vel) => {
     const p = pads[i]; if (!p) return;
     await unlock();
     trigger(p, ac.currentTime, vel);
     if (seq.playing && seq.recording && seq.countIn === 0) { const s = recStep(); snapshot(); rows[i][s] = rows[i][s] || { v: vel, late: 0, r: 1 }; paintMain(); }
+    else if (seq.playing && seq.countIn === 0) {
+      const abs = Math.round((ac.currentTime - 0.025 - seq.startedAt) / stepDur()), total = seq.bars * STEPS;
+      jam.push({ i, abs, v: vel }); jam = jam.filter((h) => h.abs > abs - total); paintJam();
+    }
     if (selected !== i) select(i);
   };
   let fxHeld = null;
@@ -564,6 +572,7 @@ export async function pagePads(app, id) {
   });
   $("#cr-prompt").addEventListener("click", (e) => {
     const b = e.target.closest("[data-c]"); if (!b) return;
+    if (b.dataset.c === "keep") { if (!jam.length) return; snapshot(); const total = seq.bars * STEPS; for (const h of jam) { const s = ((h.abs % total) + total) % total; rows[h.i][s] = rows[h.i][s] || { v: h.v, late: 0, r: 1 }; } jam = []; paintJam(); paintMain(); return; }
     if (b.dataset.c === "perform") { perf.on = !perf.on; perf.turn = 0; b.classList.toggle("on", perf.on); b.setAttribute("aria-pressed", perf.on); paintTiming(); if (perf.on && !seq.playing) play(); return; }
     b.dataset.c === "undo" ? doUndo() : doRedo();
   });
