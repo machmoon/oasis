@@ -42,11 +42,12 @@
 .pb-verdict.ok { color: var(--ok); }
 .pb-verdict.fail { color: var(--danger); }
 .pb-gates { list-style: none; margin: 0; padding: 4px 0 0; display: grid; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--inset-top); overflow: hidden; }
-.pb-gate { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 10px; align-items: baseline; padding: 10px 14px; font-size: 14px; }
+/* a gate is its name with the threshold under it (one or two short lines), not a right-hand column squeezed to 24ch */
+.pb-gate { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 2px 10px; align-items: baseline; padding: 10px 14px; font-size: 14px; }
 .pb-gate + .pb-gate { border-top: 1px solid var(--line); }
-.pb-gate i { width: 8px; height: 8px; border-radius: 50%; background: var(--line-strong); align-self: center; transition: background var(--t), transform var(--t) var(--ease-spring); }
+.pb-gate i { width: 8px; height: 8px; border-radius: 50%; background: var(--line-strong); align-self: center; grid-row: 1; transition: background var(--t), transform var(--t) var(--ease-spring); }
 .pb-gate .l { color: var(--ink); font-weight: var(--w-medium); }
-.pb-gate .v { font: var(--fs-xs) var(--font-mono); color: var(--muted); text-align: right; max-width: 24ch; overflow-wrap: anywhere; }
+.pb-gate .v { grid-column: 2; font: var(--fs-xs) / 1.5 var(--font-mono); color: var(--muted); }
 .pb-gate.ok i { background: var(--ok); transform: scale(1.15); }
 .pb-gate.warn i { background: var(--accent); }
 .pb-gate.warn .v { color: var(--accent-text); }

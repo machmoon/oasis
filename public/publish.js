@@ -56,7 +56,7 @@ export async function pagePublish(app) {
   app.innerHTML = `<div class="wrap pb-page">
     <header class="pb-head">
       <h1>Publish a sound.</h1>
-      <p class="lede">Paste a program written to <a class="link" href="/contract.txt" target="_blank" rel="noopener">the contract</a>. The server renders it in the sandbox and runs the same harness the factory passes, across every knob. If it passes, it is listed under your name and every sale pays your PayPal.</p>
+      <p class="lede">Paste a program written to <a class="link" href="/contract.txt" target="_blank" rel="noopener">the contract</a>. The server renders it in a sandbox and runs the factory's harness on every knob; if it passes, it is listed under your name.</p>
     </header>
     <div class="pb-grid">
       <section class="pb-src">
