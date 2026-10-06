@@ -325,11 +325,23 @@ export async function releaseDuePayouts(now = Date.now()) {
 }
 
 /** Buyer refund within 14 days: refunds the PayPal capture and revokes every licence on the order. */
-export async function refund(orderId, { reason = "Refund requested" } = {}) {
+export async function refund(orderId, { reason = "Refund requested", amountUsd } = {}) {
   const o = await store.get("orders", orderId);
   if (!o) throw Object.assign(new Error("Unknown order"), { status: 404 });
   if (o.status !== "COMPLETED") throw Object.assign(new Error(`Order is ${o.status}`), { status: 409 });
   if (Date.now() - Date.parse(o.createdAt) > REFUND_WINDOW_MS) throw Object.assign(new Error("Refund window (14 days) has passed"), { status: 409 });
+  // a partial refund (Payments v2 refund with an amount) gives money back and keeps the licences, e.g. for parts an
+  // early kit order billed twice; the shares held for creators shrink in proportion before Payouts runs
+  if (amountUsd !== undefined) {
+    const amt = Math.round(Number(amountUsd) * 100) / 100, already = (o.partialRefunds || []).reduce((s, r) => s + r.usd, 0);
+    if (!(amt > 0) || amt + already >= o.total) throw Object.assign(new Error("A partial refund must be more than $0 and less than what is left of the order"), { status: 400 });
+    const r = await paypal.refundCapture(o.captureId, { amount: amt, note: reason.slice(0, 200), requestId: `oasis-refund-${orderId}-${Math.round((already + amt) * 100)}` });
+    o.partialRefunds = [...(o.partialRefunds || []), { id: r.id, usd: amt, reason: reason.slice(0, 200), at: new Date().toISOString() }];
+    const keep = (o.total - already - amt) / (o.total - already);
+    if (o.payoutHold?.items) o.payoutHold.items = o.payoutHold.items.map((i) => ({ ...i, amount: Math.round(i.amount * keep * 100) / 100 }));
+    await store.put("orders", o.id, o);
+    return o;
+  }
   const r = await paypal.refundCapture(o.captureId, { note: reason.slice(0, 200), requestId: `oasis-refund-${orderId}` });
   await markRefunded(o, r.id);
   return o;

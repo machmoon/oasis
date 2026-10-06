@@ -355,3 +355,16 @@ test("payouts never go to a placeholder address: those shares stay booked and th
   assert.equal(o.payoutHold.status, "WAITING_FOR_EMAIL");
   assert.equal(o.payoutHold.notSent.length, 1);
 });
+
+test("a partial refund returns part of the money, keeps the licences, and shrinks the held creator shares", async () => {
+  const store = await import("../server/store.js"), commerce = await import("../server/commerce.js");
+  await store.put("orders", "PARTIAL-1", { id: "PARTIAL-1", status: "COMPLETED", total: 23, captureId: "CAP-P1", createdAt: new Date().toISOString(), items: [], licenses: [{ token: "lic-p1" }],
+    payoutHold: { status: "HELD", releaseAfter: new Date(Date.now() + 864e5).toISOString(), items: [{ email: "a@example.com", amount: 13.5, ref: "r" }] } });
+  await store.put("licenses", "lic-p1", { token: "lic-p1", revoked: false });
+  const o = await commerce.refund("PARTIAL-1", { amountUsd: 8, reason: "billed twice" });
+  assert.equal(o.status, "COMPLETED");
+  assert.equal(o.partialRefunds[0].usd, 8);
+  assert.equal((await store.get("licenses", "lic-p1")).revoked, false);
+  assert.equal(o.payoutHold.items[0].amount, +(13.5 * 15 / 23).toFixed(2));
+  await assert.rejects(commerce.refund("PARTIAL-1", { amountUsd: 20 }), /less than what is left/);
+});

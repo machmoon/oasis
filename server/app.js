@@ -324,6 +324,7 @@ export async function createApp() {
     // an order that paid for a kit is named by the kit (Stripe names a payment by its product, not its line items)
     const kitOf = new Map((await store.list("kits")).filter((k) => k.licence?.orderId).map((k) => [k.licence.orderId, { id: k.id, title: kits.tidyTitle(k.title), parts: k.items.length }]));
     res.json(orders.slice(0, 40).map(commerce.saleEvent).map((e, i) => ({ ...e, at: orders[i].createdAt, captureId: orders[i].captureId || null, payout: orders[i].payoutHold?.status || null, kit: kitOf.get(orders[i].id) || null,
+      refunded: (orders[i].partialRefunds || []).map((r) => ({ id: r.id, usd: r.usd })),
       repeated: (() => { const n = {}; for (const it of orders[i].items) n[it.assetId] = (n[it.assetId] || 0) + 1; return Object.values(n).some((c) => c > 1); })() })));
   }));
 
@@ -607,10 +608,13 @@ export async function createApp() {
     const rows = await store.list("ledger");
     // A share is paid out only once releaseDuePayouts() has sent its order's batch (payoutHold.status SENT);
     // until the 14-day refund window closes it is held, and a refund cancels it. Having a PayPal email is not enough.
-    const hold = Object.fromEntries((await store.list("orders")).map((o) => [o.id, o.payoutHold?.status || null]));
+    const allOrders = await store.list("orders");
+    const hold = Object.fromEntries(allOrders.map((o) => [o.id, o.payoutHold?.status || null]));
+    // a partial refund shrinks every share of its order in proportion (commerce.refund does the same to the hold)
+    const keep = Object.fromEntries(allOrders.map((o) => { const back = (o.partialRefunds || []).reduce((t, x) => t + x.usd, 0); return [o.id, o.total ? (o.total - back) / o.total : 1]; }));
     const byAuthor = {};
-    for (const r of rows) {
-      const k = r.author;
+    for (const r0 of rows) {
+      const r = { ...r0, cents: Math.round(r0.cents * (keep[r0.orderId] ?? 1)) }, k = r.author;
       byAuthor[k] ||= { author: k, cents: 0, sales: 0, paidOut: 0, held: 0 };
       byAuthor[k].cents += r.cents;
       byAuthor[k].sales += 1;
