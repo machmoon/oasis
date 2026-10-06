@@ -30,7 +30,7 @@
 // What CRATE cannot do, because its pads are samples: every Oasis pad is a program. Each hit plays the next of a pool
 // of takes rendered from seeds (round robin from the program), and EDIT on the lid shows the program's knobs, which
 // re-render the pad instead of trimming a file.
-import { audio, unlock, loadWav, output } from "/audio.js";
+import { audio, unlock, loadWav, output, analyser } from "/audio.js";
 import { wav } from "/sound-dsp.js";
 import { control } from "/sound-page.js";
 import "/knob.js";
@@ -331,6 +331,7 @@ export async function pagePads(app, id) {
             <button class="cr-key" id="cr-fx" type="button" aria-pressed="false" title="Hold for FX pads, tap to latch">FX</button>
             <button class="cr-key" id="cr-edit" type="button" aria-pressed="false" title="The selected pad's program knobs">EDIT</button>
             <button class="cr-key" id="cr-export" type="button" title="Render the loop to a WAV">BOUNCE</button>
+            <button class="cr-key" id="cr-stagebtn" type="button" title="Full-screen stage view for the room (Esc leaves)">STAGE</button>
             <p class="cr-mark">The layout and the hinge are <a href="https://github.com/odoisveryverygood/crate-duo" target="_blank" rel="noopener">CRATE</a>'s, the iPhone Duo MPC that won Bitrig Hacks.</p>
           </div>
           <div class="cr-pads" id="cr-pads">${DRAW_ORDER.filter((i) => pads.length > 12 || i < 12).map((i) => `<button class="cr-pad" type="button" data-i="${i}"><span class="cr-win">${pads[i] ? `<img src="${esc(cardUrl(pads[i]))}" alt="" loading="lazy" width="480" height="240">` : ""}</span><span class="cr-n">${i + 1}</span><span class="cr-k">${KEY_LABEL(KEYS[i])}</span><span class="cr-name"></span><span class="cr-hint"></span></button>`).join("")}</div>
@@ -452,7 +453,7 @@ export async function pagePads(app, id) {
     const loaded = pads.filter((p) => p.takes.length), ms = loaded.length ? Math.round(loaded.reduce((s, p) => s + p.ms, 0) / loaded.length) : 0;
     $("#cr-timing").innerHTML = `<span>Rendered in ${ms} ms a pad, ${loaded.reduce((s, p) => s + p.takes.length, 0)} takes from ${pads.length} programs</span>${perf.on ? `<span class="cr-perf">Perform on</span>` : ""}<span class="cr-mode">${fxMode ? "FX pads" : lidMode === "edit" ? "Edit" : "Pattern"}, hinge on ${FX.find((f) => f[0] === fxId)[1].toLowerCase()}</span>`;
   }
-  function paintAll() { paintLid(); paintTransport(); pads.forEach(paintPad); }
+  function paintAll() { paintLid(); paintTransport(); pads.forEach(paintPad); paintStage(); }
   const select = (i) => { if (i >= pads.length) return; const was = selected; selected = i; paintPad(pads[was]); paintPad(pads[i]); paintLid(); };
   function toggleEdit() { lidMode = lidMode === "edit" ? "seq" : "edit"; $("#cr-edit").classList.toggle("on", lidMode === "edit"); $("#cr-edit").setAttribute("aria-pressed", lidMode === "edit"); paintLid(); }
 
@@ -595,6 +596,7 @@ export async function pagePads(app, id) {
     if (cym) trigger(cym, t, 118);
     if (kick) trigger(kick, t, 124);
     const el = $("#cr-drop"); el.classList.remove("on"); void el.offsetWidth; el.classList.add("on");
+    if (stage) { const d = $("#cs-drop", stage); d.classList.remove("on"); void d.offsetWidth; d.classList.add("on"); }
   }
   let dragging = false;
   fader.addEventListener("pointerdown", (e) => { dragging = true; fader.setPointerCapture(e.pointerId); unlock(); setPunch(faderAt(e)); watchDrop(); });
@@ -605,6 +607,7 @@ export async function pagePads(app, id) {
   // ---------- input: keys ----------
   const onKey = (e) => {
     if (e.target.closest("input, select, textarea, oasis-knob")) { if (e.key === "Escape") e.target.blur(); return; }
+    if (e.key === "Escape" && stage) { closeStage(); return; }
     if ((e.metaKey || e.ctrlKey) && e.code === "KeyZ") { e.preventDefault(); e.shiftKey ? doRedo() : doUndo(); return; }
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (e.code === "Space") { e.preventDefault(); if (!e.repeat) seq.playing ? stop() : play(); return; }
@@ -616,6 +619,26 @@ export async function pagePads(app, id) {
   const onKeyUp = (e) => { const i = KEYS.indexOf(e.code); if (i >= 0) $(`.cr-pad[data-i="${i}"]`, app)?.classList.remove("down"); };
   addEventListener("keydown", onKey); addEventListener("keyup", onKeyUp);
 
+  // ---------- STAGE: CRATE's audience view (Sources/Crowd/CrowdStageView.swift) as a full-screen page for the room:
+  // a 4x4 dot matrix lit on every hit (held 160 ms), the style in Doto, the kit and tempo, an output level bar, the
+  // last fill, and DROP full-screen in the accent at 0.93 for 280 ms. Keys keep playing underneath; Esc leaves.
+  let stage = null;
+  const openStage = async () => {
+    if (stage) return;
+    stage = document.createElement("div"); stage.className = "cr-stage"; stage.setAttribute("role", "dialog"); stage.setAttribute("aria-label", "Stage view");
+    stage.innerHTML = `<div class="cs-grid">${DRAW_ORDER.map((i) => `<div class="cs-cell${pads[i] ? "" : " none"}" data-i="${i}"><i></i><span>${pads[i] ? esc(pads[i].item.name) : ""}</span></div>`).join("")}</div>
+      <div class="cs-side"><b class="cs-brand">OASIS · PADS</b><div class="cs-style" id="cs-style"></div><div class="cs-kit" id="cs-kit"></div><div class="cs-level"><i id="cs-level"></i></div><div class="cs-fill" id="cs-fill"></div><p class="cs-hint">Keys still play. Esc leaves.</p></div>
+      <div class="cs-drop" id="cs-drop">DROP</div>`;
+    document.body.appendChild(stage);
+    paintStage();
+    try { await stage.requestFullscreen?.(); } catch {}
+    stage.addEventListener("click", (e) => { if (!e.target.closest(".cs-cell")) return; const i = Number(e.target.closest(".cs-cell").dataset.i); if (pads[i]) hit(i, 110); });
+  };
+  const closeStage = () => { if (!stage) return; if (document.fullscreenElement === stage) document.exitFullscreen?.().catch(() => {}); stage.remove(); stage = null; };
+  document.addEventListener("fullscreenchange", () => { if (stage && !document.fullscreenElement) closeStage(); });
+  function paintStage() { if (!stage) return; $("#cs-style", stage).textContent = (seq.style ? STYLES[seq.style].label : "KIT"); $("#cs-kit", stage).textContent = `${kit.title} · ${Math.round(seq.bpm)} BPM`; }
+  $("#cr-stagebtn").addEventListener("click", openStage);
+  const tap = analyser(), lvl = new Float32Array(tap.fftSize);
   // ---------- draw what has sounded, against the audio clock (metronome.js draw()) ----------
   let raf = 0;
   const draw = () => {
@@ -628,15 +651,18 @@ export async function pagePads(app, id) {
         $("#cr-pos").textContent = `${q.bar + 1}.${Math.floor((q.s % STEPS) / 4) + 1}`;
         $$("#cr-segs i", app).forEach((g) => { const b = Number(g.dataset.b); g.className = b === q.bar ? "now" : b < q.bar ? "past" : ""; });
       } else if (q.kind === "fill") {
+        if (stage) $("#cs-fill", stage).textContent = `▸ ${FILL_NAME[q.fill].toUpperCase()}`;
         const t = $("#cr-timing .cr-perf"); if (t) { t.textContent = `▸ ${FILL_NAME[q.fill]}`; t.classList.remove("on"); void t.offsetWidth; t.classList.add("on"); }
       } else if (q.kind === "count") {
         $("#cr-pos").textContent = `−${4 - Math.floor(q.n / 4)}`;
       } else {
         const p = pads[q.i]; p.lit = now + 0.1; // lit for 100 ms after a hit (Theme.swift:104)
+        if (stage) { const c = $(`.cs-cell[data-i="${q.i}"]`, stage); if (c) { c.classList.add("on"); clearTimeout(c.t); c.t = setTimeout(() => c.classList.remove("on"), 160); } }
         $(`.cr-pad[data-i="${q.i}"]`, app)?.classList.add("lit");
         if (q.i === selected) $$("#cr-takes canvas", app).forEach((d) => d.classList.toggle("on", Number(d.dataset.n) === q.take));
       }
     }
+    if (stage) { tap.getFloatTimeDomainData(lvl); let sq = 0; for (let i = 0; i < lvl.length; i += 4) sq += lvl[i] * lvl[i]; $("#cs-level", stage).style.transform = `scaleX(${Math.min(1, Math.sqrt(sq / (lvl.length / 4)) * 3.2)})`; }
     for (const p of pads) if (p.lit && now > p.lit) { p.lit = 0; $(`.cr-pad[data-i="${p.i}"]`, app)?.classList.remove("lit"); }
     raf = requestAnimationFrame(draw);
   };
@@ -677,5 +703,5 @@ export async function pagePads(app, id) {
   paintFxPads(); paintAll(); setPunch(0);
   pads.forEach(load);
 
-  addEventListener("hashchange", () => { stop(); timer.terminate(); cancelAnimationFrame(raf); removeEventListener("keydown", onKey); removeEventListener("keyup", onKeyUp); try { padsBus.disconnect(); master.disconnect(); fx.stops.forEach((o) => o.stop()); } catch {} }, { once: true });
+  addEventListener("hashchange", () => { closeStage(); stop(); timer.terminate(); cancelAnimationFrame(raf); removeEventListener("keydown", onKey); removeEventListener("keyup", onKeyUp); try { padsBus.disconnect(); master.disconnect(); fx.stops.forEach((o) => o.stop()); } catch {} }, { once: true });
 }

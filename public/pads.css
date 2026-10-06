@@ -203,3 +203,26 @@ a.cr-chip { display: inline-flex; align-items: center; text-decoration: none; }
   .cr-padline img, .cr-takes { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .cr-drop.on, .cr-key.rec.on i { animation: none; } .cr-drop.on { opacity: .93; } }
+
+/* ---------- STAGE: CRATE's crowd view, full screen (Sources/Crowd/CrowdStageView.swift): black, the dot font Doto
+   (OFL, public/fonts/doto.ttf, the face CRATE ships for its crowd screen), hits lit for 160 ms, DROP at 0.93 ---------- */
+@font-face { font-family: "Doto"; src: url("/fonts/doto.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+.cr-stage { position: fixed; inset: 0; z-index: var(--z-app, 50); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6vmin; align-items: center; padding: 7vmin; background: #000; color: #F5F5F3; font-family: var(--font-sans); }
+.cs-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2.4vmin; aspect-ratio: 1; max-height: 80vh; }
+.cs-cell { position: relative; display: grid; place-items: center; border-radius: 50%; cursor: pointer; }
+.cs-cell i { width: 62%; aspect-ratio: 1; border-radius: 50%; background: #1C1C1C; transition: background 60ms linear, transform 60ms linear; }
+.cs-cell.on i { background: var(--accent, #F0A440); transform: scale(1.08); box-shadow: 0 0 6vmin color-mix(in srgb, var(--accent, #F0A440) 45%, transparent); }
+.cs-cell.none { cursor: default; } .cs-cell.none i { background: #0D0D0D; }
+.cs-cell span { position: absolute; bottom: -0.4vmin; left: 0; right: 0; text-align: center; font: 500 1.5vmin var(--font-sans); color: #6A6A6A; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cs-side { display: grid; gap: 2.4vmin; align-content: center; }
+.cs-brand { font: 700 2.6vmin "Doto", var(--font-mono); letter-spacing: .06em; color: var(--accent, #F0A440); }
+.cs-style { font: 800 13vmin / .9 "Doto", var(--font-mono); letter-spacing: -.01em; }
+.cs-kit { font: 500 2.6vmin var(--font-sans); color: #8E8E8E; }
+.cs-level { height: 4px; background: #1C1C1C; overflow: hidden; }
+.cs-level i { display: block; height: 100%; background: var(--accent, #F0A440); transform-origin: left; transform: scaleX(0); }
+.cs-fill { min-height: 4vmin; font: 700 3.4vmin "Doto", var(--font-mono); color: #D9A12A; }
+.cs-hint { margin: 0; font-size: 1.6vmin; color: #4A4A4A; }
+.cs-drop { position: absolute; inset: 0; display: grid; place-items: center; background: color-mix(in srgb, var(--accent, #F0A440) 93%, transparent); color: #000; font: 900 30vmin "Doto", var(--font-mono); opacity: 0; pointer-events: none; }
+.cs-drop.on { animation: cr-drop 280ms linear; }
+@media (max-aspect-ratio: 1/1) { .cr-stage { grid-template-columns: 1fr; align-content: center; } .cs-grid { max-width: 86vw; } }
+@media (prefers-reduced-motion: reduce) { .cs-drop.on { animation: none; } .cs-cell i { transition: none; } }
