@@ -88,7 +88,7 @@ export async function pageKit(app, id) {
       </header>
       <div class="kv-body">
         <div>
-          <div class="kv-all"><button class="s-play big" id="kv-all" aria-label="Play the kit" aria-pressed="false">${icon("play")}</button><div class="kv-now" aria-live="polite"><b id="kv-now-t">Play the kit</b><span id="kv-now-s">${k.items.length} parts, one after another</span></div><div class="kv-live" id="kv-live" aria-hidden="true"></div></div>
+          <div class="kv-all"><button class="s-play big" id="kv-all" aria-label="Play the kit" aria-pressed="false">${icon("play")}</button><div class="kv-now" aria-live="polite"><b id="kv-now-t">Play the kit</b><span id="kv-now-s">${k.items.length} parts, one after another</span></div><div class="kv-live" id="kv-live" aria-hidden="true"></div><a class="btn primary kv-pads" href="#/pads/${esc(k.id)}">${icon("squares-four")} Play it on pads</a></div>
           <section class="kp" id="kv-play" hidden aria-label="Play the kit's voices"></section>
           <div class="kv-parts" id="kv-parts">${k.items.map((it, i) => part(it, i, paid)).join("")}</div>
         </div>

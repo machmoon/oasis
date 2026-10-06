@@ -1,0 +1,114 @@
+/* Pads (public/pads.js): a kit as an MPC. The deck is an instrument panel with its own near-black light in both themes,
+   like the waveform and spectrogram panels, so the pads' centroid-toned waveforms read the same everywhere. Pads are a
+   4x4 grid (the MPC layout); the pattern is a 16-step grid in four beats of four, the TR-808's grouping. Radii follow
+   tokens.css: pads and cells are inner panels (--r-sm), frames are tiles (--r-lg), buttons are pills. */
+.pd-page { padding-block: 44px 96px; }
+.pd-head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 18px 32px; margin: 4px 0 24px; }
+.pd-head h1 { font: var(--w-bold) var(--fs-3xl) / var(--lh-tight) var(--font-sans); letter-spacing: var(--ls-tight); }
+.pd-vibe { margin-top: 8px; color: var(--ink-2); font-size: var(--fs-md); }
+
+.pd-transport { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.pd-btn { display: inline-flex; align-items: center; gap: 7px; height: 40px; padding: 0 14px; border-radius: var(--r-pill); border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: var(--w-semibold) 14px var(--font-sans); cursor: pointer; box-shadow: var(--inset-top); transition: border-color var(--t), background var(--t), transform var(--t-fast) var(--ease-out); }
+.pd-btn:hover { border-color: var(--line-strong); }
+.pd-btn:active { transform: scale(.97); }
+.pd-btn:disabled { opacity: .7; cursor: default; }
+.pd-play { width: 48px; height: 48px; padding: 0; justify-content: center; border-radius: 50%; background: var(--ink); color: var(--bg); border-color: var(--ink); font-size: 18px; }
+.pd-play.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.pd-rec i { color: #E5484D; }
+.pd-rec.on { background: #E5484D; border-color: #E5484D; color: #fff; }
+.pd-rec.on i { color: #fff; animation: pd-blink 1s steps(2) infinite; }
+.pd-num { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border-radius: var(--r-pill); border: 1px solid var(--line); background: var(--surface); font-size: 13px; color: var(--muted); }
+.pd-num input[type=number] { width: 46px; border: 0; padding: 0; background: transparent; color: var(--ink); font: var(--w-semibold) 15px var(--font-mono); }
+.pd-num input[type=number]:focus { outline: none; }
+.pd-num input[type=range] { width: 84px; accent-color: var(--accent); }
+
+/* the deck: pads on the left, fold and the selected pad on the right */
+.pd-deck { --fold: 0; display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 14px; padding: 14px; border-radius: var(--r-lg); background: #0B0C10; border: 1px solid rgb(255 255 255 / .06); box-shadow: var(--shadow-lg), inset 0 1px 0 rgb(255 255 255 / .06); color: #EDEEF2; }
+.pd-pads { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.pd-pad { position: relative; aspect-ratio: 1.35; padding: 0; border-radius: var(--r-sm); overflow: hidden; border: 1px solid rgb(255 255 255 / .08); background: #15171D; cursor: pointer; color: inherit; text-align: left; isolation: isolate; box-shadow: inset 0 1px 0 rgb(255 255 255 / .06), 0 2px 0 rgb(0 0 0 / .5); transition: transform 60ms var(--ease-out), border-color var(--t), box-shadow 60ms; touch-action: manipulation; }
+.pd-pad.empty { cursor: default; background: repeating-linear-gradient(135deg, #111318 0 6px, #0E1014 6px 12px); }
+.pd-pad img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: calc(.82 - var(--fold) * .45); filter: saturate(calc(1 - var(--fold) * .6)); transition: opacity var(--t-slow); }
+/* a pad is a key: pressed it sinks, struck it flashes the accent and fades (feedback for every hit, from keys or the sequencer) */
+.pd-pad::after { content: ""; position: absolute; inset: 0; z-index: 1; background: radial-gradient(120% 90% at 50% 60%, color-mix(in srgb, var(--accent) 70%, transparent), transparent 70%); opacity: 0; pointer-events: none; }
+.pd-pad.hit::after { animation: pd-flash 320ms var(--ease-out); }
+.pd-pad.down, .pd-pad:active:not(.empty) { transform: translateY(2px); box-shadow: inset 0 1px 0 rgb(255 255 255 / .04); }
+.pd-pad:hover:not(.empty) { border-color: rgb(255 255 255 / .2); }
+.pd-pad.sel { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent), 0 2px 0 rgb(0 0 0 / .5); }
+.pd-pad.muted img { opacity: .2; filter: grayscale(1); }
+.pd-pad.loading img { opacity: .3; }
+.pd-pad.loading::before { content: ""; position: absolute; inset: 0; z-index: 2; background: linear-gradient(90deg, transparent, rgb(255 255 255 / .08), transparent); background-size: 200% 100%; animation: k-shimmer 1.2s linear infinite; }
+.pd-pad:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pd-key { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 6px; background: rgb(255 255 255 / .1); border: 1px solid rgb(255 255 255 / .14); font: var(--w-semibold) 12px var(--font-mono); color: #EDEEF2; }
+.pd-pad .pd-key { position: absolute; top: 8px; left: 8px; z-index: 3; }
+.pd-name { position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 3; font: var(--w-semibold) 13px / 1.2 var(--font-sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 2px rgb(0 0 0 / .8); }
+/* the round robin: one dot per take, the one that just sounded lit */
+.pd-rr { position: absolute; top: 12px; right: 9px; z-index: 3; display: flex; gap: 3px; }
+.pd-rr i { width: 5px; height: 5px; border-radius: 50%; background: rgb(255 255 255 / .22); transition: background 80ms; }
+.pd-rr i.on { background: var(--accent); }
+
+.pd-side { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 14px; align-items: start; min-width: 0; }
+.pd-fold { display: grid; gap: 10px; justify-items: center; height: 100%; }
+.pd-fold-head { display: grid; justify-items: center; font-size: 12px; color: rgb(255 255 255 / .55); }
+.pd-fold-head b { color: #EDEEF2; font-size: 13px; }
+.pd-fold-head span { font-family: var(--font-mono); }
+.pd-fold-track { --f: 0; position: relative; width: 46px; flex: 1; min-height: 240px; border-radius: 23px; background: linear-gradient(#1C1F27, #121419); border: 1px solid rgb(255 255 255 / .08); box-shadow: inset 0 2px 6px rgb(0 0 0 / .6); cursor: ns-resize; touch-action: none; outline: none; }
+.pd-fold-track:focus-visible { box-shadow: inset 0 2px 6px rgb(0 0 0 / .6), 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent); }
+.pd-fold-fill { position: absolute; left: 4px; right: 4px; top: 4px; height: calc((100% - 8px) * var(--f)); border-radius: 19px; background: linear-gradient(#7D1F9F, #C42A82 55%, var(--accent)); opacity: .9; }
+.pd-fold-thumb { position: absolute; left: 50%; top: calc(4px + (100% - 8px - 30px) * var(--f)); width: 54px; height: 30px; margin-left: -27px; border-radius: 10px; background: linear-gradient(#F4F5F8, #C9CED8); box-shadow: 0 3px 8px rgb(0 0 0 / .55), inset 0 -2px 0 rgb(0 0 0 / .15); }
+.pd-fold-thumb::after { content: ""; position: absolute; left: 12px; right: 12px; top: 14px; height: 2px; border-radius: 1px; background: rgb(0 0 0 / .35); }
+.pd-fold .pd-help { text-align: center; font-size: 11.5px; }
+.pd-help { margin: 0; color: rgb(255 255 255 / .5); font-size: 12.5px; line-height: 1.5; }
+.pd-help kbd { font: 11px var(--font-mono); padding: 1px 5px; border-radius: 4px; border: 1px solid rgb(255 255 255 / .2); }
+
+.pd-edit { display: grid; gap: 14px; min-width: 0; }
+.pd-edit-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+.pd-edit-head b { display: block; font-weight: var(--w-semibold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pd-edit-head span:not(.pd-key) { display: block; font-size: 12.5px; color: rgb(255 255 255 / .55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pd-open { color: rgb(255 255 255 / .6); font-size: 17px; }
+.pd-open:hover { color: #fff; }
+.pd-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.pd-presets button { height: 28px; padding: 0 11px; border-radius: var(--r-pill); border: 1px solid rgb(255 255 255 / .14); background: rgb(255 255 255 / .04); color: #EDEEF2; font: var(--w-medium) 12.5px var(--font-sans); cursor: pointer; }
+.pd-presets button:hover { border-color: var(--accent); }
+/* the knobs on the deck read its dark light, not the page's */
+.pd-dials { --sunk: #1F232B; --surface: #2A2F39; --line-strong: #4A505C; --ink: #EDEEF2; --muted: #8F96A5; grid-template-columns: repeat(auto-fill, minmax(74px, 1fr)); gap: 10px 4px; --knob-size: 46px; --knob-w: 72px; }
+.pd-mix { display: grid; gap: 8px; }
+.pd-mix label { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; align-items: center; gap: 10px; font-size: 12.5px; color: rgb(255 255 255 / .6); }
+.pd-mix input[type=range] { accent-color: var(--accent); width: 100%; }
+.pd-mix output { font-size: 12px; min-width: 24px; text-align: right; color: #EDEEF2; }
+.pd-mix select { height: 30px; padding: 0 10px; border-radius: 9px; border: 1px solid rgb(255 255 255 / .14); background: #15171D; color: #EDEEF2; font: var(--w-medium) 13px var(--font-sans); grid-column: 2 / -1; }
+.pd-mute { justify-self: start; display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: var(--r-pill); border: 1px solid rgb(255 255 255 / .14); background: transparent; color: #EDEEF2; font: var(--w-medium) 12.5px var(--font-sans); cursor: pointer; }
+.pd-mute.on { background: #EDEEF2; color: #0B0C10; }
+
+/* the pattern */
+.pd-seq { margin-top: 18px; padding: 14px 14px 12px; border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--line); box-shadow: var(--inset-top); overflow-x: auto; }
+.pd-steps-head, .pd-row { display: grid; grid-template-columns: 170px repeat(16, minmax(22px, 1fr)); gap: 4px; align-items: center; min-width: 640px; }
+.pd-steps-head { margin-bottom: 6px; }
+.pd-col-h { font: var(--fs-xs) var(--font-mono); color: var(--muted); padding-left: 2px; }
+.pd-col-h.now { color: var(--accent-text); }
+/* four beats of four: a wider gap before every beat */
+.pd-steps-head > :nth-child(4n + 2):not(:nth-child(2)), .pd-row > .pd-cell:nth-child(4n + 2):not(:nth-child(2)) { margin-left: 6px; }
+.pd-row + .pd-row { margin-top: 4px; }
+.pd-row-name { display: flex; align-items: center; gap: 8px; min-width: 0; height: 30px; padding: 0 8px 0 0; border: 0; background: none; color: var(--ink-2); font: var(--w-medium) 13px var(--font-sans); text-align: left; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pd-row-name .pd-key { background: var(--sunk); border-color: var(--line); color: var(--ink-2); flex: none; }
+.pd-row.sel .pd-row-name { color: var(--ink); }
+.pd-row.sel .pd-row-name .pd-key { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.pd-cell { height: 30px; padding: 0; border-radius: 6px; border: 1px solid var(--line); background: var(--sunk); cursor: pointer; transition: background 80ms, border-color 80ms, transform 60ms; }
+.pd-cell.beat { background: color-mix(in srgb, var(--sunk) 70%, var(--line-strong)); }
+.pd-cell:hover { border-color: var(--line-strong); }
+.pd-cell[data-v="1"] { background: color-mix(in srgb, var(--accent) 52%, var(--sunk)); border-color: color-mix(in srgb, var(--accent) 60%, transparent); }
+.pd-cell[data-v="2"] { background: var(--accent); border-color: var(--accent); }
+.pd-cell.now { box-shadow: 0 0 0 2px color-mix(in srgb, var(--ink) 30%, transparent); }
+.pd-cell.now[data-v="1"], .pd-cell.now[data-v="2"] { transform: scale(1.08); }
+.pd-seq .pd-help { color: var(--muted); margin-top: 12px; }
+
+@keyframes pd-flash { from { opacity: 1; } to { opacity: 0; } }
+@keyframes pd-blink { 50% { opacity: .3; } }
+@media (max-width: 1023px) { .pd-deck { grid-template-columns: 1fr; } .pd-side { grid-template-columns: 64px minmax(0, 1fr); } .pd-fold-track { min-height: 200px; } }
+@media (max-width: 599px) {
+  .pd-pads { gap: 6px; }
+  .pd-pad { aspect-ratio: 1; }
+  .pd-name { font-size: 11.5px; }
+  .pd-pad .pd-rr { display: none; }
+  .pd-transport .pd-btn span { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .pd-pad.hit::after, .pd-rec.on i, .pd-pad.loading::before { animation: none; } .pd-pad { transition: none; } }

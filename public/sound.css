@@ -374,6 +374,7 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
 .s-sheet .s-wave::after { content: ""; position: absolute; left: 0; right: 0; bottom: -10px; height: 3px; border-radius: 2px; background: linear-gradient(90deg, #2A2675, #7D1F9F, #C42A82, #F05C53, #F7B465); opacity: 0; transition: opacity var(--t-slow) var(--ease-out); }
 .s-card:hover .s-sheet .s-wave::after, .s-sheet:has(.s-play.on) .s-wave::after { opacity: .85; }
 .kv-all .kv-live { flex: 1; min-width: 120px; height: 40px; margin-left: 6px; }
+.kv-all .kv-pads { flex: none; }
 @media (max-width: 599px) { .kv-all .kv-live { display: none; } }
 .sp-axis.spec { left: auto; right: 10px; }
 .hero-sound .hs-pic { overflow: hidden; }

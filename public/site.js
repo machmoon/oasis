@@ -252,7 +252,7 @@ async function route() {
   source?.close();
   const [path] = location.hash.slice(1).split("?");
   const seg = (path || "/").split("/").filter(Boolean);
-  const navKey = seg[0] === "kit" && seg[1] ? "kits" : seg[0] === "a" ? "sounds" : seg[0] || "home";
+  const navKey = (seg[0] === "kit" && seg[1]) || seg[0] === "pads" ? "kits" : seg[0] === "a" ? "sounds" : seg[0] || "home";
   document.querySelectorAll("[data-nav]").forEach((a) => a.classList.toggle("on", a.dataset.nav === navKey));
   closeMore();
   moreBtn.toggleAttribute("data-current", !!moreMenu.querySelector(`[data-nav="${navKey}"]`));
@@ -264,6 +264,7 @@ async function route() {
     else if (seg[0] === "sounds") await pageSounds(app);
     else if (seg[0] === "kits") await pageKits(app);
     else if (seg[0] === "kit" && seg[1]) await pageKit(app, seg[1]);
+    else if (seg[0] === "pads" && seg[1]) await (await import("/pads.js")).pagePads(app, seg[1]);
     else if (seg[0] === "kit") await page3dKit(app);
     else if (seg[0] === "a" && seg[1]) await pageAsset(app, seg[1]);
     else if (seg[0] === "publish") await (await import("/publish.js")).pagePublish(app);
