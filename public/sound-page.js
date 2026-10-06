@@ -144,8 +144,13 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
         ${a.children?.length ? `<div class="lineage">${a.children.map((c) => `<a class="chip" href="#/a/${esc(c.id)}">${esc(c.title)} <b>${price(c.price)}</b></a>`).join("")}</div>` : ""}
       </div>
       <form id="fork-form">
-        <textarea id="fork-text" placeholder="e.g. make it a heavy boot on a metal catwalk, with a longer ring"></textarea>
-        <div class="row"><input id="fork-author" placeholder="Your creator name" maxlength="40"><input id="fork-email" placeholder="PayPal email for payouts (optional)" maxlength="80"><input id="fork-price" type="number" min="0" max="50" step="0.5" placeholder="Price $" style="max-width:110px"></div>
+        <label class="fk-l" for="fork-text">What should the fork become?</label>
+        <textarea id="fork-text" placeholder="a heavy boot on a metal catwalk, with a longer ring"></textarea>
+        <div class="row fk-row">
+          <div class="fk-f"><label class="fk-l" for="fork-author">Creator name</label><input id="fork-author" maxlength="40" autocomplete="nickname"></div>
+          <div class="fk-f"><label class="fk-l" for="fork-email">PayPal email <span>optional</span></label><input id="fork-email" type="email" maxlength="80" autocomplete="email"></div>
+          <div class="fk-f fk-price"><label class="fk-l" for="fork-price">Price, $</label><input id="fork-price" type="number" min="0" max="50" step="0.5" placeholder="0"></div>
+        </div>
         <div class="row"><button class="btn primary" type="submit" id="fork-go">${icon("sparkle")} Fork with AI</button><span class="note" id="fork-note">About a minute. The sandbox and the harness check the result before it is listed.</span></div>
       </form>
     </section>
