@@ -45,3 +45,8 @@
 .ag-grid .ag-sec p { color: var(--ink-2); max-width: 60ch; }
 @media (max-width: 599px) { .ag-table th:last-child, .ag-table td:last-child { display: none; } }
 .ag-cmd[hidden] { display: none; }
+.ag-revoke { margin-top: 22px; display: grid; gap: 8px; max-width: 460px; }
+.ag-revoke label { font-weight: var(--w-semibold); font-size: 14px; }
+.ag-revoke .row { display: flex; gap: 8px; }
+.ag-revoke input { flex: 1; min-width: 0; height: 38px; padding: 0 12px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: var(--fs-sm) var(--font-mono); }
+.ag-revoke input:focus { outline: none; border-color: var(--accent); box-shadow: var(--ring); }
