@@ -122,7 +122,7 @@ export async function pageKit(app, id) {
       <div class="who"><b class="kv-name">${esc(it.name)}</b><span class="kv-meta">${esc(it.title !== it.name ? `${it.title} by ${it.author}` : `by ${it.author}`)}${it.reason && /^(matched|near|nothing)/.test(it.reason) ? `<em class="kv-why"> · ${esc(it.reason)}</em>` : ""}</span>${(() => { const shown = knobs.filter(([k, v]) => k !== "seed" && v !== false); return shown.length ? `<span class="kv-knobs" title="Knobs tuned for this kit">${shown.map(([k, v]) => `${esc(k)} <b>${esc(String(v))}</b>`).join(", ")}</span>` : ""; })()}
 </div>
       <span class="kv-acts"><a href="#/a/${esc(it.assetId)}${it.licence ? `?lic=${esc(it.licence)}` : ""}" title="Open with knobs" aria-label="Open ${esc(it.name)} with knobs">${icon("sliders-horizontal")}</a>${it.wav ? `<a href="${esc(it.wav)}" title="WAV, 44.1 kHz" aria-label="Download ${esc(it.name)} as WAV">${icon("download-simple")}</a><button type="button" class="kv-code" aria-expanded="false" aria-controls="kv-code-${i}" title="Import line" aria-label="Show the import line">${icon("code")}</button>` : ""}</span>
-      <div class="amt num${paid || it.price === 0 ? " clean" : ""}">${it.covered ? "covered" : price(it.price)}<small>${it.covered ? "same program" : paid ? "licensed" : it.price === 0 ? "free" : "preview"}</small></div>
+      <div class="amt num${paid || it.price === 0 ? " clean" : ""}">${it.covered ? "covered" : price(it.price)}<small>${it.covered ? "same program" : paid ? "" : it.price === 0 ? "free" : "preview"}</small></div>
       ${it.wav ? `<div class="links" id="kv-code-${i}" hidden><code>import { play } from "${esc(it.module)}"</code></div>` : ""}
     </div>`;
   }

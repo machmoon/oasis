@@ -130,7 +130,7 @@ async function pageBudget(id) {
   const last = store.get("oasis.budget");
   app.innerHTML = `<div class="wrap split2 pk">
     <div>
-      <h1>Give your agent a budget</h1>
+      <h1>New budget</h1>
       <p class="lede">You approve once in PayPal. Your agent can then license sounds and kits up to this amount, and nothing more.</p>
       <dl class="pk-kv">
         <dt>Charged</dt><dd>Only when the agent buys, one PayPal order per scene</dd>

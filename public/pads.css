@@ -254,3 +254,7 @@ a.cr-chip { display: inline-flex; align-items: center; text-decoration: none; }
   .cr-chips button { flex: none; }
   .cr-hero { flex-wrap: wrap; }
 }
+
+/* the credit sits under the device, not on it (a hardware deck carries no paragraphs) */
+.cr-credit { margin-top: 6px; font-size: 13px; color: var(--muted); }
+.cr-credit a { color: var(--ink-2); text-decoration: underline; text-underline-offset: 2px; }

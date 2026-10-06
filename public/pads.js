@@ -339,7 +339,6 @@ export async function pagePads(app, id) {
             <button class="cr-key" id="cr-edit" type="button" aria-pressed="false" title="The selected pad's program knobs">EDIT</button>
             <button class="cr-key" id="cr-export" type="button" title="Render the loop to a WAV">BOUNCE</button>
             <button class="cr-key" id="cr-stagebtn" type="button" title="Full-screen stage view for the room (Esc leaves)">STAGE</button>
-            <p class="cr-mark">The layout and the hinge are <a href="https://github.com/odoisveryverygood/crate-duo" target="_blank" rel="noopener">CRATE</a>'s, the iPhone Duo MPC that won Bitrig Hacks.</p>
           </div>
           <div class="cr-pads" id="cr-pads">${DRAW_ORDER.filter((i) => i < Math.max(8, Math.ceil(pads.length / 4) * 4)).map((i) => `<button class="cr-pad" type="button" data-i="${i}"><span class="cr-win">${pads[i] ? `<img src="${esc(cardUrl(pads[i]))}" alt="" loading="lazy" width="480" height="240">` : ""}</span><span class="cr-n">${i + 1}</span><span class="cr-k">${KEY_LABEL(KEYS[i])}</span><span class="cr-name"></span><span class="cr-hint"></span></button>`).join("")}</div>
           <div class="cr-right">
@@ -356,6 +355,7 @@ export async function pagePads(app, id) {
         </section>
       </div>
       <p class="cr-foot">Keys <kbd>Z X C V</kbd> pads 1-4, <kbd>A S D F</kbd> 5-8, <kbd>Q W E R</kbd> 9-12, <kbd>1 2 3 4</kbd> 13-16. <kbd>Space</kbd> play, <kbd>Return</kbd> record, <kbd>/</kbd> the prompt. Where you strike a pad is how hard. Pull the hinge up for the punch, then down fast for the drop. Every hit is the next take rendered from that pad's program.</p>
+      <p class="cr-credit">The layout and the hinge are <a href="https://github.com/odoisveryverygood/crate-duo" target="_blank" rel="noopener">CRATE</a>'s, the iPhone Duo MPC that won Bitrig Hacks.</p>
     </div>
   </div>`;
 
