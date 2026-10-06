@@ -61,16 +61,18 @@ async function drawKit(el, { limit = 12 } = {}) {
 }
 
 // ---------- sales and creators (shared by home and ledger) ----------
+// A row reads the way a payments list does (Stripe Dashboard's payments table, Gumroad's sales): the amount and its
+// status lead, then what was bought, then who was paid, then the reference. No made-up avatar.
 function saleRow(s, fresh = false) {
-  const who = (s.agent || "Buyer").replace(/^an? /i, "").slice(0, 1).toUpperCase();
   const names = s.items.map((i) => i.title);
   const list = names.length > 3 ? `${names.slice(0, 3).join(", ")} and ${names.length - 3} more` : names.join(", ");
+  const held = s.payoutAfter && new Date(s.payoutAfter) > new Date();
+  const when = s.at ? new Date(s.at).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "";
   return `<div class="sale${fresh ? " new" : ""}">
-    <div class="who" aria-hidden="true">${esc(who)}</div>
-    <div class="what"><b>${esc(s.agent || "A buyer")}</b> licensed ${esc(list)}${s.funded ? " inside a human's budget" : ""}.
-      <div class="split">${s.creators.map((c) => `<span class="chip">${esc(c.author)} <b>${usd(c.usd)}</b></span>`).join("")}</div>
-      <div class="ids">PayPal order ${esc(s.orderId)}</div></div>
-    <div class="amt">${usd(s.total)}</div></div>`;
+    <div class="sale-top"><b class="amt num">${usd(s.total)}</b><span class="sale-st">Captured</span>${s.funded ? `<span class="sale-st agent">Agent, on a budget</span>` : ""}<span class="sale-when">${esc(when)}</span></div>
+    <div class="what">${esc(list)}</div>
+    <div class="split">${s.creators.map((c) => `${esc(c.author)} <b class="num">${usd(c.usd)}</b>`).join(", ")}${held ? `<span class="sale-held">, held until ${new Date(s.payoutAfter).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>` : ""}</div>
+    <div class="ids">PayPal order ${esc(s.orderId)}</div></div>`;
 }
 function creatorTotals(sales) {
   const t = {};

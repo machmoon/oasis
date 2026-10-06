@@ -34,7 +34,7 @@ export async function pageKits(app) {
     <h1>Describe the vibe</h1>
     <p class="lede">One line in, a kit out. Claude picks six to ten sound programs, tunes their knobs to your scene, and one PayPal order pays every creator.</p>
     <form class="kt-form" id="kt-form">
-      <div class="row"><input type="text" id="kt-vibe" maxlength="300" placeholder="rainy cyberpunk alley footsteps and UI clicks" value="${esc(params.get("vibe") || "")}" autocomplete="off"><button class="btn primary" type="submit" id="kt-go">${icon("sparkle")} Make a kit</button></div>
+      <div class="row"><input type="text" id="kt-vibe" maxlength="300" placeholder="Describe a scene: a haunted lighthouse in a storm" value="${esc(params.get("vibe") || "")}" autocomplete="off"><button class="btn primary" type="submit" id="kt-go">${icon("sparkle")} Make a kit</button></div>
       <div class="kt-examples">${EXAMPLES.map((e) => `<button type="button" data-v="${esc(e)}">${esc(e)}</button>`).join("")}</div>
     </form>
     <div id="kt-status" hidden></div>
