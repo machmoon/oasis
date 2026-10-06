@@ -25,7 +25,7 @@ function catalogLines() {
  * near words, so "haunted" finds the horror kit), keeps the kinds varied, 8 parts. Each part says which words it
  * matched, and one that matched nothing says so, so a thin kit reads as thin rather than as a confident plan. */
 const STOP = new Set(["a", "an", "the", "in", "at", "of", "with", "and", "for", "on", "to", "by", "my", "some", "kit", "sounds", "sound"]);
-const NEAR = { haunted: ["horror", "ghost", "creak", "night"], spooky: ["horror", "ghost", "night"], creepy: ["horror", "creak"], scary: ["horror"], ocean: ["sea", "harbour", "wave", "gull"], sea: ["harbour", "wave"], beach: ["wave", "harbour", "gull"], city: ["street", "traffic", "rain"], urban: ["street", "traffic"], space: ["sci-fi", "console", "laser"], spaceship: ["sci-fi", "console", "servo"], robot: ["sci-fi", "servo", "console"], cyberpunk: ["neon", "rain", "sci-fi", "street"], medieval: ["market", "anvil", "tavern"], fantasy: ["tavern", "market", "magic"], cafe: ["office", "mug", "cup", "kitchen"], coffee: ["mug", "cup", "kitchen"], cooking: ["kitchen"], car: ["engine", "door", "car"], drive: ["car", "engine"], game: ["arcade", "coin", "blip"], retro: ["arcade", "chip", "pixel"], arcade: ["coin", "blip", "pixel"], drums: ["kick", "snare", "hat"], beat: ["kick", "snare", "hat"], woods: ["forest", "owl", "night"], forest: ["owl", "night", "wind"], lighthouse: ["harbour", "sea", "wind", "foghorn"], storm: ["rain", "thunder", "wind"], gong: ["bell", "toll", "chime"], temple: ["bell", "chime", "stone", "echo"], underwater: ["bubble", "water", "drip", "sea"], bubbles: ["bubble"], church: ["bell", "toll"], cave: ["drip", "echo", "stone"], ui: ["click", "interface", "toggle"], menu: ["click", "interface", "ui"] };
+const NEAR = { subway: ["train", "tunnel", "metro", "rumble", "echo"], station: ["train", "echo", "announcement"], tunnel: ["echo", "rumble", "drip"], haunted: ["horror", "ghost", "creak", "night"], spooky: ["horror", "ghost", "night"], creepy: ["horror", "creak"], scary: ["horror"], ocean: ["sea", "harbour", "wave", "gull"], sea: ["harbour", "wave"], beach: ["wave", "harbour", "gull"], city: ["street", "traffic", "rain"], urban: ["street", "traffic"], space: ["sci-fi", "console", "laser"], spaceship: ["sci-fi", "console", "servo"], robot: ["sci-fi", "servo", "console"], cyberpunk: ["neon", "rain", "sci-fi", "street"], medieval: ["market", "anvil", "tavern"], fantasy: ["tavern", "market", "magic"], cafe: ["office", "mug", "cup", "kitchen"], coffee: ["mug", "cup", "kitchen"], cooking: ["kitchen"], car: ["engine", "door", "car"], drive: ["car", "engine"], game: ["arcade", "coin", "blip"], retro: ["arcade", "chip", "pixel"], arcade: ["coin", "blip", "pixel"], drums: ["kick", "snare", "hat"], beat: ["kick", "snare", "hat"], woods: ["forest", "owl", "night"], forest: ["owl", "night", "wind"], lighthouse: ["harbour", "sea", "wind", "foghorn"], storm: ["rain", "thunder", "wind"], gong: ["bell", "toll", "chime"], temple: ["bell", "chime", "stone", "echo"], underwater: ["bubble", "water", "drip", "sea"], bubbles: ["bubble"], church: ["bell", "toll"], cave: ["drip", "echo", "stone"], ui: ["click", "interface", "toggle"], menu: ["click", "interface", "ui"] };
 export function planByKeywords(vibe, { count = 8 } = {}) {
   // plurals match their singular ("footsteps" finds Footstep, "clicks" finds Click)
   const words = [...new Set(vibe.toLowerCase().split(/[^a-z0-9-]+/).filter((t) => t.length > 2 && !STOP.has(t)).map((t) => (t.length > 4 && t.endsWith("s") && !t.endsWith("ss") ? t.slice(0, -1) : t)))];
@@ -33,14 +33,17 @@ export function planByKeywords(vibe, { count = 8 } = {}) {
   // a word that matches half the registry says little; a word that matches three sounds says a lot: each term is
   // weighted by its inverse document frequency, ln(N / df), the weighting of classic TF-IDF (Lucene's TFIDFSimilarity)
   const all = sounds(), hays = new Map(all.map((a) => [a.id, `${a.title} ${a.tags.join(" ")} ${a.description} ${a.kind} ${a.worldKit || ""}`.toLowerCase()]));
-  const idf = Object.fromEntries(terms.map((t) => { const df = all.filter((a) => hays.get(a.id).includes(t)).length; return [t, Math.log((all.length + 1) / (df + 1)) + 0.2]; }));
+  // whole words only (with a plural ending), the way a search engine's tokenizer matches: "platform" is not "platformer"
+  const rx = Object.fromEntries(terms.map((t) => [t, new RegExp(`(^|[^a-z0-9])${t.replace(/[^a-z0-9-]/g, "")}(s|es)?($|[^a-z0-9])`)]));
+  const has = (text, t) => rx[t].test(text);
+  const idf = Object.fromEntries(terms.map((t) => { const df = all.filter((a) => has(hays.get(a.id), t)).length; return [t, Math.log((all.length + 1) / (df + 1)) + 0.2]; }));
   const scored = all.map((a) => {
     const hay = hays.get(a.id);
     let s = 0; const hit = [];
     for (const t of terms) {
       const w = (words.includes(t) ? 1 : 0.6) * idf[t]; // a near word counts for less than the person's own word
       let ts = 0;
-      if (a.title.toLowerCase().includes(t)) ts += 4; if (a.tags.some((x) => x.includes(t))) ts += 3; if ((a.worldKit || "").toLowerCase().includes(t)) ts += 2; if (hay.includes(t)) ts += 1;
+      if (has(a.title.toLowerCase(), t)) ts += 4; if (a.tags.some((x) => has(x.toLowerCase(), t))) ts += 3; if (has((a.worldKit || "").toLowerCase(), t)) ts += 2; if (has(hay, t)) ts += 1;
       if (ts) { s += ts * w; hit.push(t); }
     }
     return [a, s + ((hash(vibe + a.id) % 100) / 1000), hit];
@@ -122,6 +125,13 @@ export function licenceOf(kit, order, via = "mandate") {
   return { orderId: order?.id || "free", total: order?.total || 0, creators, tokens, at: new Date().toISOString(), via };
 }
 
+/** A stored title without a dangling stop word ("Haunted Lighthouse In A" from before the planner trimmed them). */
+export function tidyTitle(t) {
+  const w = String(t || "").split(/\s+/).filter(Boolean);
+  while (w.length > 1 && STOP.has(w[w.length - 1].toLowerCase().replace(/[,:;.]+$/, ""))) w.pop();
+  return w.join(" ").replace(/[,:;.]+$/, "") || "Untitled Kit";
+}
+
 /** Whether a caller may see a licensed kit's tokens: the claim token its PayPal order handed the buyer's browser, or
  *  the mandate that paid for it. The order ID alone unlocks nothing (the same rule as commerce.publicOrder). */
 export async function owns(kit, { claim, mandate } = {}) {
@@ -136,7 +146,7 @@ export async function owns(kit, { claim, mandate } = {}) {
 export function view(kit, { owner = true } = {}) {
   const b = config.baseUrl;
   return {
-    id: kit.id, title: kit.title, vibe: kit.vibe, planner: kit.planner, createdAt: kit.createdAt, total: kit.total, creators: kit.creators, licensed: !!kit.licence, owner: !!kit.licence && owner,
+    id: kit.id, title: tidyTitle(kit.title), vibe: kit.vibe, planner: kit.planner, createdAt: kit.createdAt, total: kit.total, creators: kit.creators, licensed: !!kit.licence, owner: !!kit.licence && owner,
     licence: kit.licence ? { orderId: kit.licence.orderId, total: kit.licence.total, creators: kit.licence.creators, at: kit.licence.at, via: kit.licence.via } : null,
     items: kit.items.map((l) => {
       const q = Object.keys(l.knobs).length ? `?p=${encodeURIComponent(JSON.stringify(l.knobs))}` : "";
