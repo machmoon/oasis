@@ -295,7 +295,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
       const cs = takes.map((t) => t[2]).filter((c) => c > 0), ps = takes.map((t) => t[1]);
       const x = scaleLinear().domain([0, dur]).range([m.l, w - m.r]);
       const y = scaleLog().domain([Math.max(20, Math.min(...cs) * 0.92), Math.max(...cs) * 1.08]).range([h - m.b, m.t]);
-      const r = scaleSqrt().domain([0, Math.max(...ps) || 1]).range([1.5, Math.min(count > 100 ? 6 : 9, w / (count * 2.2))]); // dots never overlap on a narrow chart
+      const r = scaleSqrt().domain([0, Math.max(...ps) || 1]).range([1.5, Math.max(2.5, Math.min(count > 100 ? 6 : 9, w / (count * 2.2)))]); // dots never overlap on a narrow chart
       const c = scaleLinear().domain(y.domain().map(Math.log)).range([0.08, 1]);
       const lo = y.domain()[0];
       geo = { x, y };
