@@ -293,7 +293,7 @@ export async function pagePads(app, id) {
           <div class="cr-main" id="cr-main"></div>
           <div class="cr-punch" id="cr-punch" hidden><i id="cr-cells"></i><b class="num" id="cr-punch-v"></b><span id="cr-punch-t"></span></div>
           <div class="cr-timing" id="cr-timing"></div>
-          <form class="cr-prompt" id="cr-prompt" autocomplete="off"><span aria-hidden="true">›</span><input id="cr-q" placeholder="Describe a beat: boom bap, bpm 96, looser, take out the hats" aria-label="Describe a beat"><button type="button" data-c="undo" title="Undo (Cmd-Z)">↶ UNDO</button><button type="button" data-c="redo" title="Redo (Shift-Cmd-Z)">↷ REDO</button></form>
+          <form class="cr-prompt" id="cr-prompt" autocomplete="off"><span aria-hidden="true">›</span><input id="cr-q" placeholder="Describe a beat or a kit: rusty sci-fi dungeon, boom bap, bpm 96, looser" aria-label="Describe a beat"><button type="button" data-c="undo" title="Undo (Cmd-Z)">↶ UNDO</button><button type="button" data-c="redo" title="Redo (Shift-Cmd-Z)">↷ REDO</button></form>
           <div class="cr-chips" id="cr-chips">${STYLE_ORDER.map((k) => `<button type="button" data-style="${k}">${STYLES[k].label}</button>`).join("")}</div>
         </section>
         <div class="cr-hinge" aria-hidden="true"></div>
@@ -514,10 +514,19 @@ export async function pagePads(app, id) {
   };
   const doUndo = () => { if (!undo.length) return; redo.push(state()); restore(undo.pop()); };
   const doRedo = () => { if (!redo.length) return; undo.push(state()); restore(redo.pop()); };
+  // anything that is not a command or a style is a vibe: DIG it into a new kit and open that kit on the pads, the way
+  // CRATE's DIG key turns the prompt into a kit (Sources/UI/UISupport.swift:202-210, LidDisplayView.swift:934-983)
+  const dig = async (vibe) => {
+    const q = $("#cr-q"); q.disabled = true; q.value = ""; q.placeholder = `DIGGING · ${vibe.toUpperCase()}`;
+    try { const r = await fetch("/api/kits", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ vibe }) }); const j = await r.json(); if (!r.ok) throw new Error(j.error || r.status); location.hash = `#/pads/${j.id}`; }
+    catch (err) { q.disabled = false; q.placeholder = `× FAILED · ${String(err.message).toUpperCase()}`; }
+  };
   $("#cr-prompt").addEventListener("submit", (e) => {
     e.preventDefault();
-    const r = command($("#cr-q").value); $("#cr-q").value = "";
-    $("#cr-q").placeholder = r === "?" ? "Try a style (boom bap, dilla, house), bpm 96, faster, looser, 4 bars, take out the hats" : `✓ ${r}`; $("#cr-q").blur();
+    const text = $("#cr-q").value.trim(), r = command(text);
+    if (r === "?" && text.split(/\s+/).length >= 2) return dig(text);
+    $("#cr-q").value = "";
+    $("#cr-q").placeholder = r === "?" ? "A style (boom bap, dilla, house), bpm 96, looser, 4 bars, take out the hats, or a vibe to dig" : `✓ ${r}`; $("#cr-q").blur();
   });
   $("#cr-prompt").addEventListener("click", (e) => { const b = e.target.closest("[data-c]"); if (!b) return; b.dataset.c === "undo" ? doUndo() : doRedo(); });
 
