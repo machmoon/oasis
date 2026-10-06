@@ -142,3 +142,7 @@
 .pk-bal .pk-stat-sub { font-size: 13px; color: var(--muted); }
 .pk-bal .pk-stat-sub b { font-weight: var(--w-semibold); color: var(--ink-2); }
 @media (max-width: 599px) { .pk-bal { grid-template-columns: 1fr; } .pk-bal > div + div { border-left: 0; border-top: 1px solid var(--line); } }
+
+.sale .what a { color: var(--ink); text-decoration: none; font-weight: var(--w-semibold); }
+.sale .what a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.sale .what .sale-n { color: var(--muted); font-weight: 400; }

@@ -4,7 +4,7 @@
 // per knob before anything is written. Publish re-runs the same check and lists the program under the creator's
 // name. The creator page is what the ledger says they earned, order by order, plus forks and the royalty those paid.
 import { audio, unlock, toBuffer, renderInWorker } from "/audio.js";
-import { mountWave, themed } from "/wave.js";
+import { mountWave, themed, avatar } from "/wave.js";
 import { segment, KIND_LABEL } from "/sound-page.js";
 import { soundCard, soundRow, liveSoundCards } from "/kit.js";
 
@@ -231,13 +231,12 @@ export async function pageCreator(app, name) {
   if (location.hash !== here) return; // the visitor moved on while this loaded
   const when = (iso) => (iso ? new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "");
   const role = (r) => (r === "creator" ? "share" : r === "parent" ? "royalty from a fork" : "royalty from a fork's fork");
-  const face = c.sounds.slice().sort((x, y) => (y.price || 0) - (x.price || 0))[0];
   const facts = [`${c.sounds.length} sound${c.sounds.length === 1 ? "" : "s"}`, c.earned.cents ? `${cents(c.earned.cents)} earned from ${c.earned.orders} order${c.earned.orders === 1 ? "" : "s"}` : null, c.forks.length ? `${c.forks.length} fork${c.forks.length === 1 ? "" : "s"}` : null, c.since ? `since ${when(c.since)}` : null].filter(Boolean).join(", ");
   const tabs = [["sounds", "Sounds", c.sounds.length], ["orders", "Orders", c.orders.length], ["forks", "Forks", c.forks.length]];
   app.innerHTML = `<div class="wrap pb-page cr-page">
     <nav class="a-crumb" aria-label="Breadcrumb"><a href="#/sounds">Sounds</a><span>/</span><span>${esc(c.name)}</span></nav>
     <header class="cr-head2">
-      ${face ? `<img class="cr-avatar" src="${themed(`/api/assets/${encodeURIComponent(face.id)}/render.png?w=240`)}" alt="" width="240" height="120">` : ""}
+      ${avatar(c.name, 96)}
       <div><h1>${esc(c.name)}</h1><p class="cr-facts">${esc(facts)}</p>
       <p class="cr-pay">${icon("paypal-logo")} ${c.hasPayout ? `Payouts to <span class="mono">${esc(c.payoutEmail)}</span> after each order's 14-day refund window` : `No PayPal email on file, ${cents(c.earned.held)} held until there is one`}</p></div>
     </header>

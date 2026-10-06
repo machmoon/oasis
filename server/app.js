@@ -310,7 +310,9 @@ export async function createApp() {
   app.get("/api/sales", wrap(async (req, res) => {
     const orders = (await store.list("orders")).filter((o) => o.status === "COMPLETED" && o.royalties?.length).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
     // the capture and the payout batch's state ride along, so the ledger shows the money moving, not only the order
-    res.json(orders.slice(0, 40).map(commerce.saleEvent).map((e, i) => ({ ...e, at: orders[i].createdAt, captureId: orders[i].captureId || null, payout: orders[i].payoutHold?.status || null })));
+    // an order that paid for a kit is named by the kit (Stripe names a payment by its product, not its line items)
+    const kitOf = new Map((await store.list("kits")).filter((k) => k.licence?.orderId).map((k) => [k.licence.orderId, { id: k.id, title: kits.tidyTitle(k.title) }]));
+    res.json(orders.slice(0, 40).map(commerce.saleEvent).map((e, i) => ({ ...e, at: orders[i].createdAt, captureId: orders[i].captureId || null, payout: orders[i].payoutHold?.status || null, kit: kitOf.get(orders[i].id) || null })));
   }));
 
   // Kits: a vibe becomes 6-10 tuned sound programs (server/kits.js), licensed in one PayPal order.

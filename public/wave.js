@@ -38,6 +38,11 @@ export function onTheme(f) { f(); const g = () => f(); scheme.addEventListener("
 /** "light" or "dark": which card PNG to ask the server for (render.png?theme=light is transparent, deeper ramp). */
 export const pngTheme = () => document.documentElement.dataset.theme || (scheme.matches ? "dark" : "light");
 export const themed = (url) => pngTheme() === "light" ? `${url}${url.includes("?") ? "&" : "?"}theme=light` : url;
+// A person's avatar when they have no picture: their initials on a colour hashed from the name, the fallback GitHub
+// and Primer's Avatar use, so the same creator looks the same on every page.
+export const avatar = (name, size = 44) => { const n = String(name || "?"), h = [...n].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) % 360;
+  const ini = n.split(/[^a-z0-9]+/i).filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase() || n.slice(0, 2).toUpperCase();
+  return `<span class="av" style="--av-h:${h};width:${size}px;height:${size}px;font-size:${Math.round(size * 0.38)}px" aria-hidden="true">${ini}</span>`; };
 /** Roseus stops (github.com/dofuuz/roseus, the table wavesurfer's fft.ts ships), bright to dark, for gradients. */
 export const ROSEUS_STOPS = ["#FEFBF9", "#F7B465", "#F05C53", "#C42A82", "#7D1F9F", "#2A2675", "#040507"];
 

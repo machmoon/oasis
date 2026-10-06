@@ -4,7 +4,7 @@
 import { pageStudio, leaveStudio } from "/studio.js";
 import { pageKit as page3dKit, pageAsset, pageSounds } from "/kit.js";
 import { pageKits, pageKit } from "/kits.js";
-import { themed } from "/wave.js";
+import { themed, avatar } from "/wave.js";
 
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -70,9 +70,9 @@ function saleRow(s, fresh = false) {
   const held = s.payoutAfter && new Date(s.payoutAfter) > new Date();
   const when = s.at ? new Date(s.at).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "";
   return `<div class="sale${fresh ? " new" : ""}">
-    <div class="sale-top"><b class="amt num">${usd(s.total)}</b><span class="sale-st">${s.payout === "SENT" ? "Paid out" : "Captured"}</span>${s.funded ? `<span class="sale-st agent">Agent, on a budget</span>` : ""}<span class="sale-when">${esc(when)}</span></div>
-    <div class="what">${esc(list)}</div>
-    <div class="split">${s.creators.map((c) => `${esc(c.author)} <b class="num">${usd(c.usd)}</b>`).join(", ")}${held ? `<span class="sale-held">, held until ${new Date(s.payoutAfter).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>` : ""}</div>
+    <div class="sale-top"><b class="amt num">${usd(s.total)}</b>${s.payout === "SENT" ? `<span class="sale-st">Paid out</span>` : ""}${s.funded ? `<span class="sale-st agent">Agent, on a budget</span>` : ""}<span class="sale-when">${esc(when)}</span></div>
+    <div class="what">${s.kit ? `<a href="#/kit/${esc(s.kit.id)}">${esc(s.kit.title)}</a> <span class="sale-n">· ${names.length} sound${names.length === 1 ? "" : "s"}</span>` : esc(list)}</div>
+    <div class="split">Creators receive ${s.creators.map((c) => `${esc(c.author)} <b class="num">${usd(c.usd)}</b>`).join(", ")}${held ? `<span class="sale-held">, held until ${new Date(s.payoutAfter).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>` : ""}</div>
     <div class="ids">PayPal order ${esc(s.orderId)}${s.captureId ? `, capture ${esc(s.captureId)}` : ""}${s.payout === "SENT" ? ", Payouts batch sent" : ""}</div></div>`;
 }
 function creatorTotals(sales) {
@@ -82,14 +82,12 @@ function creatorTotals(sales) {
 }
 async function drawSales({ limit = 6, empty = null, after = null } = {}) {
   let sales = await api("/api/sales").catch(() => []);
-  const cat = await catalog();
-  const face = (author) => cat.find((a) => a.author === author)?.id;
   const paint = (bump = []) => {
     if (!$("#sales")) return; // the visitor has left the ledger
     $("#sales").innerHTML = sales.length ? sales.slice(0, limit).map((s, i) => saleRow(s, i === 0 && bump.length)).join("")
       : empty || `<div class="empty"><h3>No agent has bought anything yet.</h3><p>Give an agent a budget and ask it to build a scene. Its purchase shows up here the moment PayPal completes it.</p><a class="btn" href="#/budget">Give your agent a budget</a></div>`;
     const totals = creatorTotals(sales);
-    $("#creators").innerHTML = totals.length ? totals.map(([a, v]) => `<div class="creator"><img src="${face(a) ? thumb(face(a), 120) : ""}" alt=""><div><b><a href="#/creator/${encodeURIComponent(a)}">${esc(a)}</a></b></div><div class="earn${bump.includes(a) ? " bump" : ""}">${usd(v)}</div></div>`).join("")
+    $("#creators").innerHTML = totals.length ? totals.map(([a, v]) => `<div class="creator">${avatar(a)}<div><b><a href="#/creator/${encodeURIComponent(a)}">${esc(a)}</a></b></div><div class="earn${bump.includes(a) ? " bump" : ""}">${usd(v)}</div></div>`).join("")
       : "";
     $("#creators").hidden = !totals.length;
     $("#sales").closest(".ledger")?.classList.toggle("solo", !totals.length);
