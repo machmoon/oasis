@@ -175,8 +175,12 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
     // page, which claims the licence with the token saved here (the kit page's own return path)
     try {
       const k = await api("/api/kits/single", { method: "POST", body: { assetId: a.id, knobs: diff() } });
+      // a second click goes back to the order this browser already started (PayPal orders stay approvable for hours),
+      // instead of opening another one; the claim token stays with the buyer who started it
+      let pend = null; try { pend = JSON.parse(localStorage.getItem(`oasis.kit.${k.id}`)); } catch {}
+      if (pend?.approveUrl && Date.now() - (pend.at || 0) < 3 * 3600e3) { location.href = pend.approveUrl; return; }
       const o = await api(`/api/kits/${k.id}/checkout`, { method: "POST", body: {} });
-      try { localStorage.setItem(`oasis.kit.${k.id}`, JSON.stringify({ orderId: o.order_id, claimToken: o.claim_token })); } catch {}
+      try { localStorage.setItem(`oasis.kit.${k.id}`, JSON.stringify({ orderId: o.order_id, claimToken: o.claim_token, approveUrl: o.approve_url, at: Date.now() })); } catch {}
       location.href = o.approve_url;
     }
     catch (err) { toast(err.message); b.disabled = false; b.innerHTML = `${icon("seal-check")} License it, ${price(a.price)}`; }

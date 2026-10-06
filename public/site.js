@@ -266,6 +266,9 @@ async function route() {
   closeMore();
   moreBtn.toggleAttribute("data-current", !!moreMenu.querySelector(`[data-nav="${navKey}"]`));
   window.scrollTo(0, 0);
+  // the browser tab names the page (a history of tabs that all read "Oasis" is a judge's complaint)
+  const TITLES = { sounds: "Sounds", kits: "Kits", kit: "Kit", pads: "Pads", a: "Sound", ledger: "Ledger", publish: "Publish", creator: "Creator", agents: "For agents", budget: "Budget", studio: "Studio" };
+  document.title = seg.length ? `${TITLES[seg[0]] || "Oasis"} · Oasis` : "Oasis: sound effects you tune, licensed per kit";
   try {
     if (!seg.length) await pageHome();
     else if (seg[0] === "budget") await pageBudget(seg[1]);

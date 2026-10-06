@@ -10,7 +10,7 @@ cart / agent / MCP
 server prices the cart ──► Orders v2: create (intent CAPTURE, DIGITAL_GOODS, PayPal-Request-Id)
    │
    ▼
-human approves in PayPal  (Smart Buttons popup, or the payer-action link an agent hands over)
+human approves in PayPal  (the order's approval page, reached from Pay, or the payer-action link an agent hands over)
    │
    ▼
 capture (server only) ──► amount + currency checked ──► licences issued ──► royalties split

@@ -236,9 +236,12 @@ a.cr-chip { display: inline-flex; align-items: center; text-decoration: none; }
    (shadcn/ui scroll-area.tsx: an overflow viewport; the sticky first column is the table pattern), the prompt's
    buttons drop under the field (input-group.tsx's block-end addon), the style chips scroll in one row */
 @media (max-width: 639px) {
-  .cr-main { overflow-x: auto; margin: 0 -14px; padding: 0 14px; scrollbar-width: none; }
-  .cr-seq { min-width: 560px; }
-  .cr-ruler, .cr-lane { grid-template-columns: 96px repeat(16, minmax(0, 1fr)); }
+  /* all sixteen steps fit the card: names narrow, steps 17 px; nothing scrolls out of view */
+  .cr-main { overflow: visible; margin: 0; padding: 0; }
+  .cr-seq { min-width: 0; }
+  .cr-ruler, .cr-lane { grid-template-columns: 64px repeat(16, minmax(0, 1fr)); column-gap: 1px; }
+  .cr-ruler > :nth-child(4n + 2):not(:nth-child(2)), .cr-lane > :nth-child(4n + 2):not(:nth-child(2)) { margin-left: 3px; }
+  .cr-lname { font-size: 11px !important; }
   .cr-lname, .cr-ruler > span:first-child { position: sticky; left: -14px; z-index: 1; background: #000; padding-left: 0; }
   .cr-prompt { flex-wrap: wrap; height: auto; padding: 8px 10px; gap: 6px; }
   .cr-prompt input { flex: 1 1 calc(100% - 24px); height: 30px; }

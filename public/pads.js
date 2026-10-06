@@ -298,7 +298,12 @@ export async function pagePads(app, id) {
   const click = (t, accent) => { const o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = accent ? 1760 : 1320; g.gain.setValueAtTime(0.18, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05); o.connect(g).connect(master); o.start(t); o.stop(t + 0.06); };
   const timer = new Worker(URL.createObjectURL(new Blob([`let t=null;onmessage=(e)=>{if(e.data==="start"){clearInterval(t);t=setInterval(()=>postMessage("tick"),25);}else{clearInterval(t);t=null;}};`], { type: "text/javascript" })));
   timer.onmessage = () => seq.playing && schedule();
-  const play = async ({ countIn = false } = {}) => { await unlock(); seq.playing = true; seq.abs = 0; seq.countIn = countIn ? 16 : 0; seq.nextTime = ac.currentTime + 0.06; seq.startedAt = seq.nextTime + (countIn ? 16 * stepDur() : 0); timer.postMessage("start"); paintTransport(); };
+  const play = async ({ countIn = false } = {}) => {
+    await unlock();
+    // the first bar should sound: wait for the takes still rendering (a fresh load takes a moment)
+    const waiting = pads.filter((p) => p.loading);
+    if (waiting.length) { $("#cr-play").classList.add("wait"); $("#cr-play").textContent = "…"; await Promise.all(waiting.map((p) => p.loading)); $("#cr-play").classList.remove("wait"); $("#cr-play").textContent = "PLAY"; if (!document.getElementById("cr")) return; }
+    seq.playing = true; seq.abs = 0; seq.countIn = countIn ? 16 : 0; seq.nextTime = ac.currentTime + 0.06; seq.startedAt = seq.nextTime + (countIn ? 16 * stepDur() : 0); timer.postMessage("start"); paintTransport(); };
   const stop = () => { jam = []; paintJam(); playing = null; perf.turn = 0; perf.crash = false; seq.playing = false; seq.recording = false; seq.countIn = 0; timer.postMessage("stop"); queue.length = 0; paintTransport(); paintSeqHead(-1); };
   /** Where a live hit lands while recording: the nearest 16th, less 25 ms of touch latency (AudioSequencer.swift:570-588). */
   const recStep = () => { const len = seq.bars * STEPS, rel = ac.currentTime - 0.025 - seq.startedAt; return ((Math.round(rel / stepDur()) % len) + len) % len; };
@@ -309,7 +314,7 @@ export async function pagePads(app, id) {
       <nav class="a-crumb" aria-label="Breadcrumb"><a href="#/kits">Kits</a><span>/</span><a href="#/kit/${esc(kit.id)}">${esc(kit.title)}</a><span>/</span><span>Pads</span></nav>
       <div class="cr-device" id="cr">
         <section class="cr-lid" aria-label="Display">
-          <div class="cr-title"><div><b id="cr-style">Kit</b><span>${esc(kit.title)}, ${pads.length} programs</span>${kit.licensed ? `<a class="cr-lic ok" href="#/kit/${esc(kit.id)}" title="PayPal order ${esc(kit.licence?.orderId || "")}">Licensed · plays clean</a>` : kit.total > 0 ? `<a class="cr-lic" href="#/kit/${esc(kit.id)}">Preview · license ${"$"}${Number(kit.total).toFixed(2)} with PayPal →</a>` : ""}</div><button class="cr-loop" id="cr-loop" type="button" aria-label="Loop length"><span>LOOP · <b id="cr-bars">2</b> <em id="cr-bars-w">BARS</em></span><i id="cr-segs"></i></button></div>
+          <div class="cr-title"><div><b id="cr-style">Kit</b><span>${esc(kit.title)}, ${pads.length} programs</span>${kit.licensed ? `<a class="cr-lic ok" href="#/kit/${esc(kit.id)}" title="PayPal order ${esc(kit.licence?.orderId || "")}">Licensed · plays clean</a>` : kit.total > 0 ? `<a class="cr-lic" id="cr-lic" href="#/kit/${esc(kit.id)}">Preview · license ${"$"}${Number(kit.total).toFixed(2)} with PayPal →</a>` : ""}</div><button class="cr-loop" id="cr-loop" type="button" aria-label="Loop length"><span>LOOP · <b id="cr-bars">2</b> <em id="cr-bars-w">BARS</em></span><i id="cr-segs"></i></button></div>
           <div class="cr-hero">
             <button class="cr-read" id="cr-bpm-b" type="button"><b class="num" id="cr-bpm">90</b><span>BPM</span></button>
             <button class="cr-read" id="cr-swing-b" type="button"><b class="num" id="cr-swing">56</b><span>SWING</span></button>
@@ -615,13 +620,13 @@ export async function pagePads(app, id) {
     if (e.key === "Escape" && stage) { closeStage(); return; }
     if ((e.metaKey || e.ctrlKey) && e.code === "KeyZ") { e.preventDefault(); e.shiftKey ? doRedo() : doUndo(); return; }
     if (e.metaKey || e.ctrlKey || e.altKey) return;
-    if (e.code === "Space") { e.preventDefault(); if (!e.repeat) seq.playing ? stop() : play(); return; }
+    if (e.code === "Space") { e.preventDefault(); e.target.closest("button")?.blur(); if (!e.repeat) seq.playing ? stop() : play(); return; }
     if (e.code === "Enter") { e.preventDefault(); $("#cr-rec").click(); return; }
     if (e.key === "/") { e.preventDefault(); $("#cr-q").focus(); return; }
     const i = KEYS.indexOf(e.code);
     if (i >= 0 && !e.repeat) { e.preventDefault(); hit(i, 110); $(`.cr-pad[data-i="${i}"]`, app)?.classList.add("down"); }
   };
-  const onKeyUp = (e) => { const i = KEYS.indexOf(e.code); if (i >= 0) $(`.cr-pad[data-i="${i}"]`, app)?.classList.remove("down"); };
+  const onKeyUp = (e) => { if (e.code === "Space" && e.target.closest("button")) e.preventDefault(); const i = KEYS.indexOf(e.code); if (i >= 0) $(`.cr-pad[data-i="${i}"]`, app)?.classList.remove("down"); };
   addEventListener("keydown", onKey); addEventListener("keyup", onKeyUp);
 
   // ---------- STAGE: CRATE's audience view (Sources/Crowd/CrowdStageView.swift) as a full-screen page for the room:
@@ -631,7 +636,7 @@ export async function pagePads(app, id) {
   const openStage = async () => {
     if (stage) return;
     stage = document.createElement("div"); stage.className = "cr-stage"; stage.setAttribute("role", "dialog"); stage.setAttribute("aria-label", "Stage view");
-    stage.innerHTML = `<div class="cs-grid">${DRAW_ORDER.map((i) => `<div class="cs-cell${pads[i] ? "" : " none"}" data-i="${i}"><i></i><span>${pads[i] ? esc(pads[i].item.name) : ""}</span></div>`).join("")}</div>
+    stage.innerHTML = `<div class="cs-grid">${DRAW_ORDER.filter((i) => i < Math.max(4, Math.ceil(pads.length / 4) * 4)).map((i) => `<div class="cs-cell${pads[i] ? "" : " none"}" data-i="${i}"><i></i><span>${pads[i] ? esc(pads[i].item.name) : ""}</span></div>`).join("")}</div>
       <div class="cs-side"><b class="cs-brand">OASIS · PADS</b><div class="cs-style" id="cs-style"></div><div class="cs-kit" id="cs-kit"></div><div class="cs-level"><i id="cs-level"></i></div><div class="cs-fill" id="cs-fill"></div><p class="cs-hint">Keys still play. Esc leaves.</p></div>
       <div class="cs-drop" id="cs-drop">DROP</div>`;
     document.body.appendChild(stage);
@@ -643,6 +648,15 @@ export async function pagePads(app, id) {
   document.addEventListener("fullscreenchange", () => { if (stage && !document.fullscreenElement) closeStage(); });
   function paintStage() { if (!stage) return; $("#cs-style", stage).textContent = (seq.style ? STYLES[seq.style].label : "KIT"); $("#cs-kit", stage).textContent = `${kit.title} · ${Math.round(seq.bpm)} BPM`; }
   $("#cr-stagebtn").addEventListener("click", openStage);
+  // the licence chip goes straight to PayPal (the kit page's own checkout and claim flow); it is a link to the kit
+  // page only if JavaScript cannot start the order
+  $("#cr-lic")?.addEventListener("click", async (e) => {
+    e.preventDefault();
+    const key = `oasis.kit.${kit.id}`; let pend = null; try { pend = JSON.parse(localStorage.getItem(key)); } catch {}
+    if (pend?.approveUrl && Date.now() - (pend.at || 0) < 3 * 3600e3) { location.href = pend.approveUrl; return; }
+    try { const r = await fetch(`/api/kits/${kit.id}/checkout`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }); const o = await r.json(); if (!r.ok) throw new Error(o.error); try { localStorage.setItem(key, JSON.stringify({ orderId: o.order_id, claimToken: o.claim_token, approveUrl: o.approve_url, at: Date.now() })); } catch {} location.href = o.approve_url; }
+    catch { location.hash = `#/kit/${kit.id}`; }
+  });
   const tap = analyser(), lvl = new Float32Array(tap.fftSize);
   // ---------- draw what has sounded, against the audio clock (metronome.js draw()) ----------
   let raf = 0;

@@ -152,7 +152,8 @@ export async function pageKit(app, id) {
     files.push({ name: `${kitSlug}/README.txt`, data: [`${k.title}`, `"${k.vibe}"`, "",
       "Every sound here is eight takes of one program (seeds in oasis-kit.json). Pick one at random each time it plays",
       "and the player never hears the same file twice in a row. For takes without end, import the program and play it live:", "",
-      ...manifest.parts.map((p) => `  import { play } from "${p.live}";   // ${p.name}`), "",
+      ...manifest.parts.map((p, n) => `  import { play as play${n + 1} } from "${p.live}";   // ${p.name}`), "",
+      "Each import is its own binding (play1, play2, ...); call one with an AudioContext to hear a fresh take.", "",
       marked ? "These are previews: paid parts carry a soft tick every 0.6 s until the kit is licensed on its page." : "These are clean renders.", "",
       `Kit page: ${location.origin}/#/kit/${k.id}`, ""].join("\n") });
     files.push({ name: `${kitSlug}/LICENCE.txt`, data: [k.licensed ? `Licensed with PayPal order ${k.licence.orderId} on ${new Date(k.licence.at).toUTCString()}.` : "Not licensed yet. These files are previews.", "",
@@ -244,8 +245,10 @@ export async function pageKit(app, id) {
     $("#kv-pay")?.addEventListener("click", async () => {
       const b = $("#kv-pay"); b.setAttribute("aria-busy", "true"); b.innerHTML = `<span class="pk-spin" aria-hidden="true"></span> Opening PayPal…`;
       try {
+        const pend = store.get(`oasis.kit.${k.id}`);
+        if (pend?.approveUrl && Date.now() - (pend.at || 0) < 3 * 3600e3) { location.href = pend.approveUrl; return; }
         const o = await api(`/api/kits/${k.id}/checkout`, { method: "POST", body: {} });
-        store.set(`oasis.kit.${k.id}`, { orderId: o.order_id, claimToken: o.claim_token });
+        store.set(`oasis.kit.${k.id}`, { orderId: o.order_id, claimToken: o.claim_token, approveUrl: o.approve_url, at: Date.now() });
         location.href = o.approve_url;
       } catch (e) { toast(e.message); b.removeAttribute("aria-busy"); b.innerHTML = `Pay ${usd(k.total)} with <em>Pay<b>Pal</b></em>`; }
     });
