@@ -1,0 +1,32 @@
+/* For agents (public/agents.js). Spent from tokens.css; three columns for the flow, then tools beside the live proof. */
+.ag-page { padding-block: 44px 96px; }
+.ag-head { max-width: 720px; }
+.ag-head .lede { margin-top: 12px; }
+.ag-flow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin-top: var(--s-7); border-top: 1px solid var(--line); }
+.ag-step { padding: var(--s-5) var(--s-5) var(--s-5) 0; display: grid; gap: 10px; align-content: start; }
+.ag-step + .ag-step { padding-left: var(--s-5); border-left: 1px solid var(--line); }
+.ag-step h2 { font: var(--w-bold) var(--fs-lg) / var(--lh-snug) var(--font-sans); letter-spacing: var(--ls-snug); }
+.ag-step p { color: var(--ink-2); max-width: 42ch; }
+.ag-step .btn { justify-self: start; }
+.ag-cmd { display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 12px; border-radius: var(--r); background: #0B0C10; color: #EDEEF2; border: 1px solid rgb(255 255 255 / .08); }
+.ag-cmd code { flex: 1; min-width: 0; font: var(--fs-xs) / 1.45 var(--font-mono); overflow-wrap: anywhere; }
+.ag-cmd .btn { flex: none; }
+.ag-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: var(--s-7); margin-top: var(--s-8); }
+.ag-grid h2 { font: var(--w-bold) var(--fs-xl) / var(--lh-tight) var(--font-sans); letter-spacing: var(--ls-tight); margin-bottom: var(--s-4); }
+.ag-tools dl { margin: 0; display: grid; }
+.ag-tools dl > div { padding: 14px 0; border-top: 1px solid var(--line); display: grid; gap: 4px; }
+.ag-tools dt { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.ag-tools dt code { font: var(--w-semibold) 15px var(--font-mono); color: var(--ink); }
+.ag-n { font: var(--fs-xs) var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.ag-tools dd { margin: 0; color: var(--ink-2); max-width: 62ch; }
+.ag-side { display: grid; gap: var(--s-6); align-content: start; }
+.ag-side h2 { font-size: var(--fs-lg); margin-bottom: 8px; }
+.ag-side p { color: var(--ink-2); }
+.ag-side code { font: var(--fs-sm) var(--font-mono); }
+.ag-muted { color: var(--muted) !important; font-size: var(--fs-sm); }
+.ag-402 pre { margin: 12px 0 0; padding: 14px 16px; border-radius: var(--r); background: #0B0C10; color: #C4C9D4; border: 1px solid rgb(255 255 255 / .08); font: var(--fs-xs) / 1.6 var(--font-mono); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 360px; overflow: auto; }
+@media (max-width: 899px) {
+  .ag-flow { grid-template-columns: 1fr; }
+  .ag-step, .ag-step + .ag-step { padding: var(--s-5) 0; border-left: 0; border-top: 1px solid var(--line); }
+  .ag-grid { grid-template-columns: 1fr; gap: var(--s-6); }
+}

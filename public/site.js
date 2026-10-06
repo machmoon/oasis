@@ -270,6 +270,7 @@ async function route() {
     else if (seg[0] === "sounds") await pageSounds(app);
     else if (seg[0] === "kits") await pageKits(app);
     else if (seg[0] === "kit" && seg[1]) await pageKit(app, seg[1]);
+    else if (seg[0] === "agents") await (await import("/agents.js")).pageAgents(app);
     else if (seg[0] === "pads" && seg[1]) await (await import("/pads.js")).pagePads(app, seg[1]);
     else if (seg[0] === "kit") { location.replace("#/kits"); return; } // the old 3D kit is retired; kits are sound kits now
     else if (seg[0] === "a" && seg[1]) await pageAsset(app, seg[1]);
