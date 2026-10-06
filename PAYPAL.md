@@ -1,6 +1,6 @@
 # How Oasis uses PayPal
 
-Oasis sells licences to procedural sound programs, usually as a kit of 6 to 10 tuned parts. This is the payment
+Oasis sells licences to procedural sound programs, usually as a kit of up to ten tuned parts. This is the payment
 path in the order money moves, with the code that does each step. `test/commerce.test.mjs` and
 `test/http.test.mjs` exercise it against a fake PayPal client. Everything runs against the PayPal sandbox
 (`server/config.js` `paypal.apiBase`, `Environment.Sandbox` in `server/paypal.js`).

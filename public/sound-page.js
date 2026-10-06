@@ -151,7 +151,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
           <div class="fk-f"><label class="fk-l" for="fork-email">PayPal email <span>optional</span></label><input id="fork-email" type="email" maxlength="80" autocomplete="email"></div>
           <div class="fk-f fk-price"><label class="fk-l" for="fork-price">Price, $</label><input id="fork-price" type="number" min="0" max="50" step="0.5" value="${a.price}"></div>
         </div>
-        <div class="row"><button class="btn primary" type="submit" id="fork-go">${icon("sparkle")} Fork with AI</button><span class="note" id="fork-note"></span></div>
+        <div class="row"><button class="btn primary" type="submit" id="fork-go">${icon("sparkle")} Fork with Claude</button><span class="note" id="fork-note"></span></div>
       </form>
     </section>
 
@@ -370,6 +370,11 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
   }
 
   // ----- fork with AI -----
+  // a fork is written by Claude: when the server already knows the model is down, say so before anyone types
+  fetch("/api/config").then((r) => r.json()).then((c) => {
+    if (c.agentReady !== false || !$("#fork-go")) return;
+    $("#fork-go").disabled = true; $("#fork-note").textContent = "Forking needs Claude, which is offline on this server right now.";
+  }).catch(() => {});
   $("#fork-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const instruction = $("#fork-text").value.trim(); if (instruction.length < 3) { toast("Say how to change it"); return; }
@@ -377,7 +382,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
     try {
       const f = await api(`/api/assets/${a.id}/fork`, { method: "POST", body: { instruction, author: $("#fork-author").value || "anonymous", payoutEmail: $("#fork-email").value || null, price: $("#fork-price").value || undefined } });
       toast(`Forked: ${f.title}`); location.hash = `#/a/${f.id}`;
-    } catch (err) { toast(err.message); b.disabled = false; b.innerHTML = `${icon("sparkle")} Fork with AI`; $("#fork-note").textContent = err.message; }
+    } catch (err) { toast(err.message); b.disabled = false; b.innerHTML = `${icon("sparkle")} Fork with Claude`; $("#fork-note").textContent = err.message; }
   });
 
   // ----- more from the kit -----

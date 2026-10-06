@@ -274,7 +274,7 @@ export async function createApp() {
     const { description, usd, hours } = req.body || {};
     const { mandate, token } = await mandates.issue({ description: description || "Sounds for my game", maxTotalUsd: usd, expiresInHours: hours || 24, funded: true });
     const setup = await paypal.createSetupToken({
-      description: `Oasis: up to $${Number(usd).toFixed(0)} for your agent's sound kits`,
+      description: `Oasis: up to $${Number(usd).toFixed(0)} for your agent: ${String(description || "sound kits").slice(0, 90)}`, // the buyer's "What is it for?", as the form promises
       returnUrl: `${config.baseUrl}/budget/return?m=${mandate.id}`, cancelUrl: `${config.baseUrl}/#/budget?cancelled=${mandate.id}`,
       requestId: `oasis-setup-${mandate.id}`,
     });
@@ -351,7 +351,9 @@ export async function createApp() {
     const seen = new Set(), key = (s) => String(s || "").trim().toLowerCase();
     // the public feed shows kits worth hearing: paid ones, or ones whose vibe matched the registry for most parts
     // (a keyword kit where nothing matched, or a vibe with markup in it, stays reachable by link but is not listed)
-    const listed = (k) => k.licence || (!k.copiedFrom && !/[<>]/.test(k.vibe) && (k.planner !== "keywords" || k.items.filter((l) => !/^nothing/.test(l.reason || "")).length >= Math.ceil(k.items.length * 0.75)));
+    // keyword kits planned before whole-word matching (2558069) picked "platform" sounds for a subway; unlisted
+    const KEYWORDS_FIXED = "2026-10-06T08:48:00Z";
+    const listed = (k) => k.licence || (!k.copiedFrom && !(k.planner === "keywords" && String(k.createdAt) < KEYWORDS_FIXED) && !/[<>]/.test(k.vibe) && (k.planner !== "keywords" || k.items.filter((l) => !/^nothing/.test(l.reason || "")).length >= Math.ceil(k.items.length * 0.75)));
     const all = (await store.list("kits")).filter((k) => k.planner !== "single" && k.items.length >= 4 && listed(k)).sort((a, b) => (!!b.licence - !!a.licence) || b.updatedAt.localeCompare(a.updatedAt))
       .filter((k) => { const t = `t:${key(kits.tidyTitle(k.title))}`, v = `v:${key(k.vibe)}`; if (seen.has(t) || seen.has(v)) return false; seen.add(t); seen.add(v); return true; }).slice(0, 24);
     // the tile's picture: its first four parts as tuned in the kit (the same card render a part shows on the kit page)

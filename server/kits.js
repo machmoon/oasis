@@ -85,7 +85,7 @@ export function planByKeywords(vibe, { count = 8 } = {}) {
     return [a, s + ((hash(vibe + a.id) % 100) / 1000), hit];
   }).sort((x, y) => y[1] - x[1]);
   const picked = [], kinds = {};
-  for (const e of scored) { if (picked.length >= count) break; if ((kinds[e[0].kind] || 0) >= (e[0].kind === "music" ? 1 : Math.ceil(count / 3))) continue; /* one music loop per kit at most: a loop matched on one shared word is the loosest pick */ picked.push(e); kinds[e[0].kind] = (kinds[e[0].kind] || 0) + 1; }
+  for (const e of scored) { if (picked.length >= count) break; if ((kinds[e[0].kind] || 0) >= (e[0].kind === "music" ? 1 : e[0].kind === "ambience" ? 2 : Math.ceil(count / 3))) continue; /* one music loop per kit at most: a loop matched on one shared word is the loosest pick */ picked.push(e); kinds[e[0].kind] = (kinds[e[0].kind] || 0) + 1; }
   // a part that matched nothing is not sold as part of the kit; only if the vibe matched almost nothing does the kit
   // fall back to the closest sounds, and then each says so
   const matched = picked.filter((e) => e[2].length);

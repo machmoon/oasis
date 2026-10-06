@@ -1,6 +1,6 @@
 # Oasis
 
-**Tagline:** Oasis is a registry of sounds written as code. Describe a vibe, get a kit of sounds tuned to it, and one PayPal order pays every creator in it.
+**Tagline:** Oasis is a registry of sounds written as code. Describe a vibe, get a kit of sounds tuned to it, and one PayPal order books every creator's share.
 
 ## Inspiration
 
@@ -20,8 +20,8 @@ samples in the server's QuickJS sandbox, in a browser Worker and in a licensed i
 different take. The sound page shows it: turn a knob, the waveform and spectrogram redraw, a take plays, the import
 line updates with the knobs at the call site, and a walk of 300 seeds is 300 different dots on one timeline.
 
-**Describe the vibe, get a kit.** "Rainy cyberpunk alley footsteps and UI clicks." Claude reads the registry and picks
-six to ten programs, tunes their knobs to the scene (wet concrete, heavy, seed per part) and names them like a sample
+**Describe the vibe, get a kit.** "Rainy cyberpunk alley footsteps and UI clicks." Claude (or a keyword planner when the model is
+offline, as tonight) picks up to ten programs, tunes their knobs to the scene (wet concrete, heavy, seed per part) and names them like a sample
 pack. Until the kit is paid for every preview carries a soft watermark tick.
 
 **Pay with PayPal, every part turns clean.** The kit's bill is one PayPal Orders v2 order with an itemised line per

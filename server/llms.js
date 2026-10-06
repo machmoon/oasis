@@ -11,7 +11,7 @@ export function llmsTxt() {
 > A registry of sounds written as code. Every sound is a small program with typed knobs (material, weight, wetness,
 > pitch, a seed): you render it at the call site instead of downloading a file, so one footstep program is 300
 > footsteps that never repeat. A human approves one PayPal budget; you (the agent) license every sound you import
-> inside it, and each creator is paid.
+> inside it, and each creator's share is booked.
 
 Registry: ${sounds.length} sound programs from ${creators.length} creators in ${kits.length} kits (${kits.slice(0, 6).join(", ")}${kits.length > 6 ? ", ..." : ""}). PayPal sandbox.
 

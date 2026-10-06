@@ -133,7 +133,7 @@ async function pageBudget(id) {
       <h1>New budget</h1>
       <p class="lede">You approve once in PayPal. Your agent can then license sounds and kits up to this amount, and nothing more.</p>
       <dl class="pk-kv">
-        <dt>Charged</dt><dd>Only when the agent buys, one PayPal order per scene</dd>
+        <dt>Charged</dt><dd>Only when the agent buys, one PayPal order per kit</dd>
         <dt>Cap</dt><dd>Enforced by Oasis before PayPal is called</dd>
         <dt>Stop</dt><dd>Revoke the token any time; it stops working at once</dd>
       </dl>
@@ -215,7 +215,7 @@ async function pageBudgetView(id) {
 async function pageLedger() {
   payCss();
   app.innerHTML = `<div class="wrap pk" style="padding-block:48px 96px">
-    <div class="head"><h1>Ledger</h1><p>Every order that paid a creator, with its PayPal order.</p></div>
+    <div class="head"><h1>Ledger</h1><p>Every captured PayPal order, and each creator's share of it: held for the 14-day refund window, then paid out.</p></div>
     <dl class="pk-bal" id="stats"><div><dt>Earned by creators</dt><dd class="num" id="st-paid">–</dd><dd class="pk-stat-sub"><b class="num" id="st-orders">–</b> PayPal orders, <b class="num" id="st-creators">–</b> creators</dd></div><div><dt>Paid out</dt><dd class="num" id="st-out">–</dd><dd class="pk-stat-sub">with PayPal Payouts</dd></div><div><dt>Held</dt><dd class="num" id="st-held">–</dd><dd class="pk-stat-sub">until each order's 14-day refund window closes</dd></div></dl>
     <div class="ledger">
       <div><div class="pk-col-h">Orders <span class="pk-live"><i aria-hidden="true"></i>live</span></div><div class="sales" id="sales"><div class="pk-stack" style="padding:12px 16px"><div class="pk-sk row"></div><div class="pk-sk row"></div><div class="pk-sk row"></div></div></div></div>

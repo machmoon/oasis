@@ -13,7 +13,7 @@ const TOOLS = [
   ["preview_asset", "Hear it with the agent's knob values before buying: a watermarked WAV and a picture of it."],
   ["make_kit", "A vibe in, a kit out: up to ten programs tuned to the scene, with the bill and who planned it."],
   ["get_kit", "A kit's parts, knobs, bill, and each part's module and WAV once it is licensed."],
-  ["buy_assets", "License sounds or a kit inside the budget the human approved. One PayPal order; every creator in it is paid."],
+  ["buy_assets", "License sounds or a kit inside the budget the human approved. One PayPal order; every creator in it gets a share booked, paid out after the 14-day refund window."],
   ["get_budget", "What the human allowed: the cap, what is spent, what is left, when it expires, every order on it."],
 ];
 

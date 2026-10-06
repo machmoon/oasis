@@ -48,7 +48,7 @@ export async function pageHome(app, ctx) {
     </div>
     <div class="wrap"><div class="hero-copy">
       <h1 class="hero-h1">Sound effects you tune, licensed per kit</h1>
-      <p class="lede">Every sound is a program with knobs and a seed, so no two plays are the same. Describe a vibe, get a tuned kit, and one PayPal order pays every creator.</p>
+      <p class="lede">Every sound is a program with knobs and a seed, so each play can be a fresh take. Describe a vibe, get a tuned kit, and one PayPal order books every creator's share.</p>
       <form class="hero-dig" id="hero-dig" autocomplete="off"><label class="sr-only" for="hero-vibe">Describe a kit</label><input id="hero-vibe" maxlength="200" placeholder="haunted arcade at midnight"><button class="btn primary" type="submit">Make a kit</button></form>
       <p class="hero-alt">Or <a class="link" href="#/sounds">browse all the sounds</a></p>
     </div></div>
