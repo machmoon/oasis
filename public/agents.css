@@ -12,7 +12,6 @@
 .ag-cmd code { flex: 1; min-width: 0; font: var(--fs-xs) / 1.45 var(--font-mono); overflow-wrap: anywhere; }
 .ag-cmd .btn { flex: none; }
 .ag-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: var(--s-7); margin-top: var(--s-8); }
-.ag-grid h2 { font: var(--w-bold) var(--fs-xl) / var(--lh-tight) var(--font-sans); letter-spacing: var(--ls-tight); margin-bottom: var(--s-4); }
 .ag-tools dl { margin: 0; display: grid; }
 .ag-tools dl > div { padding: 14px 0; border-top: 1px solid var(--line); display: grid; gap: 4px; }
 .ag-tools dt { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
@@ -20,7 +19,6 @@
 .ag-n { font: var(--fs-xs) var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
 .ag-tools dd { margin: 0; color: var(--ink-2); max-width: 62ch; }
 .ag-side { display: grid; gap: var(--s-6); align-content: start; }
-.ag-side h2 { font-size: var(--fs-lg); margin-bottom: 8px; }
 .ag-side p { color: var(--ink-2); }
 .ag-side code { font: var(--fs-sm) var(--font-mono); }
 .ag-muted { color: var(--muted) !important; font-size: var(--fs-sm); }
