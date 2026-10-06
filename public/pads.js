@@ -353,7 +353,7 @@ export async function pagePads(app, id) {
   </div>`;
 
   // ---------- painting ----------
-  function paintPad(p) {
+  function paintPad(p) { if (!document.getElementById("cr")) return; // the visitor has left the page
     const el = $(`.cr-pad[data-i="${p.i}"]`, app); if (!el) return;
     el.classList.toggle("loading", !!p.loading);
     el.classList.toggle("sel", p.i === selected && !fxMode);
@@ -361,7 +361,7 @@ export async function pagePads(app, id) {
     $(".cr-name", el).textContent = fxMode ? f[1] : p.item.name;
     $(".cr-hint", el).textContent = fxMode ? f[2] : (p.role || "").toUpperCase();
   }
-  function paintFxPads() {
+  function paintFxPads() { if (!document.getElementById("cr")) return; // the visitor has left the page
     $("#cr").classList.toggle("fx", fxMode);
     $$(".cr-pad", app).forEach((el) => {
       const i = Number(el.dataset.i), f = FX[DRAW_ORDER.indexOf(i)];
@@ -371,7 +371,7 @@ export async function pagePads(app, id) {
     pads.forEach(paintPad);
     $("#cr-fx").classList.toggle("on", fxMode); $("#cr-fx").setAttribute("aria-pressed", fxMode);
   }
-  function paintLid() {
+  function paintLid() { if (!document.getElementById("cr")) return; // the visitor has left the page
     $("#cr-style").textContent = seq.style ? STYLES[seq.style].name : "Kit";
     $("#cr-bpm").textContent = Math.round(seq.bpm); $("#cr-swing").textContent = seq.swing; $("#cr-bars").textContent = seq.bars; $("#cr-bars-w").textContent = seq.bars === 1 ? "BAR" : "BARS";
     $("#cr-segs").innerHTML = Array.from({ length: seq.bars }, (_, b) => `<i data-b="${b}"></i>`).join("");
@@ -391,7 +391,7 @@ export async function pagePads(app, id) {
     g.clearRect(0, 0, W, H); g.fillStyle = "#F5F5F3";
     for (let x = 0; x < W; x++) { let lo = 0, hi = 0; for (let i = x * per; i < (x + 1) * per && i < d.length; i++) { if (d[i] < lo) lo = d[i]; if (d[i] > hi) hi = d[i]; } g.fillRect(x, H / 2 - hi * k, 1, Math.max(1, (hi - lo) * k)); }
   }
-  function paintMain() {
+  function paintMain() { if (!document.getElementById("cr")) return; // the visitor has left the page
     const main = $("#cr-main");
     if (lidMode === "edit") return paintEdit(main);
     const lanes = pads.map((p, i) => i).filter((i) => i === selected || rows[i].some(Boolean));
@@ -434,11 +434,11 @@ export async function pagePads(app, id) {
     }));
     $("#cr-rrsel")?.addEventListener("change", (e) => { p.rr = Number(e.target.value); load(p); });
   }
-  function paintTransport() {
+  function paintTransport() { if (!document.getElementById("cr")) return; // the visitor has left the page
     $("#cr-play").classList.toggle("on", seq.playing && seq.countIn === 0);
     $("#cr-rec").classList.toggle("on", seq.recording); $("#cr-rec").setAttribute("aria-pressed", seq.recording);
   }
-  function paintPunch() {
+  function paintPunch() { if (!document.getElementById("cr")) return; // the visitor has left the page
     $("#cr-fader").style.setProperty("--p", punch); $("#cr-fader").setAttribute("aria-valuenow", Math.round(punch * 100));
     const show = punch > 0.04;
     $("#cr-punch").hidden = !show; $("#cr-timing").hidden = show;
@@ -449,7 +449,7 @@ export async function pagePads(app, id) {
     const name = FX.find((f) => f[0] === fxId)[1];
     $("#cr-punch-t").textContent = fxId === "punch" ? `LPF ${fmtHz(20000 * Math.pow(180 / 20000, Math.pow(punch, 0.85)))} · VERB ${Math.round(38 * punch)}${breakdown ? " · BREAKDOWN" : ""}` : `${name}${fxId === "repeat" ? ` ${punch >= 0.85 ? "1/32" : punch >= 0.5 ? "1/16" : "1/8"}` : ""}`;
   }
-  function paintTiming() {
+  function paintTiming() { if (!document.getElementById("cr")) return; // the visitor has left the page
     const loaded = pads.filter((p) => p.takes.length), ms = loaded.length ? Math.round(loaded.reduce((s, p) => s + p.ms, 0) / loaded.length) : 0;
     $("#cr-timing").innerHTML = `<span>Rendered in ${ms} ms a pad, ${loaded.reduce((s, p) => s + p.takes.length, 0)} takes from ${pads.length} programs</span>${perf.on ? `<span class="cr-perf">Perform on</span>` : ""}<span class="cr-mode">${fxMode ? "FX pads" : lidMode === "edit" ? "Edit" : "Pattern"}, hinge on ${FX.find((f) => f[0] === fxId)[1].toLowerCase()}</span>`;
   }

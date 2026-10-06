@@ -323,8 +323,9 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
       const el = e.target.closest("circle[data-i]"); if (!el || !walkBuf) return;
       await unlock(); walk.ws.setTime(takes[Number(el.dataset.i)][0]); if (!walk.playing) walk.ws.play();
     });
-    const note = (html) => { const el = $("#sp-walk-note"); el.hidden = !html; el.innerHTML = html || ""; };
+    const note = (html) => { const el = $("#sp-walk-note"); if (!el) return; el.hidden = !html; el.innerHTML = html || ""; };
     async function loadWalk() {
+      if (!$("#sp-walk-stat")) return; // the visitor has left the page
       $("#sp-walk-stat").textContent = ""; walkPlay.disabled = true;
       note(takes ? "" : `<span class="skel" style="width:160px;height:12px"></span><span>rendering ${count} takes on the server</span>`);
       if (takes) $("#sp-walk-stat").textContent = `rendering ${count} takes…`;
@@ -339,11 +340,12 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
         walkBuf = buf; takes = tk; heard = new Set(); hot = -1; note("");
         regions.clearRegions(); region = null;
         await walk.show(buf, { morph: false, dim: r.headers.get("X-Oasis-Watermarked") === "1" });
+        if (!$("#sp-walk-stat")) return;
         $("#sp-walk-stat").textContent = `${tk.length} takes · ${buf.duration.toFixed(1)} s · ${Math.round(performance.now() - t0)} ms`;
         walkPlay.disabled = false;
         drawPlot();
       } catch (e) {
-        if (run !== wn) return;
+        if (run !== wn || !$("#sp-walk-stat")) return;
         takes = null; walkBuf = null; drawPlot();
         note(`<b>The walk could not be rendered.</b><span>${esc(e.message)}</span><button class="btn small" type="button" id="sp-walk-retry">${icon("arrow-clockwise")} Try again</button>`);
         $("#sp-walk-retry").addEventListener("click", loadWalk);
