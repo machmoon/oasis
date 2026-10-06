@@ -192,7 +192,7 @@ export async function pageSounds(app) {
       <div class="s-sels">
         <label class="s-sel"><span>Kit</span><select id="k-kit"></select></label>
         <label class="s-sel"><span>Creator</span><select id="k-author"></select></label>
-        <label class="s-sel"><span>Price</span><select id="k-price">${options([["all", "Any"], ["free", "Free"], ["paid", "Paid"]], "all")}</select></label>
+        <label class="s-sel"><span>Price</span><select id="k-price">${options([["all", "Any"], ["lt2", "Under $2"], ["2to3", "$2 to $3"], ["gte4", "$4 and up"]], "all")}</select></label>
         <label class="s-sel"><span>Sort</span><select id="k-sort">${options(SORTS, "name")}</select></label>
       </div>
     </div>
@@ -229,7 +229,7 @@ export async function pageSounds(app) {
   const draw = () => {
     shown = PAGE;
     const q = state.q.trim().toLowerCase();
-    let out = list.filter((a) => (state.kind === "all" || a.kind === state.kind) && (state.price === "all" || (state.price === "free") === (a.price === 0)) && (state.author === "all" || a.author === state.author) && (state.kit === "all" || a.kit === state.kit)
+    let out = list.filter((a) => (state.kind === "all" || a.kind === state.kind) && (state.price === "all" || ({ lt2: a.price < 2, "2to3": a.price >= 2 && a.price <= 3, gte4: a.price >= 4, free: a.price === 0, paid: a.price > 0 })[state.price]) && (state.author === "all" || a.author === state.author) && (state.kit === "all" || a.kit === state.kit)
       && (!q || `${a.title} ${a.kit || ""} ${a.author} ${a.description || ""}`.toLowerCase().includes(q)));
     const by = { name: (x, y) => x.title.localeCompare(y.title), kit: (x, y) => String(x.kit).localeCompare(String(y.kit)) || x.title.localeCompare(y.title), "price-asc": (x, y) => x.price - y.price || x.title.localeCompare(y.title), "price-desc": (x, y) => y.price - x.price || x.title.localeCompare(y.title), length: (x, y) => y.duration - x.duration, knobs: (x, y) => y.knobCount - x.knobCount }[state.sort];
     out = out.sort(by);
