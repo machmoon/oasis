@@ -91,7 +91,7 @@ export async function measureLengths() {
 export function summary(a, { withKnobs = false } = {}) {
   const s = {
     // instrument and drum-machine programs were filed as "sfx" by the factory's briefs; they list as music
-    id: a.id, title: a.title, kind: a.format === "sound" && a.kind === "sfx" && ["Drum Machine", "Instrument"].includes(a.worldKit) ? "music" : a.kind, description: a.description, tags: a.tags,
+    id: a.id, title: a.title, kind: a.format === "sound" && a.kind === "sfx" && ["Drum Machine", "Instrument"].includes(a.worldKit) ? "music-loop" : a.kind, description: a.description, tags: a.tags,
     price: a.price, author: a.author, credit: a.credit, size: a.size, format: a.format, footprint: a.footprint, duration: measured.get(a.id) ?? a.duration,
     forkedFrom: a.forkedFrom, lineage: a.lineage, createdAt: a.createdAt,
     presets: Object.keys(a.params.presets || {}),

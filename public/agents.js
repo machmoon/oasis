@@ -34,8 +34,8 @@ export async function pageAgents(app) {
       ${clients.map(([id, , text], i) => `<div class="ag-cmd" role="tabpanel" id="agp-${id}" aria-labelledby="agt-${id}"${i ? " hidden" : ""}><code>${esc(text)}</code><button type="button" class="btn small ag-copy" data-copy="${esc(text)}">${icon("copy")} Copy</button></div>`).join("")}
     </section>
     <section class="ag-sec"><h2>Tools</h2>
-      <table class="ag-table"><thead><tr><th>Tool</th><th>What it does</th><th class="num">Calls</th></tr></thead><tbody>${TOOLS.map(([t, d]) => `<tr><td><code>${t}</code></td><td>${esc(d)}</td><td class="num ag-n" data-tool="${t}">0</td></tr>`).join("")}</tbody></table>
-      <p id="ag-stats" class="ag-muted"></p>
+      <table class="ag-table"><thead><tr><th>Tool</th><th>What it does</th></tr></thead><tbody>${TOOLS.map(([t, d]) => `<tr><td><code>${t}</code></td><td>${esc(d)}</td></tr>`).join("")}</tbody></table>
+      
     </section>
     <div class="ag-grid">
       <section class="ag-sec"><h2>Spending</h2><p>You approve a cap and an expiry in PayPal. Oasis holds the token and charges your saved PayPal wallet per order; an order over the cap, past the expiry or after you revoke is refused before PayPal is called. Every order lands in the <a class="link" href="#/ledger">ledger</a>.</p><p style="margin-top:14px"><a class="btn primary" href="#/budget">${icon("wallet")} Set a budget</a></p>
@@ -48,12 +48,6 @@ export async function pageAgents(app) {
   const pick = (t) => { tabEls.forEach((x) => { const on = x === t; x.setAttribute("aria-selected", on); x.tabIndex = on ? 0 : -1; document.getElementById(x.getAttribute("aria-controls")).hidden = !on; }); t.focus(); };
   tabEls.forEach((t, i) => { t.addEventListener("click", () => pick(t)); t.addEventListener("keydown", (e) => { const d = { ArrowRight: 1, ArrowLeft: -1 }[e.key]; if (d) { e.preventDefault(); pick(tabEls[(i + d + tabEls.length) % tabEls.length]); } }); });
   app.querySelectorAll(".ag-copy").forEach((b) => b.addEventListener("click", async () => { try { await navigator.clipboard.writeText(b.dataset.copy); b.innerHTML = `${icon("check")} Copied`; setTimeout(() => (b.innerHTML = `${icon("copy")} Copy`), 1800); } catch {} }));
-  fetch("/api/stats/mcp").then((r) => r.json()).then((s) => {
-    if (!$("#ag-stats")) return;
-    const clients = Object.keys(s.clients || {});
-    $("#ag-stats").innerHTML = `<b class="num">${s.requests}</b> MCP requests since ${new Date(s.since).toLocaleDateString(undefined, { month: "short", day: "numeric" })}${clients.length ? `, from ${clients.length} client${clients.length === 1 ? "" : "s"}` : ""}. Most are our own test clients so far.`;
-    for (const [t, n] of Object.entries(s.tools || {})) { const el = document.querySelector(`.ag-n[data-tool="${t}"]`); if (el) el.textContent = n; }
-  }).catch(() => { if ($("#ag-stats")) $("#ag-stats").textContent = "The MCP counter is not available."; });
   // the 402 is fetched when asked for (a 402 on page load reads as an error in every visitor's console)
   $("#ag-402-go").addEventListener("click", () => { $("#ag-402").hidden = false; $("#ag-402").textContent = "GET /cdn/footstep.mjs …"; fetch("/cdn/footstep.mjs", { headers: { Accept: "application/json" } }).then(async (r) => {
     const h = r.headers.get("PAYMENT-REQUIRED"), body = await r.json().catch(() => null);

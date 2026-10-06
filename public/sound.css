@@ -526,3 +526,5 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
 #fork-form[hidden] { display: none; }
 /* phones: a kit's name gets two lines and the trailing pads shortcut gives way (pads live on the kit page) */
 @media (max-width: 599px) { .kt-row .s-name b { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; } .kt-row .kt-pads { display: none; } .kt-row { grid-template-columns: 84px minmax(0, 1fr) auto; } }
+#sp-fork[hidden] { display: none; }
+@media (max-width: 599px) { .kt-form .row { flex-direction: column; align-items: stretch; } .kt-form .row input { flex: none; height: 48px; } .kt-form .row .btn { justify-content: center; } }

@@ -147,7 +147,7 @@ export function soundRow(a, { maker = true, kit = true } = {}) {
     <button class="s-play" data-play="${esc(a.id)}" aria-label="Play ${esc(a.title)}">${icon("play")}</button>
     <span class="s-sheet"><a href="#/a/${esc(a.id)}" class="s-link" tabindex="-1" aria-hidden="true"><img src="${soundThumb(a.id, { w: 320 })}" alt="" loading="lazy" width="320" height="160"></a><i class="s-cursor" aria-hidden="true"></i></span>
     <a class="s-name" href="#/a/${esc(a.id)}"><b>${esc(a.title)}</b><span>${maker ? `${esc(a.author)}${a.kit && kit ? ` <i>in</i> ` : ""}` : ""}${a.kit && kit ? esc(a.kit) : ""}</span></a>
-    <span class="s-c s-kind">${esc(KIND_LABEL[a.kind] || a.kind)}</span><span class="s-c num">${a.duration} s</span>
+    <span class="s-c s-kind">${esc(KIND_LABEL[a.kind] || a.kind)}</span><span class="s-c num">${Number(a.duration).toFixed(1)} s</span>
     <span class="s-c s-price num">${price(a.price)}</span></div>`;
 }
 const soundSkeleton = (n = 12) => Array.from({ length: n }, () => `<div class="s-skel" aria-hidden="true"><div class="skel"></div><div class="skel t"></div><div class="skel t"></div></div>`).join("");

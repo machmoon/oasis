@@ -236,7 +236,7 @@ export async function pageCreator(app, name) {
   const when = (iso) => (iso ? new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "");
   const role = (r) => (r === "creator" ? "share" : r === "parent" ? "royalty from a fork" : "royalty from a fork's fork");
   const facts = [`${c.sounds.length} sound${c.sounds.length === 1 ? "" : "s"}`, c.earned.cents ? `${cents(c.earned.cents)} earned from ${c.earned.orders} order${c.earned.orders === 1 ? "" : "s"}` : null, c.forks.length ? `${c.forks.length} fork${c.forks.length === 1 ? "" : "s"}` : null, c.since ? `since ${when(c.since)}` : null].filter(Boolean).join(", ");
-  const tabs = [["sounds", "Sounds", c.sounds.length], ["orders", "Orders", c.orders.length], ["forks", "Forks", c.forks.length]];
+  const tabs = [["sounds", "Sounds", c.sounds.length], ["orders", "Orders", c.orders.length], ["forks", "Forks", c.forks.length]].filter(([id, , n]) => n || id === "sounds"); // no empty tabs
   app.innerHTML = `<div class="wrap pb-page cr-page">
     <nav class="a-crumb" aria-label="Breadcrumb"><a href="#/sounds">Sounds</a><span>/</span><span>${esc(c.name)}</span></nav>
     <header class="cr-head2">

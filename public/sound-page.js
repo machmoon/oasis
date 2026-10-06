@@ -225,7 +225,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
     if ($("#a-dur")) $("#a-dur").textContent = +an.seconds.toFixed(2); // the header length follows the knobs, as the readout does
     $("#sp-readout").innerHTML = `<span>length <b>${an.seconds.toFixed(2)}</b> s</span><span>peak <b>${an.peak}</b></span><span>rms <b>${an.rms}</b></span><span>centroid <b>${an.centroid}</b> Hz</span><span>rendered in <b>${res.ms}</b> ms${res.where === "worker" ? " in your browser" : ""}</span>`;
     const wm = $("#sp-wm"); wm.hidden = false;
-    wm.className = `sp-wm${res.watermarked ? "" : " clean"}`; wm.innerHTML = res.watermarked ? `${icon("waveform")} preview: a soft tick until licensed` : `${icon("seal-check")} ${a.price > 0 ? "licensed, clean" : "free, clean"}`;
+    wm.className = `sp-wm${res.watermarked ? "" : " clean"}`; wm.innerHTML = res.watermarked ? `${icon("waveform")} Preview watermark` : `${icon("seal-check")} ${a.price > 0 ? "Licensed, clean" : "Free, clean"}`;
     if (what) addLog({ what, ms: res.ms, where: res.where === "worker" ? "worker" : "server" });
     program();
     if (what && (audio().state === "running")) playCurrent();
@@ -374,8 +374,7 @@ export async function pageSound(app, a, { catalog: list, card, liveCards }) {
   // a fork is written by Claude: when the server already knows the model is down, say so before anyone types
   fetch("/api/config").then((r) => r.json()).then((c) => {
     if (c.agentReady === true || !$("#fork-go")) return;
-    const form = $("#fork-form"); form.hidden = true;
-    form.insertAdjacentHTML("afterend", `<p class="sp-off">${icon("info")} Forking is off while Claude is offline on this server. Every other part of this page works.</p>`);
+    $("#sp-fork").hidden = true; // forking is written by Claude; while it is offline the section is not offered
   }).catch(() => {});
   $("#fork-form").addEventListener("submit", async (e) => {
     e.preventDefault();
