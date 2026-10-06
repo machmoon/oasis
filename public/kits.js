@@ -100,6 +100,7 @@ export async function pageKit(app, id) {
             <div class="r-total"><span>${paid ? "Paid in one PayPal order" : "One PayPal order"}</span><b class="num">${usd(k.total)}</b></div>
             ${paid ? `<div class="r-paypal">${icon("paypal-logo")} Captured ${new Date(k.licence.at).toLocaleString()}. ${k.licence.creators.map((c) => `${esc(c.author)} +${usd(c.usd)}`).join(", ")}.</div>` : `<div class="r-paypal">${icon("paypal-logo")} Orders v2, itemised per part. Creator shares paid with PayPal Payouts.</div>`}
           </div>
+          <button class="btn kv-packbtn" id="kv-pack" type="button">${icon("file-zip")} <span>Game pack: 8 takes of every sound${paid || k.total === 0 ? "" : " (preview)"}</span></button>
           ${paid ? `<a class="btn" href="#/kits">${icon("sparkle")} Make another kit</a>` : k.total > 0 ? `<button class="pk-pp" id="kv-pay" type="button">Pay ${usd(k.total)} with <em>Pay<b>Pal</b></em></button><p class="fine" style="margin:0;font-size:13px;color:var(--muted)">PayPal sandbox. No real money moves. You approve in PayPal's window and come back here licensed.</p>
             <div class="alt"><span>Or license it on a budget your agent holds:</span><div class="row"><input id="kv-mandate" placeholder="mdt_…"><button class="btn small" id="kv-lic" type="button">License</button></div></div>` : `<button class="btn primary" id="kv-free" type="button">${icon("seal-check")} Claim the free kit</button>`}
         </aside>
@@ -118,7 +119,48 @@ export async function pageKit(app, id) {
       ${it.wav ? `<div class="links" id="kv-code-${i}" hidden><code>import { play } from "${esc(it.module)}"</code></div>` : ""}
     </div>`;
   }
+  // The game pack: what game audio does by hand (record several takes of every sound and pick one at random so the
+  // tenth footstep is not the first) done by the programs. Eight seeds per part, named part_01..08, a manifest an
+  // engine can read, the import lines for live takes, and a plain record of what was licensed. Paid parts come
+  // clean once the kit is licensed; until then they carry the preview tick and the pack says so.
+  async function gamePack(btn) {
+    const slug = (t) => String(t).toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+    const kitSlug = slug(k.title), files = [], manifest = { kit: k.title, vibe: k.vibe, licensed: !!k.licensed, order: k.licence?.orderId || null, parts: [] };
+    const label = btn.querySelector("span"), was = label.textContent;
+    const parts = k.items.map((it, i) => ({ it, i, name: slug(it.name) || `part_${i + 1}` }));
+    const seen = new Map(); parts.forEach((p) => { const n = (seen.get(p.name) || 0) + 1; seen.set(p.name, n); if (n > 1) p.name += `_${n}`; });
+    let done = 0; const total = parts.reduce((s, p) => s + (p.it.values?.seed !== undefined ? 8 : 1), 0);
+    for (const { it, name } of parts) {
+      const seeded = it.values?.seed !== undefined, base = Number(it.values?.seed ?? 1), takes = [];
+      for (let n = 0; n < (seeded ? 8 : 1); n++) {
+        const knobs = { ...it.knobs, ...(seeded ? { seed: base + n } : {}) }, q = `?p=${encodeURIComponent(JSON.stringify(knobs))}`;
+        const url = it.licence ? `/api/licenses/${it.licence}/render.wav${q}` : `/api/assets/${encodeURIComponent(it.assetId)}/render.wav${q}`;
+        const r = await fetch(url); if (!r.ok) throw new Error(`${it.name}: render failed (${r.status})`);
+        const file = `${kitSlug}/${name}_${String(n + 1).padStart(2, "0")}.wav`;
+        files.push({ name: file, data: new Uint8Array(await r.arrayBuffer()) });
+        takes.push({ file, seed: seeded ? base + n : null, watermarked: r.headers.get("X-Oasis-Watermarked") === "1" });
+        label.textContent = `Rendering ${++done} of ${total}`;
+      }
+      manifest.parts.push({ name: it.name, program: it.assetId, title: it.title, author: it.author, kind: it.kind, knobs: it.knobs, takes, live: it.module || `${location.origin}/cdn/${it.assetId}.mjs` });
+    }
+    const marked = manifest.parts.some((p) => p.takes.some((t) => t.watermarked));
+    files.push({ name: `${kitSlug}/oasis-kit.json`, data: JSON.stringify(manifest, null, 2) });
+    files.push({ name: `${kitSlug}/README.txt`, data: [`${k.title}`, `"${k.vibe}"`, "",
+      "Every sound here is eight takes of one program (seeds in oasis-kit.json). Pick one at random each time it plays",
+      "and the player never hears the same file twice in a row. For takes without end, import the program and play it live:", "",
+      ...manifest.parts.map((p) => `  import { play } from "${p.live}";   // ${p.name}`), "",
+      marked ? "These are previews: paid parts carry a soft tick every 0.6 s until the kit is licensed on its page." : "These are clean renders.", "",
+      `Kit page: ${location.origin}/#/kit/${k.id}`, ""].join("\n") });
+    files.push({ name: `${kitSlug}/LICENCE.txt`, data: [k.licensed ? `Licensed with PayPal order ${k.licence.orderId} on ${new Date(k.licence.at).toUTCString()}.` : "Not licensed yet. These files are previews.", "",
+      "Parts, their programs and who made them:", ...manifest.parts.map((p) => `  ${p.name}: ${p.title} (${p.program}) by ${p.author}`), "",
+      `Credit line: Sounds from Oasis by ${[...new Set(manifest.parts.map((p) => p.author))].join(", ")}.`, ""].join("\n") });
+    const { zip } = await import("/zip.js");
+    const a = document.createElement("a"); a.href = URL.createObjectURL(zip(files)); a.download = `${kitSlug}-game-pack${marked ? "-preview" : ""}.zip`;
+    document.body.appendChild(a); a.click(); a.remove();
+    label.textContent = `Saved ${files.length - 3} takes`; setTimeout(() => (label.textContent = was), 2400);
+  }
   function wire(paid) {
+    $("#kv-pack").addEventListener("click", async (e) => { const b = e.currentTarget; b.disabled = true; try { await gamePack(b); } catch (err) { toast(err.message); } b.disabled = false; });
     // the import line is one click away instead of printed under every part
     $("#kv-parts").addEventListener("click", (e) => {
       const b = e.target.closest(".kv-code"); if (!b) return;
