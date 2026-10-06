@@ -236,9 +236,11 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
 .kt-mosaic[data-n="1"] { grid-template-columns: 1fr; }
 .kt-mosaic[data-n="3"] img:first-child { grid-row: span 2; }
 .kt-tile:hover .kt-mosaic img { transform: scale(1.03); }
-.kt-body { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; padding: 12px 8px 8px; }
+.kt-body { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto 1fr; gap: 4px 10px; padding: 12px 8px 8px; }
+.kt-tile { grid-template-rows: auto 1fr; }
+.kt-facts { align-self: end; }
 .kt-body b { font-weight: var(--w-semibold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.kt-body q { grid-column: 1 / -1; color: var(--ink-2); font-size: var(--fs-sm); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.6em; }
+.kt-body q { grid-column: 1 / -1; color: var(--ink-2); font-size: var(--fs-sm); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .kt-paid { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px; border-radius: var(--r-pill); background: var(--ok-soft); color: var(--ok); font: var(--w-semibold) 12px var(--font-sans); font-style: normal; }
 .kt-facts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; color: var(--muted); font-size: var(--fs-xs); }
 .kt-facts span { white-space: nowrap; }
