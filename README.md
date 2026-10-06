@@ -84,6 +84,11 @@ independent grader (`factory/grader-sound.mjs`) listens through waveform+spectro
 are published to `sounds/` under one of five creators (sandbox PayPal payees); every build is a line in
 `factory/stats.jsonl`, and the grader's lessons go into `factory/lessons-sound.md`, which every later build reads.
 
+Two kits were not built by the factory: Instrument (`sounds/inst-*`, 12 playable synth voices by kickdrum) and
+Interface (`sounds/iface-*`, 12 dry UI sounds by quietmachine) were hand-written by a Claude Code agent against the
+same contract and pass the same harness. Each says so in its header and names the open-source synth it follows
+(STK, Open303, Tone.js, jsfxr) in `meta.credit`; they have no lines in `factory/stats.jsonl`.
+
 ## Run it
 
 ```bash
