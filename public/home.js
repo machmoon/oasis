@@ -57,6 +57,11 @@ export async function pageHome(app, ctx) {
   </section>
 
   <section class="wrap band">
+    <div class="kit-head"><h2>New sounds</h2><a class="link" href="#/sounds">All sounds</a></div>
+    <div class="s-rows" id="kit"></div>
+  </section>
+
+  <section class="wrap band">
     <div class="rebuild">
       <div><div class="rebuild-stage hs-stage2" id="rb-stage"><div id="rb-ws"></div><button class="s-play big" id="rb-play" aria-label="Play">${icon("play")}</button><span class="readout" id="rb-readout"></span></div></div>
       <div>
@@ -88,13 +93,9 @@ export async function pageHome(app, ctx) {
     <h2>For agents</h2>
     <p class="lede">One line in Claude Code; it licenses inside a budget you approve. <a class="link" href="#/agents">How it works</a></p>
     <div class="cmd"><span id="cmd-text"></span><button type="button" id="cmd-copy">Copy</button></div>
-    <div class="tools" aria-label="MCP tools">${["search_assets", "preview_asset", "make_kit", "buy_assets", "get_budget"].map((t) => `<code>${t}</code>`).join("")}</div>
   </section>
 
-  <section class="wrap band">
-    <div class="kit-head"><h2>New sounds</h2><a class="link" href="#/sounds">All sounds</a></div>
-    <div class="s-grid" id="kit"></div>
-  </section>`;
+`;
 
   // the hero's one action: a vibe becomes a kit on the pads (POST /api/kits, then #/pads/:id), the way CRATE's DIG does
   $("#hero-dig").addEventListener("submit", async (e) => {
@@ -287,10 +288,10 @@ function drawReceipt(el, kit, { esc, usd, icon }) {
 // the same card the sounds browser shows (public/kit.js soundCard: the centroid-coloured waveform, play in the corner),
 // eight of them from different kits so the row shows the registry's range rather than one kit's
 async function drawKitRow(el, { catalog }) {
-  const [all, { soundCard, liveSoundCards }] = await Promise.all([catalog(), import("/kit.js")]);
+  const [all, { soundRow, liveSoundCards }] = await Promise.all([catalog(), import("/kit.js")]);
   if (!el.isConnected) return;
   const seen = new Set(), list = [];
   for (const a of all) { if (list.length >= 8) break; if (seen.has(a.kit)) continue; seen.add(a.kit); list.push(a); }
-  el.innerHTML = list.map(soundCard).join("");
+  el.innerHTML = list.map(soundRow).join("");
   liveSoundCards(el);
 }
