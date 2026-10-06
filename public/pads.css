@@ -171,7 +171,12 @@ a.cr-chip { display: inline-flex; align-items: center; text-decoration: none; }
   .cr-hero { gap: 22px; }
   .cr-deck { grid-template-columns: 1fr; padding: 16px 14px 18px; gap: 14px; }
   .cr-right { flex-direction: row; align-items: stretch; }
-  .cr-fader-row { min-height: 0; height: 140px; }
+  .cr-tx { flex: 1; align-self: end; }
+  .cr-fader-w { flex: none; height: 190px; }
+  .cr-fader-row { min-height: 0; }
+  .cr-main { min-height: 0; }
+  .cr-title span { display: none; }
+  .cr-loop span { font-size: 9.5px; }
   .cr-pad { aspect-ratio: 1; }
   .cr-pad .cr-name { font-size: 11px; bottom: 18px; }
   .cr-pad .cr-hint, .cr-pad .cr-k { display: none; }
