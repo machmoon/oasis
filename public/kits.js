@@ -72,6 +72,10 @@ export async function pageKit(app, id) {
   app.innerHTML = `<div class="wrap a-page kv-skel" aria-busy="true"><div class="skel" style="height:14px;width:120px;margin-bottom:18px"></div><div class="skel" style="height:44px;width:min(420px,70%);margin-bottom:28px"></div><div class="kv-body"><div class="kv-parts">${Array.from({ length: 6 }, () => `<div class="kv-part"><span class="skel" style="width:36px;height:36px;border-radius:50%"></span><span class="skel" style="height:48px"></span><span><span class="skel" style="width:50%"></span><span class="skel" style="width:80%;margin-top:8px"></span></span><span class="skel" style="width:48px"></span></div>`).join("")}</div><div class="skel" style="height:320px;border-radius:var(--r-lg)"></div></div></div>`;
   let k;
   // a licensed kit's clean files go to its buyer only: this browser's claim token, or the budget it set up
+  // a receipt link (#/kit/<id>?claim=<token>) hands the claim token to another browser of the same buyer, the way a
+  // Gumroad receipt link opens the purchase anywhere; it is kept here and dropped from the address bar
+  const claimQ = new URLSearchParams(location.hash.split("?")[1] || "").get("claim");
+  if (claimQ && /^[0-9a-f]{32}$/.test(claimQ)) { store.set(`oasis.kit.${id}`, { ...(store.get(`oasis.kit.${id}`) || {}), claimToken: claimQ }); history.replaceState(null, "", `#/kit/${encodeURIComponent(id)}`); }
   const mine = store.get(`oasis.kit.${id}`), budget = store.get("oasis.budget");
   const who = { ...(mine?.claimToken ? { "X-Claim-Token": mine.claimToken } : {}), ...(budget?.token ? { Authorization: `Bearer ${budget.token}` } : {}) };
   const here = location.hash;
