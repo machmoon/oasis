@@ -1,3 +1,5 @@
+// NOTE: written for the earlier (pre-sound) build. It calls MCP create_order/get_order and asset ids such as
+// pricing-card that the sound server no longer registers, so it fails against this branch until it is ported.
 // An outside agent shopping on Oasis over MCP, the way Claude Desktop or Cursor would: it only knows the /mcp URL.
 // Claude gets the server's tools, a brief and a spending cap, and runs until it stops. The transcript is written
 // to docs/mcp-session.md. Run: node scripts/mcp-agent.mjs [url]

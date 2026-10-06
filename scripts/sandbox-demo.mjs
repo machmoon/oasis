@@ -1,3 +1,5 @@
+// NOTE: written for the earlier (pre-sound) build. It calls MCP create_order/get_order and asset ids such as
+// pricing-card that the sound server no longer registers, so it fails against this branch until it is ported.
 // The whole Oasis payment path against the real PayPal sandbox, in one command: npm run sandbox-demo
 //
 // Starts its own Oasis server on PORT (default 8788, separate data dir), and fast-forwards its clock past the 14-day

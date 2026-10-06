@@ -1,7 +1,8 @@
 import crypto from "node:crypto";
 import * as world from "./world.js";
 // One tool surface, two consumers: the in-app Oasis agent (Claude tool use) and outside agents over
-// MCP. Names mirror PayPal's agent toolkit where they overlap (create_order, get_order).
+// MCP (server/mcp.js registers search_assets, get_asset, preview_asset, make_kit, get_kit, buy_assets, get_budget).
+// createOrder and getOrder below are the earlier build's order tools, kept for scripts/ and tests, not registered on MCP.
 import * as catalog from "./catalog.js";
 import * as commerce from "./commerce.js";
 import * as store from "./store.js";

@@ -89,7 +89,7 @@ export async function createCheckout(items, { agent = false, agentName = null, m
 export async function buyWithMandate(mandateToken, items, { agentName = null } = {}) {
   const m = await mandates.recordByToken(mandateToken);
   if (!m) throw Object.assign(new Error("Unknown or revoked mandate token. Ask the human for an Oasis budget at /#/budget."), { status: 403 });
-  if (!m.vault) throw Object.assign(new Error(`Mandate ${m.id} is not funded: every order on it needs the human to approve in PayPal. Use create_order instead.`), { status: 409 });
+  if (!m.vault) throw Object.assign(new Error(`Mandate ${m.id} is not funded: every order on it needs the human to approve in PayPal. Open the kit link and pay with PayPal, or ask the human to fund the budget at /#/budget.`), { status: 409 });
   const lines = priceCart(items);
   const paid = lines.filter((l) => l.price > 0);
   const total = paid.reduce((s, l) => s + l.price, 0);
@@ -337,6 +337,10 @@ async function markRefunded(o, refundId) {
   for (const l of o.licenses || []) {
     const lic = await store.get("licenses", l.token);
     if (lic) await store.put("licenses", l.token, { ...lic, revoked: true, revokedAt: new Date().toISOString() });
+  }
+  // a kit paid by this order is unlicensed again (its previews come back), and keeps a note of the refund
+  for (const k of await store.list("kits")) {
+    if (k.licence?.orderId === o.id) await store.put("kits", k.id, { ...k, licence: null, refunded: { orderId: o.id, refundId, at: new Date().toISOString() }, updatedAt: new Date().toISOString() });
   }
   await store.put("orders", o.id, o);
 }
