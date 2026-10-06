@@ -39,7 +39,7 @@ function springTo(from, to, onStep, { mass = 0.8, stiffness = 75, damping = 15 }
 }
 
 export async function pageHome(app, ctx) {
-  const { api, esc, usd, price, icon, catalog, drawSales, viewers, reduced, rise } = ctx;
+  const { api, esc, usd, price, icon, catalog, viewers, reduced, rise } = ctx;
   app.innerHTML = `
   <section class="hero" id="hero" aria-label="Oasis rendering and licensing a sound kit, live">
     <div class="hero-stage hero-sound" id="hero-stage">
@@ -59,24 +59,6 @@ export async function pageHome(app, ctx) {
   <section class="wrap band">
     <div class="kit-head"><h2>New sounds</h2><a class="link" href="#/sounds">All sounds</a></div>
     <div class="s-rows" id="kit"></div>
-  </section>
-
-
-
-  <section class="wrap band" id="pay">
-    <div class="order">
-      <div>
-        <h2>The bill</h2>
-        <p class="lede">Approve once in PayPal; each creator's share is booked from that order.</p>
-        <a class="btn" href="#/budget">Give an agent a budget</a>
-      </div>
-      <div class="receipt" id="receipt"><div class="skel" style="height:280px"></div></div>
-    </div>
-  </section>
-
-  <section class="wrap band" id="sales-sec" hidden>
-    <div class="head"><h2>Recent orders</h2></div>
-    <div class="ledger"><div class="sales" id="sales"></div><div class="creators" id="creators"></div></div>
   </section>
 
   <section class="wrap band agents-band">
@@ -100,12 +82,8 @@ export async function pageHome(app, ctx) {
   $("#cmd-copy").addEventListener("click", async () => { try { await navigator.clipboard.writeText(cmd); ctx.toast("Copied"); } catch { ctx.toast("Select the command and copy it"); } });
 
   drawKitRow($("#kit"), { catalog });
-  drawSales().then((n) => { if (n) $("#sales-sec").hidden = false; });
-  // the bill shows a real paid kit at once (the latest licensed one, with its PayPal order), so the band is never an
-  // empty frame waiting on the hero; a bill the hero builds later replaces it
-  let heroBilled = false;
-  api("/api/kits").then((ks) => ks.find((k) => k.licensed)).then((k) => k && api(`/api/kits/${encodeURIComponent(k.id)}`)).then((kit) => { if (kit && !heroBilled) drawReceipt($("#receipt"), kit, { esc, usd, icon }); }).catch(() => {});
-  const hero = mountHero({ api, esc, usd, icon, reduced, onBill: (kit) => { heroBilled = true; drawReceipt($("#receipt"), kit, { esc, usd, icon }); } });
+  // the home page is the hero and one feed (Bandcamp's front page); orders live on the ledger, bills on each kit
+  const hero = mountHero({ api, esc, usd, icon, reduced, onBill: () => {} });
   viewers.push({ dispose: hero.stop });
   rise(app);
 }
@@ -259,18 +237,6 @@ async function mountRebuild({ api, esc, icon, reduced }) {
   });
   $("#rb-play").addEventListener("click", async () => { await unlock(); if (current) wave.toggle(); });
   await rebuild(false);
-}
-
-// ---------- the receipt ----------
-function drawReceipt(el, kit, { esc, usd, icon }) {
-  if (!el?.isConnected) return;
-  const by = {};
-  for (const i of kit.items) if (i.price > 0) { by[i.author] ||= { usd: 0, lines: [] }; by[i.author].usd += i.price; by[i.author].lines.push(i); }
-  const creators = Object.entries(by).sort((a, b) => b[1].usd - a[1].usd);
-  el.innerHTML = `<div class="r-head"><b>${esc(kit.title)}</b><span>${kit.items.length} sounds, ${creators.length} creators</span></div>
-    ${creators.map(([who, c]) => `<div class="r-who"><div class="r-name">${esc(who)}<em class="num">${usd(c.usd)}</em></div>${c.lines.map((l) => `<div class="r-line"><span>${esc(l.name)}</span><span class="num">${usd(l.price)}</span></div>`).join("")}</div>`).join("")}
-    <div class="r-total"><span>${kit.licence ? "Paid in one PayPal order" : "One PayPal order"}</span><b class="num">${usd(kit.total)}</b></div>
-    <div class="r-paypal">${icon("paypal-logo")} ${kit.licence ? `Order ${esc(kit.licence.orderId)}, itemised per part. Shares paid out with PayPal Payouts.` : "Orders v2, itemised per part. Shares paid out with PayPal Payouts."}</div>`;
 }
 
 // ---------- the sounds row ----------
