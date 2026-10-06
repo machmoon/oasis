@@ -56,7 +56,7 @@ x402 v2 shape, and a browser import gets a placeholder tick of the real length.
   `/claim`): 9SS52993P3394003X ($23.00), captured and split across three creators (foleyroom $10.80, stormfront
   $7.20, quietmachine $2.70). The order was approved with one of PayPal's published sandbox test cards instead of a
   person in PayPal's window; capture, the amount check and the licences are the normal code path.
-- 55/55 tests pass, including the sandbox refusing `Math.random`, imports and over-long renders; determinism; the
+- 68/68 tests pass, including the sandbox refusing `Math.random`, imports and over-long renders; determinism; the
   watermark; the CDN gate; and a kit order through checkout, capture and claim.
 - The catalogue is growing as the factory runs; `GET /api/config` reports the live count and `/llms.txt` lists every
   sound with its kit and creator.
