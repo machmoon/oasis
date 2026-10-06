@@ -11,7 +11,8 @@
 // The keyboard is the 4x4 grid an MPC and Ableton's Drum Rack put on a computer keyboard: 1234 / QWER / ASDF / ZXCV.
 import { audio, unlock, loadWav, output } from "/audio.js";
 import { wav } from "/sound-dsp.js";
-import { control } from "/sound-page.js";
+import { control, segment } from "/sound-page.js";
+import { LOOKS, buildLook } from "/fx.js";
 import "/knob.js";
 
 // styles: sound.css (crumbs, dials) and kit.css (a-dials), then pads.css; loaded once from here, as the other pages do
@@ -69,7 +70,11 @@ export async function pagePads(app, id) {
   const curve = (k) => { const n = 1024, c = new Float32Array(n); for (let i = 0; i < n; i++) { const x = (i / (n - 1)) * 2 - 1; c[i] = k > 0 ? Math.tanh(x * (1 + k * 6)) / Math.tanh(1 + k * 6) : x; } return c; };
   drive.curve = curve(0); drive.oversample = "2x";
   master.gain.value = 0.9;
-  padsBus.connect(lp).connect(drive).connect(master).connect(output());
+  lp.connect(drive).connect(master).connect(output());
+  // the look sits first, so the fold darkens a hall's tail too (public/fx.js; Polyfork's looks, for sound)
+  let lookId = "dry", look = buildLook(ac, lookId);
+  padsBus.connect(look.input); look.output.connect(lp);
+  const setLook = (id) => { const old = look; padsBus.disconnect(); lookId = id; look = buildLook(ac, id); padsBus.connect(look.input); look.output.connect(lp); setTimeout(() => old.stop(), 60); };
   /** The fold, Crate's hinge as one fader: 0 is open (flat), 1 is folded shut (dark, driven, ringing). */
   let fold = 0;
   const setFold = (f, glide = 0.03) => {
@@ -139,6 +144,7 @@ export async function pagePads(app, id) {
       </header>
 
       <div class="pd-deck">
+        <div class="pd-looks"><span>Look</span><div id="pd-look" aria-label="Look"></div><small>Kept in the export: the loop renders through the same chain.</small></div>
         <div class="pd-pads" id="pd-pads" role="group" aria-label="Pads">${pads.map((p) => `
           <button class="pd-pad" type="button" data-i="${p.i}" aria-label="${esc(p.item.name)}, key ${KEY_LABEL(p.key)}">
             <img src="${esc(cardUrl(p))}" alt="" width="320" height="160" loading="lazy">
@@ -291,7 +297,7 @@ export async function pagePads(app, id) {
     try {
       await Promise.all(pads.map((p) => p.loading || p.takes));
       const sr = 44100, bars = 2, d = stepDur(), tail = 2, len = Math.ceil((bars * STEPS * d + tail) * sr);
-      const off = new OfflineAudioContext(1, len, sr), bus = off.createGain(); bus.gain.value = 0.9; bus.connect(off.destination);
+      const off = new OfflineAudioContext(1, len, sr), bus = off.createGain(), offLook = buildLook(off, lookId); bus.gain.value = 0.9; bus.connect(offLook.input); offLook.output.connect(off.destination);
       const counters = pads.map(() => 0);
       for (let bar = 0; bar < bars; bar++) for (let s = 0; s < STEPS; s++) {
         const t = (bar * STEPS + s) * d + (s % 2 ? seq.swing * d : 0);
@@ -308,7 +314,7 @@ export async function pagePads(app, id) {
       if (peak > 0.98) for (let i = 0; i < out.length; i++) out[i] *= 0.98 / peak;
       const a = document.createElement("a");
       a.href = URL.createObjectURL(new Blob([wav(out, sr)], { type: "audio/wav" }));
-      a.download = `${kit.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${seq.bpm}bpm.wav`;
+      a.download = `${kit.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${seq.bpm}bpm${lookId === "dry" ? "" : `-${lookId}`}.wav`;
       document.body.appendChild(a); a.click(); a.remove();
       const unpaid = pads.some((p) => !p.item.licence && p.item.price > 0 && rows[p.i].some(Boolean));
       b.innerHTML = `${icon("check")}<span>${unpaid ? "Exported, with preview ticks" : "Exported"}</span>`;
@@ -316,9 +322,10 @@ export async function pagePads(app, id) {
     setTimeout(() => { b.disabled = false; b.innerHTML = `${icon("download-simple")}<span>Export loop</span>`; }, 2600);
   });
 
+  segment($("#pd-look"), LOOKS, lookId, (id) => setLook(id));
   paintCells(); paintTransport(); paintFold(); select(0);
   pads.forEach(load);
 
   // leaving the page stops the clock and frees the chain
-  addEventListener("hashchange", () => { stop(); timer.terminate(); cancelAnimationFrame(raf); removeEventListener("keydown", onKey); removeEventListener("keyup", onKeyUp); try { padsBus.disconnect(); master.disconnect(); } catch {} }, { once: true });
+  addEventListener("hashchange", () => { stop(); timer.terminate(); cancelAnimationFrame(raf); removeEventListener("keydown", onKey); removeEventListener("keyup", onKeyUp); try { padsBus.disconnect(); master.disconnect(); look.stop(); } catch {} }, { once: true });
 }
