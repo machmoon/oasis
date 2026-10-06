@@ -3,7 +3,8 @@
 // After STK src/Rhodey.cpp and include/Rhodey.h tick(): setRatio 1, 0.5, 1, 15; gains fmGains_[99/90/99/67] (src/FM.cpp
 // steps 0.933033 per index); decays 1.5, 1.5, 1.0 and 0.25 s; output (1 - control2/2)·body + control2/2·tine, then
 // amplitude modulation by the vibrato LFO; base frequency is 2·note as Rhodey::setFrequency sets it (the tine ratio is
-// capped below Nyquist at a 22.05 kHz preview). Decays here are exponential (STK ramps linearly) and scale with the Decay knob.
+// capped below Nyquist at a 22.05 kHz preview). Decays here are exponential (STK ramps linearly) and scale with the
+// Decay knob.
 // Hand-written by a Claude Code agent against the factory contract (not built by the factory).
 export const meta = {
   title: "Electric Piano", kind: "sfx", format: "sound", duration: 1.7, price: 2, author: "kickdrum", payout: "kickdrum@creators.oasis.example", kit: "Instrument",
