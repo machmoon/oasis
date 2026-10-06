@@ -423,3 +423,8 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
 @media (max-width: 599px) { .fk-row { grid-template-columns: 1fr; } }
 
 @media (max-width: 599px) { .kv-all { flex-wrap: wrap; } .kv-all .kv-pads { flex: 1 1 100%; justify-content: center; } .kv-body > * { min-width: 0; } }
+/* the live spectrum and scope wait as a faint baseline and come up only while something is sounding, instead of an
+   empty black bar with a dot that reads as broken (design round 2) */
+:has(> .lv-spec) { transition: opacity var(--t-slow) var(--ease-out); }
+:has(> .lv-spec):not(.on) { opacity: .22; }
+:has(> .lv-spec):not(.on) .lv-tag { visibility: hidden; }
