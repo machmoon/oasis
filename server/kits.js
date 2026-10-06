@@ -8,6 +8,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import * as catalog from "./catalog.js";
 import * as commerce from "./commerce.js";
 import * as store from "./store.js";
+import * as mandates from "./mandates.js";
 import { config } from "./config.js";
 import { diffFromDefaults } from "./knobs.js";
 
@@ -113,15 +114,25 @@ export function licenceOf(kit, order, via = "mandate") {
   return { orderId: order?.id || "free", total: order?.total || 0, creators, tokens, at: new Date().toISOString(), via };
 }
 
-/** Public view: parts with their preview and, once licensed, their clean render and module URLs. */
-export function view(kit) {
+/** Whether a caller may see a licensed kit's tokens: the claim token its PayPal order handed the buyer's browser, or
+ *  the mandate that paid for it. The order ID alone unlocks nothing (the same rule as commerce.publicOrder). */
+export async function owns(kit, { claim, mandate } = {}) {
+  if (!kit.licence?.tokens || !Object.keys(kit.licence.tokens).length) return true; // nothing paid, nothing to hide
+  const o = await store.get("orders", kit.licence.orderId);
+  if (claim && commerce.ownsOrder(o, String(claim))) return true;
+  if (mandate && o?.mandateId) { const m = await mandates.recordByToken(String(mandate)); if (m && m.id === o.mandateId) return true; }
+  return false;
+}
+
+/** Public view: parts with their preview and, once licensed and only for its owner, their clean render and module URLs. */
+export function view(kit, { owner = true } = {}) {
   const b = config.baseUrl;
   return {
-    id: kit.id, title: kit.title, vibe: kit.vibe, planner: kit.planner, createdAt: kit.createdAt, total: kit.total, creators: kit.creators, licensed: !!kit.licence,
+    id: kit.id, title: kit.title, vibe: kit.vibe, planner: kit.planner, createdAt: kit.createdAt, total: kit.total, creators: kit.creators, licensed: !!kit.licence, owner: !!kit.licence && owner,
     licence: kit.licence ? { orderId: kit.licence.orderId, total: kit.licence.total, creators: kit.licence.creators, at: kit.licence.at, via: kit.licence.via } : null,
     items: kit.items.map((l) => {
       const q = Object.keys(l.knobs).length ? `?p=${encodeURIComponent(JSON.stringify(l.knobs))}` : "";
-      const tok = kit.licence?.tokens?.[l.assetId] || (l.price === 0 && !l.covered ? "free" : null) || (l.covered && kit.items.find((x) => x.assetId === l.assetId && !x.covered)?.price === 0 ? "free" : null);
+      const tok = (owner ? kit.licence?.tokens?.[l.assetId] : null) || (l.price === 0 && !l.covered ? "free" : null) || (l.covered && kit.items.find((x) => x.assetId === l.assetId && !x.covered)?.price === 0 ? "free" : null);
       return { ...l, preview: `${b}/api/assets/${l.assetId}/render.wav${q}`, card: `${b}/api/assets/${l.assetId}/render.png${q}`,
         licence: tok && tok !== "free" ? tok : null,
         wav: tok ? (tok === "free" ? `${b}/api/assets/${l.assetId}/download.wav${q}` : `${b}/api/licenses/${tok}/download.wav`) : null,

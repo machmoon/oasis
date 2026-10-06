@@ -340,11 +340,13 @@ export async function createApp() {
     const card = (l) => `/api/assets/${encodeURIComponent(l.assetId)}/render.png?w=320${Object.keys(l.knobs || {}).length ? `&p=${encodeURIComponent(JSON.stringify(l.knobs))}` : ""}`;
     res.json(all.map((k) => ({ id: k.id, title: k.title, vibe: k.vibe, parts: k.items.length, total: k.total, creators: k.creators.length, licensed: !!k.licence, createdAt: k.createdAt, cards: k.items.filter((l) => !l.covered).slice(0, 4).map(card) })));
   }));
-  app.get("/api/kits/:id", wrap(async (req, res) => res.set("Cache-Control", "no-cache").json(kits.view(await mustKit(req.params.id)))));
+  // who is asking: the browser's claim token, or an agent's mandate (Bearer, as on /api/kits/:id/license)
+  const kitCaller = (req) => ({ claim: req.get("x-claim-token") || req.body?.claim_token, mandate: req.body?.mandate || (req.get("authorization") || "").replace(/^Bearer\s+/i, "") || null });
+  app.get("/api/kits/:id", wrap(async (req, res) => { const k = await mustKit(req.params.id); res.set("Cache-Control", "no-cache").json(kits.view(k, { owner: await kits.owns(k, kitCaller(req)) })); }));
   // Licensing a kit on a funded budget: every paid part, once, in one vaulted order.
   app.post("/api/kits/:id/license", buyLimit, wrap(async (req, res) => {
     const k = await mustKit(req.params.id);
-    if (k.licence) return res.json(kits.view(k));
+    if (k.licence) return res.json(kits.view(k, { owner: await kits.owns(k, kitCaller(req)) }));
     const items = kits.billItems(k);
     const mandate = String(req.body?.mandate || (req.get("authorization") || "").replace(/^Bearer\s+/i, ""));
     const o = items.length ? await commerce.buyWithMandate(mandate, items, { agentName: String(req.body?.agent_name || "Oasis Kits").slice(0, 40) }) : null;
@@ -360,7 +362,7 @@ export async function createApp() {
   }));
   app.post("/api/kits/:id/claim", buyLimit, wrap(async (req, res) => {
     const k = await mustKit(req.params.id);
-    if (k.licence) return res.json(kits.view(k));
+    if (k.licence) return res.json(kits.view(k, { owner: await kits.owns(k, kitCaller(req)) }));
     let o = await store.get("orders", String(req.body?.order_id || ""));
     if (!commerce.ownsOrder(o, String(req.body?.claim_token || ""))) throw Object.assign(new Error("Unknown order, or wrong claim token"), { status: 404 });
     if (o.status !== "COMPLETED") { try { o = await commerce.capture(o.id); } catch (e) { console.warn("kit claim capture", e.message); } }

@@ -184,20 +184,20 @@ export async function makeKit({ vibe, mandate, agent_name }) {
   }
   return kitStatus(k);
 }
-export async function getKit({ kit_id }) {
+export async function getKit({ kit_id, mandate }) {
   const kits = await import("./kits.js");
   const k = await kits.get(String(kit_id));
   if (!k) throw new Error("Unknown kit_id");
-  return kitStatus(k);
+  return kitStatus(k, await kits.owns(k, { mandate }));
 }
-async function kitStatus(k) {
+async function kitStatus(k, owner = true) {
   const kits = await import("./kits.js");
-  const v = kits.view(k);
+  const v = kits.view(k, { owner });
   return {
     kit_id: v.id, title: v.title, vibe: v.vibe, link: `${config.baseUrl}/#/kit/${v.id}`, planned_by: v.planner,
     parts: v.items.map((l) => ({ name: l.name, asset_id: l.assetId, kind: l.kind, author: l.author, price_usd: l.price, knobs: l.knobs, reason: l.reason, preview_wav: l.preview, module: l.module, wav: l.wav })),
     total_usd: v.total, creators: v.creators, licensed: v.licensed, order_id: v.licence?.orderId || null, creators_paid: v.licence?.creators || [],
-    next: v.licensed ? "Licensed: import each part's module (play(ctx, knobs)) or download its WAV." : "Unlicensed: previews carry a watermark tick. Pass the human's mandate to license the whole kit in one order, or open the link and pay with PayPal.",
+    next: v.licensed && !owner ? "Licensed by someone else: pass the mandate that paid for it to get the modules and WAVs." : v.licensed ? "Licensed: import each part's module (play(ctx, knobs)) or download its WAV." : "Unlicensed: previews carry a watermark tick. Pass the human's mandate to license the whole kit in one order, or open the link and pay with PayPal.",
   };
 }
 

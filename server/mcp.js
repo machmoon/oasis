@@ -50,7 +50,7 @@ function getServer() {
   }, async (args) => text(await tools.makeKit(args)));
   server.registerTool("get_kit", {
     description: "A kit's parts, knobs, bill, whether it is licensed, and each part's module and WAV once it is.",
-    inputSchema: { kit_id: z.string() },
+    inputSchema: { kit_id: z.string(), mandate: z.string().optional().describe("The mandate that paid for the kit; its modules and WAVs are only returned to their owner") },
   }, async (args) => text(await tools.getKit(args)));
   server.registerTool("get_budget", {
     description: "What the human allowed: budget, spent, what is left, expiry, and every order charged against it.",

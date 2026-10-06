@@ -81,3 +81,22 @@ test("the registry: agents get an x402 402, browser imports get a placeholder, a
   const settle = await fetch(`${base}/cdn/town-shop.mjs`, { headers: { "PAYMENT-SIGNATURE": Buffer.from(JSON.stringify({ x402Version: 2, accepted: pr.accepts[0], payload: { mandate: "mdt_nope" } })).toString("base64") } });
   assert.equal(settle.status, 403, "an unknown mandate pays for nothing");
 });
+
+test("a licensed kit's tokens and clean files reach its buyer only, not anyone who knows the kit id", async () => {
+  const store = await import("../server/store.js");
+  await store.put("orders", "ORDER-KIT-1", { id: "ORDER-KIT-1", status: "COMPLETED", claimToken: "c".repeat(32), items: [] });
+  const item = { assetId: "drum-kick-808-boom", name: "Kick", title: "808 Boom Kick", author: "kickdrum", kind: "sfx", price: 2, knobs: {}, values: {} };
+  await store.put("kits", "kowner1", { id: "kowner1", title: "T", vibe: "v", planner: "keywords", total: 2, creators: ["kickdrum"], items: [item],
+    licence: { orderId: "ORDER-KIT-1", total: 2, creators: [], tokens: { "drum-kick-808-boom": "tok-secret" }, at: new Date().toISOString(), via: "checkout" } });
+  const anon = await (await fetch(`${base}/api/kits/kowner1`)).json();
+  assert.equal(anon.licensed, true);
+  assert.equal(anon.owner, false);
+  assert.ok(anon.items.every((l) => !l.licence && !l.wav && !l.module), "no token, WAV or module for a stranger");
+  for (const route of ["license", "claim"]) {
+    const r = await (await fetch(`${base}/api/kits/kowner1/${route}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ order_id: "ORDER-KIT-1", claim_token: "wrong" }) })).json();
+    assert.ok(!JSON.stringify(r).includes("tok-secret"), `POST ${route} on a licensed kit leaks nothing`);
+  }
+  const mine = await (await fetch(`${base}/api/kits/kowner1`, { headers: { "X-Claim-Token": "c".repeat(32) } })).json();
+  assert.equal(mine.owner, true);
+  assert.equal(mine.items[0].licence, "tok-secret");
+});

@@ -12,7 +12,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const usd = (n) => `$${Number(n || 0).toFixed(2)}`;
 const price = (n) => (Number(n) === 0 ? "Free" : usd(n));
 const icon = (name) => `<i class="ph-bold ph-${name}" aria-hidden="true"></i>`;
-const api = async (path, { method = "GET", body } = {}) => { const r = await fetch(path, { method, headers: body ? { "Content-Type": "application/json" } : {}, body: body ? JSON.stringify(body) : undefined }); const j = await r.json().catch(() => ({})); if (!r.ok) throw Object.assign(new Error(j.error || `Request failed (${r.status})`), { status: r.status }); return j; };
+const api = async (path, { method = "GET", body, headers = {} } = {}) => { const r = await fetch(path, { method, headers: { ...(body ? { "Content-Type": "application/json" } : {}), ...headers }, body: body ? JSON.stringify(body) : undefined }); const j = await r.json().catch(() => ({})); if (!r.ok) throw Object.assign(new Error(j.error || `Request failed (${r.status})`), { status: r.status }); return j; };
 const toast = (msg) => { const t = $("#toast"); if (!t) return; t.textContent = msg; t.classList.add("on"); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("on"), 2600); };
 const store = { get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
 for (const href of ["/sound.css", "/pay.css"]) if (!document.querySelector(`link[href="${href}"]`)) { const l = document.createElement("link"); l.rel = "stylesheet"; l.href = href; document.head.appendChild(l); }
@@ -71,7 +71,10 @@ export async function pageKit(app, id) {
   // the page's shape while the kit loads: a title, a list of parts, a bill
   app.innerHTML = `<div class="wrap a-page kv-skel" aria-busy="true"><div class="skel" style="height:14px;width:120px;margin-bottom:18px"></div><div class="skel" style="height:44px;width:min(420px,70%);margin-bottom:28px"></div><div class="kv-body"><div class="kv-parts">${Array.from({ length: 6 }, () => `<div class="kv-part"><span class="skel" style="width:36px;height:36px;border-radius:50%"></span><span class="skel" style="height:48px"></span><span><span class="skel" style="width:50%"></span><span class="skel" style="width:80%;margin-top:8px"></span></span><span class="skel" style="width:48px"></span></div>`).join("")}</div><div class="skel" style="height:320px;border-radius:var(--r-lg)"></div></div></div>`;
   let k;
-  try { k = await api(`/api/kits/${encodeURIComponent(id)}`); } catch { app.innerHTML = `<div class="wrap split2"><div><h1>That kit doesn't exist.</h1><p class="lede">It may have been removed, or the link has a typo.</p><p style="margin-top:24px"><a class="btn primary" href="#/kits">Make a kit</a></p></div></div>`; return; }
+  // a licensed kit's clean files go to its buyer only: this browser's claim token, or the budget it set up
+  const mine = store.get(`oasis.kit.${id}`), budget = store.get("oasis.budget");
+  const who = { ...(mine?.claimToken ? { "X-Claim-Token": mine.claimToken } : {}), ...(budget?.token ? { Authorization: `Bearer ${budget.token}` } : {}) };
+  try { k = await api(`/api/kits/${encodeURIComponent(id)}`, { headers: who }); } catch { app.innerHTML = `<div class="wrap split2"><div><h1>That kit doesn't exist.</h1><p class="lede">It may have been removed, or the link has a typo.</p><p style="margin-top:24px"><a class="btn primary" href="#/kits">Make a kit</a></p></div></div>`; return; }
   // back from PayPal: the browser that started the order claims the licence with its claim token
   const pending = store.get(`oasis.kit.${k.id}`);
   if (!k.licensed && pending?.orderId) {
@@ -87,7 +90,7 @@ export async function pageKit(app, id) {
       <header class="kv-head">
         <div><h1>${esc(k.title)}</h1><p class="kv-vibe">${k.planner === "single" ? `One sound, licensed on its own with the knobs set on its page.` : `${k.vibe.trim().toLowerCase() !== k.title.trim().toLowerCase() ? `${esc(k.vibe.charAt(0).toUpperCase() + k.vibe.slice(1))}. ` : ""}<span class="num">${k.items.length}</span> sounds from ${k.creators.length} creator${k.creators.length === 1 ? "" : "s"}, <span title="${k.planner === "keywords" ? "The Claude planner was offline" : esc(k.planner)}">${k.planner === "keywords" ? "matched by keyword" : "picked by Claude"}</span>.`}</p></div>
         <div class="kv-side">
-          ${paid ? "" : `<span class="kv-state">${icon("waveform")} Watermarked preview until paid</span>`}
+          ${paid ? (k.owner ? "" : `<span class="kv-state">${icon("waveform")} Licensed by its buyer; previews here</span>`) : `<span class="kv-state">${icon("waveform")} Watermarked preview until paid</span>`}
           <div class="kv-share"><input id="kv-url" type="hidden" value="${esc(kitUrl)}"><button class="btn small" id="kv-copy" type="button">${icon("link-simple")} <span>Copy link</span></button></div>
         </div>
       </header>
@@ -132,7 +135,8 @@ export async function pageKit(app, id) {
   // clean once the kit is licensed; until then they carry the preview tick and the pack says so.
   async function gamePack(btn) {
     const slug = (t) => String(t).toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
-    const kitSlug = slug(k.title), files = [], manifest = { kit: k.title, vibe: k.vibe, licensed: !!k.licensed, order: k.licence?.orderId || null, parts: [] };
+    const own = k.licensed && k.owner; // the clean files reach the buyer only
+    const kitSlug = slug(k.title), files = [], manifest = { kit: k.title, vibe: k.vibe, licensed: !!own, order: k.licence?.orderId || null, parts: [] };
     const label = btn.querySelector("span"), was = label.textContent;
     const parts = k.items.map((it, i) => ({ it, i, name: slug(it.name) || `part_${i + 1}` }));
     const seen = new Map(); parts.forEach((p) => { const n = (seen.get(p.name) || 0) + 1; seen.set(p.name, n); if (n > 1) p.name += `_${n}`; });
@@ -160,9 +164,9 @@ export async function pageKit(app, id) {
       "Each import is its own binding (play1, play2, ...); call one with an AudioContext to hear a fresh take.", "",
       marked ? "These are previews: paid parts carry a soft tick every 0.6 s until the kit is licensed on its page." : "These are clean renders.", "",
       `Kit page: ${location.origin}/#/kit/${k.id}`, ""].join("\n") });
-    files.push({ name: `${kitSlug}/LICENCE.txt`, data: [k.licensed ? `Licensed with PayPal order ${k.licence.orderId} on ${new Date(k.licence.at).toUTCString()}.` : "Not licensed yet. These files are previews.", "",
+    files.push({ name: `${kitSlug}/LICENCE.txt`, data: [own ? `Licensed with PayPal order ${k.licence.orderId} on ${new Date(k.licence.at).toUTCString()}.` : "Not licensed yet. These files are previews.", "",
       "Parts, their programs and who made them:", ...manifest.parts.map((p) => `  ${p.name}: ${p.title} (${p.program}) by ${p.author}`), "",
-      k.licensed ? "What the order bought: a licence to import and ship each program, at any knobs and any seed, in what you make (the terms the registry states on every program's 402 and in /llms.txt)." : "",
+      own ? "What the order bought: a licence to import and ship each program, at any knobs and any seed, in what you make (the terms the registry states on every program's 402 and in /llms.txt)." : "",
       `Credit line: Sounds from Oasis by ${[...new Set(manifest.parts.map((p) => p.author))].join(", ")}.`, ""].join("\n") });
     const { zip } = await import("/zip.js");
     const a = document.createElement("a"); a.href = URL.createObjectURL(zip(files)); a.download = `${kitSlug}-game-pack${marked ? "-preview" : ""}.zip`;
@@ -188,7 +192,7 @@ export async function pageKit(app, id) {
     let kp = null;
     Promise.all(k.items.map((it) => api(`/api/assets/${encodeURIComponent(it.assetId)}`).then((d) => ({ ...d, title: it.name, values: it.knobs, licence: it.licence || null }), () => null))).then((ds) => {
       if (!$("#kv-play")) return;
-      kp = mountKitPlayer($("#kv-play"), ds.filter(Boolean), { title: "Play the voices", renderFor: (v) => makeRenderer(v, { licence: v.licence, analysis: false }), blurb: paid ? "Licensed: every note plays clean." : k.total > 0 ? "Watermarked previews until the kit is paid." : "" });
+      kp = mountKitPlayer($("#kv-play"), ds.filter(Boolean), { title: "Play the voices", renderFor: (v) => makeRenderer(v, { licence: v.licence, analysis: false }), blurb: paid && k.owner ? "Licensed: every note plays clean." : k.total > 0 ? "Watermarked previews until the kit is paid." : "" });
     });
     addEventListener("hashchange", () => setTimeout(() => { if (!$("#kv-live")) { stop(); live.destroy(); kp?.destroy(); } }, 0), { once: true });
     // one transport for the page: a single part, or the whole kit in order. Every start takes a new token, so a stop
