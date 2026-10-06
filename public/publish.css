@@ -15,7 +15,7 @@
 .pb-src textarea { width: 100%; min-height: 560px; resize: vertical; padding: 16px 18px; font: 13.5px / 1.55 var(--font-mono); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--inset-top), var(--shadow-sm); tab-size: 2; white-space: pre; overflow: auto; }
 .pb-src textarea:focus { outline: none; border-color: var(--accent); box-shadow: var(--ring); }
 .pb-src textarea::placeholder { color: var(--muted); }
-.pb-src-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.pb-src-foot { display: flex; justify-content: flex-end; align-items: center; gap: 12px; }
 .pb-lines { font: var(--fs-sm) var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
 
 /* notes */
