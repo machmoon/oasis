@@ -286,7 +286,7 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
 /* phone: the card stacks. Play, name and price share the top row; the waveform, the knob chips, the links and the import
    line each take the full width under it (.who dissolves so its pieces become grid items) */
 @media (max-width: 599px) {
-  .kv-part { grid-template-columns: 36px minmax(0, 1fr) auto; grid-template-areas: "play name amt" "play meta amt" "pic pic pic" "knobs knobs acts" "links links links"; gap: 0 12px; align-items: start; padding: 12px; }
+  .kv-part { grid-template-columns: 36px minmax(0, 1fr) auto; grid-template-areas: "play name amt" "play meta acts" "pic pic pic" "knobs knobs knobs" "links links links"; gap: 0 12px; align-items: start; padding: 12px; }
   .kv-part > .s-play { grid-area: play; align-self: center; }
   .kv-part .who { display: contents; }
   .kv-part .kv-name { grid-area: name; align-self: end; }
@@ -294,7 +294,7 @@ oasis-knob:not(:defined) { display: inline-block; width: 76px; height: 92px; }
   .kv-part .amt { grid-area: amt; align-self: center; }
   .kv-part .pic { grid-area: pic; margin-top: 10px; }
   .kv-part .kv-knobs { grid-area: knobs; margin-top: 10px; }
-  .kv-part .kv-acts { grid-area: acts; margin-top: 6px; align-self: start; }
+  .kv-part .kv-acts { grid-area: acts; margin-top: 0; align-self: start; justify-self: end; }
   .kv-part .links { grid-area: links; margin-top: 10px; }
 }
 .kv-bill { position: sticky; top: 80px; display: grid; gap: 12px; }
